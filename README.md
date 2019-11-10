@@ -1,1 +1,3 @@
-# rtsp_stream
+# RTSP Streaming
+
+Powered by Go and FFmpeg
