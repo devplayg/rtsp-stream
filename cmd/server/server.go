@@ -20,9 +20,10 @@ func main() {
 		Description: appDescription,
 		Version:     appVersion,
 		Debug:       true,
+		IsService:   true,
 	}
 
-	server := &server.Server{}
+	server := server.NewServer()
 	engine := hippo.NewEngine(server, config)
 	err := engine.Start()
 	if err != nil {
