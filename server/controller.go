@@ -38,7 +38,7 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
- curl -i -X POST -d '{"url":"rtsp://58.72.99.132:30101/Streaming/Channels/101/","username":"admin","password":"unisem1234"}' http://192.168.0.14:9000/streams
+ curl -i -X POST -d '{"url":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"1234"}' http://192.168.0.14:9000/streams
 */
 
 func (c *Controller) PostStream(w http.ResponseWriter, r *http.Request) {
