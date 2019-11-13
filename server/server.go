@@ -1,26 +1,24 @@
 package server
 
 import (
-	"encoding/json"
 	"github.com/devplayg/hippo"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 )
 
 type Server struct {
 	engine     *hippo.Engine
-	streamMap  sync.Map
 	controller *Controller
+	manager    *Manager
 }
 
 func NewServer() *Server {
-	server := Server{}
-	server.controller = NewController(&server)
-	return &server
+	server := &Server{}
+	server.controller = NewController(server)
+	server.manager = NewManager(server)
+	return server
 }
 
 func (s *Server) Start() error {
@@ -49,27 +47,5 @@ func (s *Server) Stop() error {
 	//if err != nil {
 	//    return err
 	//}
-	return nil
-}
-
-func (s *Server) getAllStreams() ([]byte, error) {
-	streams := make([]*Stream, 0)
-	s.streamMap.Range(func(k, v interface{}) bool {
-		streams = append(streams, v.(*Stream))
-		//fmt.Printf("key: %s, value: %s\n", k, v) // key: hoge, value: fuga
-		return true
-	})
-
-	return json.Marshal(streams)
-}
-func (s *Server) AddStream(stream *Stream) error {
-	_, ok := s.streamMap.Load(stream.Url)
-	if ok {
-		return errors.New("duplicate stream")
-	}
-
-	// stream := val.(Stream)
-	s.streamMap.Store(stream.Url, stream)
-
 	return nil
 }

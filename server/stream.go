@@ -7,10 +7,10 @@ import (
 )
 
 type Stream struct {
-	Url string `json:"url"`
-	//Username string
-	//Password string
-	cmd *exec.Cmd `json:"-"`
+	URI      string `json:"uri"`
+	Username string
+	Password string
+	cmd      *exec.Cmd `json:"-"`
 	//liveDir  string
 	//recDir string
 	recording bool
@@ -22,9 +22,9 @@ type Stream struct {
 	} `json:"-"`
 }
 
-func NewStream(url string) *Stream {
+func NewStream(uri string) *Stream {
 	return &Stream{
-		Url: url,
+		URI: uri,
 	}
 }
 
