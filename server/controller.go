@@ -11,7 +11,7 @@ import (
 )
 
 type Controller struct {
-	server *Server
+	server  *Server
 	manager *Manager
 
 	router *mux.Router
@@ -20,7 +20,7 @@ type Controller struct {
 func (c *Controller) init() {
 	r := mux.NewRouter()
 	r.HandleFunc("/streams", c.GetStreams).Methods("GET")
-	r.HandleFunc("/streams", c.PostStream).Methods("POST")
+	r.HandleFunc("/streams", c.AddStream).Methods("POST")
 	r.HandleFunc("/streams/{id:[0-9]+}", c.DeleteStream).Methods("DELETE")
 	http.Handle("/", r)
 	c.router = r
@@ -28,7 +28,7 @@ func (c *Controller) init() {
 
 func NewController(server *Server, manager *Manager) *Controller {
 	controller := Controller{
-		server: server,
+		server:  server,
 		manager: manager,
 	}
 	controller.init()
@@ -54,8 +54,7 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 /*
 	curl -i -X POST -d '{"uri":"rtsp://58.72.99.132:30101/Streaming/Channels/101/","username":"admin","password":"unisem1234"}' http://192.168.0.32:9000/streams
 */
-
-func (c *Controller) PostStream(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 	stream := &Stream{}
 	err := c.checkStreamRequest(r.Body, stream)
 	if err != nil {
@@ -71,9 +70,8 @@ func (c *Controller) PostStream(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
- 	curl -i -X DELETE http://192.168.0.32:9000/streams/1
- */
-
+	curl -i -X DELETE http://192.168.0.32:9000/streams/1
+*/
 func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
