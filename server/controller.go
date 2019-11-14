@@ -47,7 +47,7 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 		ResponseError(w, err, http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", ApplicationJson)
 	w.Write(json)
 }
 
