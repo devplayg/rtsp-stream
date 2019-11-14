@@ -3,15 +3,17 @@ package server
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 type Controller struct {
 	server *Server
+	manager *Manager
+
 	router *mux.Router
 }
 
@@ -19,66 +21,71 @@ func (c *Controller) init() {
 	r := mux.NewRouter()
 	r.HandleFunc("/streams", c.GetStreams).Methods("GET")
 	r.HandleFunc("/streams", c.PostStream).Methods("POST")
+	r.HandleFunc("/streams/{id:[0-9]+}", c.DeleteStream).Methods("DELETE")
 	http.Handle("/", r)
 	c.router = r
 }
 
-func NewController(server *Server) *Controller {
+func NewController(server *Server, manager *Manager) *Controller {
 	controller := Controller{
 		server: server,
+		manager: manager,
 	}
 	controller.init()
 	return &controller
 }
 
 func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
-	list, err := c.server.manager.getAllStreams()
+	list, err := c.manager.getAllStreams()
 	if err != nil {
-		log.Error(err)
+		ResponseError(w, err, http.StatusOK)
+		return
+	}
+
+	json, err := json.Marshal(list)
+	if err != nil {
+		ResponseError(w, err, http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(list)
+	w.Write(json)
 }
 
 /*
- curl -i -X POST -d '{"url":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"1234"}' http://192.168.0.14:9000/streams
+	curl -i -X POST -d '{"uri":"rtsp://58.72.99.132:30101/Streaming/Channels/101/","username":"admin","password":"unisem1234"}' http://192.168.0.32:9000/streams
 */
 
-func (c *Controller) ResponseError(w http.ResponseWriter, err error, status int) {
-	log.Error(err)
-	w.Header().Add("Content-Type", ApplicationJson)
-	b, _ := json.Marshal(Result{Error: err})
-	w.WriteHeader(status)
-	w.Write(b)
+func (c *Controller) PostStream(w http.ResponseWriter, r *http.Request) {
+	stream := &Stream{}
+	err := c.checkStreamRequest(r.Body, stream)
+	if err != nil {
+		ResponseError(w, err, http.StatusBadRequest)
+		return
+	}
+	err = c.manager.AddStream(stream)
+	if err != nil {
+		ResponseError(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
-func (c *Controller) PostStream(w http.ResponseWriter, r *http.Request) {
+/*
+ 	curl -i -X DELETE http://192.168.0.32:9000/streams/1
+ */
 
-	stream := Stream{}
-	err := c.checkStreamRequest(r.Body, &stream)
+func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		c.ResponseError(w, err, http.StatusBadRequest)
+		ResponseError(w, err, http.StatusBadRequest)
+		return
 	}
-
-	//if err := r.ParseForm(); err != nil {
-	//	log.Error(err)
-	//	return
-	//}
-	//if !c.isAuthenticated(r) {
-	//	w.WriteHeader(http.StatusForbidden)
-	//	return
-	//}
-	//var dto StreamDto
-	//if err := c.marshalValidatedURI(&dto, r.Body); err != nil {
-	//	logrus.Error(err)
-	//	c.SendError(w, err, http.StatusBadRequest)
-	//	return
-	//}
-
-	//spew.Dump(r.Form.Get("username"))
-
-	//stream := NewStream("rtsp")
-	c.server.manager.AddStream(stream)
+	err = c.manager.DeleteStream(id)
+	if err != nil {
+		ResponseError(w, err, http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -87,12 +94,14 @@ func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
 	if err != nil {
 		return err
 	}
+
 	if err = json.Unmarshal(uri, stream); err != nil {
 		return err
 	}
 
-	if _, err := url.Parse(stream.URI); err != nil {
-		return InvalidUriError
+	if _, err := url.Parse(stream.Uri); err != nil {
+		return ErrorInvalidUri
 	}
+
 	return nil
 }

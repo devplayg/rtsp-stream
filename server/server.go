@@ -1,51 +1,111 @@
 package server
 
 import (
-	"github.com/devplayg/hippo"
-	"github.com/sirupsen/logrus"
-	"log"
-	"net/http"
-	"time"
+    "github.com/boltdb/bolt"
+    "github.com/devplayg/hippo"
+    log "github.com/sirupsen/logrus"
+    "net/http"
+    "time"
 )
 
 type Server struct {
-	engine     *hippo.Engine
-	controller *Controller
-	manager    *Manager
+    engine     *hippo.Engine
+    controller *Controller
+    manager    *Manager
+    addr       string
+    db         *bolt.DB
 }
 
 func NewServer() *Server {
-	server := &Server{}
-	server.controller = NewController(server)
-	server.manager = NewManager(server)
-	return server
+    server := &Server{
+        addr: "0.0.0.0:9000",
+    }
+    manager := NewManager(server)
+    controller := NewController(server, manager)
+
+    server.manager = manager
+    server.controller = controller
+
+    return server
 }
 
 func (s *Server) Start() error {
-	logrus.Debug("RTSP Server is running")
-	srv := &http.Server{
-		Handler: s.controller.router,
-		Addr:    "0.0.0.0:9000",
-		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
+    err := s.init()
+    if err != nil {
+        return err
+    }
 
-	go log.Fatal(srv.ListenAndServe())
+    srv := &http.Server{
+        Handler:      s.controller.router,
+        Addr:         s.addr,
+        WriteTimeout: 15 * time.Second,
+        ReadTimeout:  15 * time.Second,
+    }
 
-	return nil
+    log.WithFields(log.Fields{
+        "address": s.addr,
+    }).Info("listen")
+    go func() {
+        log.Fatal(srv.ListenAndServe())
+    }()
+
+    return nil
 }
 
 func (s *Server) Stop() error {
-	logrus.Debug("RTSP server is stopping")
+    var err error
+    err = s.db.Close()
+    if err != nil {
+        log.Error(err)
+    }
 
-	// Save
+    return nil
+}
 
-	// Stop all streams
-	//println("classifier is stopping")
-	//err := c.DB.Close()
-	//if err != nil {
-	//    return err
-	//}
-	return nil
+func (s *Server) SetEngine(e *hippo.Engine) {
+    s.engine = e
+}
+
+func (s *Server) init() error {
+    var err error
+
+    err = s.initDatabase()
+    if err != nil {
+        return nil
+    }
+    log.Debug("database has been loaded")
+
+    return nil
+}
+
+func (s *Server) initDatabase() error {
+    db, err := bolt.Open(s.engine.Config.Name+".db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+    if err != nil {
+        return err
+    }
+
+    defaultBuckets := [][]byte{
+        StreamBucket,
+        ConfigBucket,
+    }
+
+    tx, err := db.Begin(true)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback()
+
+    for _, b := range defaultBuckets {
+        _, err := tx.CreateBucketIfNotExists(b)
+        if err != nil {
+            return err
+        }
+    }
+
+    if err := tx.Commit(); err != nil {
+        return err
+    }
+
+    s.db = db
+    return nil
 }

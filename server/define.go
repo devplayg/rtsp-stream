@@ -7,8 +7,14 @@ const (
 	Running = 1
 )
 
+var (
+	StreamBucket = []byte("stream")
+	ConfigBucket = []byte("config")
+)
+
+
 var ApplicationJson = "application/json"
-var InvalidUriError = errors.New("invalid URI")
+var ErrorInvalidUri = errors.New("invalid URI")
 
 type Result struct {
 	Error error `json:"error"`
