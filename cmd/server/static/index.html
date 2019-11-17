@@ -13,33 +13,34 @@
         <!-- Remove Tap Highlight on Windows Phone IE -->
         <meta name="msapplication-tap-highlight" content="no">
         <!-- base css -->
-        <link rel="stylesheet" media="screen, print" href="css/vendors.bundle.css">
-        <link rel="stylesheet" media="screen, print" href="css/app.bundle.css">
+        <link rel="stylesheet" media="screen, print" href="assets/css/vendors.bundle.css">
+        <link rel="stylesheet" media="screen, print" href="assets/css/app.bundle.css">
         <!-- Place favicon.ico in the root directory -->
-        <link rel="apple-touch-icon" sizes="180x180" href="img/favicon/apple-touch-icon.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="img/favicon/favicon-32x32.png">
-        <link rel="mask-icon" href="img/favicon/safari-pinned-tab.svg" color="#5bbad5">
-        <link id="mytheme" rel="stylesheet" href="css/themes/cust-theme-12.css">
-        <!--<link rel="stylesheet" media="screen, print" href="css/your_styles.css">-->
+        <link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon/apple-touch-icon.png">
+        <link rel="mask-icon" href="assets/img/favicon/safari-pinned-tab.svg" color="#5bbad5">
+        <link rel="stylesheet" href="assets/css/fa-solid.css">
+        <link rel="stylesheet" href="assets/css/themes/cust-theme-12.css">
+        <link rel="stylesheet" href="plugins/bootstrap-table/bootstrap-table.css">
+        <!--<link rel="stylesheet" media="screen, print" href="assets/css/your_styles.css">-->
     </head>
     <body class="mod-bg-1 ">
         <!-- DOC: script to save and load page settings -->
         <script>
             /**
-             *	This script should be placed right after the body tag for fast execution 
+             *	This script should be placed right after the body tag for fast execution
              *	Note: the script is written in pure javascript and does not depend on thirdparty library
              **/
             'use strict';
 
             var classHolder = document.getElementsByTagName("BODY")[0],
-                /** 
+                /**
                  * Load from localstorage
                  **/
                 themeSettings = (localStorage.getItem('themeSettings')) ? JSON.parse(localStorage.getItem('themeSettings')) :
                 {},
                 themeURL = themeSettings.themeURL || '',
                 themeOptions = themeSettings.themeOptions || '';
-            /** 
+            /**
              * Load theme options
              **/
             if (themeSettings.themeOptions)
@@ -59,8 +60,8 @@
                 cssfile.href = themeURL;
                 document.getElementsByTagName('head')[0].appendChild(cssfile);
             }
-            /** 
-             * Save to localstorage 
+            /**
+             * Save to localstorage
              **/
             var saveSettings = function()
             {
@@ -74,7 +75,7 @@
                 };
                 localStorage.setItem('themeSettings', JSON.stringify(themeSettings));
             }
-            /** 
+            /**
              * Reset settings
              **/
             var resetSettings = function()
@@ -90,7 +91,7 @@
                 <aside class="page-sidebar">
                     <div class="page-logo">
                         <a href="#" class="page-logo-link press-scale-down d-flex align-items-center position-relative" data-toggle="modal" data-target="#modal-shortcut">
-                            <img src="img/avatar.png" alt="SmartAdmin WebApp" aria-roledescription="logo">
+                            <img src="img/logo.png" alt="SmartAdmin WebApp" aria-roledescription="logo" class="rounded" style="height: 30px;">
                             <span class="page-logo-text mr-1">RTSP Stream</span>
                             <span class="position-absolute text-white opacity-50 small pos-top pos-right mr-2 mt-n2">Streaming Project</span>
                         </a>
@@ -153,8 +154,35 @@
                     <!-- the #js-page-content id is needed for some plugins to initialize -->
                     <main id="js-page-content" role="main" class="page-content">
                         <div class="row">
-                            <div class="col-xl-12">
-                                <div id="panel-1" class="panel">
+                            <div class="col-lg-8">
+                                <buttom type="button" class="btn btn-default btn-streams-active" data-id="444"></buttom>
+                                <table id="table-streams"
+                                       data-search="true"
+                                       data-id-field="id"
+                                        data-url="/streams"
+                                        data-pagination="true"
+                                        data-side-pagination="client"
+                                        data-click-to-select="true"
+                                       data-show-refresh="true"
+                                       data-sort-name="uri"
+                                       data-sort-order="asc"
+
+                                >
+                                    <thead>
+                                    <tr>
+                                        <th data-formatter="streamsActionFormatter" data-visible="false">Action</th>
+                                        <th data-field="id" data-visible="false">ID</th>
+                                        <th data-field="uri">URI</th>
+                                        <th data-field="active">Active</th>
+
+                                        <th data-formatter="streamsControlFormatter" data-events="streamsActiveEvents">Control</th>
+                                        <th data-field="recording" data-formatter="streamsRecordingFormatter">Recording</th>
+                                    </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="panel">
                                     <div class="panel-container show">
                                         <div class="panel-content">
                                             <form id="form-streams">
@@ -177,11 +205,11 @@
                                                     <input type="password" name="password" class="form-control" value="1234"/>
                                                 </div>
 
-                                                <button type="button" class="btn btn-primary btn-stream-add">Add</button>
-                                                <button type="button" class="btn btn-primary btn-stream-list">List</button>
-                                                <button type="button" class="btn btn-default btn-stream-start">Start</button>
-                                                <button type="button" class="btn btn-default btn-stream-stop">Stop</button>
-                                                <button type="button" class="btn btn-danger btn-stream-delete">Delete</button>
+                                                <button type="button" class="btn btn-primary btn-streams-add">Add</button>
+                                                <button type="button" class="btn btn-primary btn-streams-list">List</button>
+                                                <button type="button" class="btn btn-default btn-streams-start">Start</button>
+                                                <button type="button" class="btn btn-default btn-streams-stop">Stop</button>
+                                                <button type="button" class="btn btn-danger btn-streams-delete">Delete</button>
                                             </form>
                                         </div>
                                     </div>
@@ -199,8 +227,8 @@
             </div>
         </div>
         <!-- END Page Wrapper -->
-        <!-- base vendor bundle: 
-			 DOC: if you remove pace.js from core please note on Internet Explorer some CSS animations may execute before a page is fully loaded, resulting 'jump' animations 
+        <!-- base vendor bundle:
+			 DOC: if you remove pace.js from core please note on Internet Explorer some CSS animations may execute before a page is fully loaded, resulting 'jump' animations
 						+ pace.js (recommended)
 						+ jquery.js (core)
 						+ jquery-ui-cust.js (core)
@@ -212,12 +240,19 @@
 						+ waves.js (extension)
 						+ smartpanels.js (extension)
 						+ src/../jquery-snippets.js (core) -->
-        <script src="js/vendors.bundle.js"></script>
-        <script src="js/app.bundle.js"></script>
+        <script src="assets/js/vendors.bundle.js"></script>
+        <script src="assets/js/app.bundle.js"></script>
         <script src="js/custom.js"></script>
+
         <script>
             $(document).ready(function () {
+
+
             });
         </script>
+        <!-- Module -->
+        <script src="plugins/bootstrap-table/bootstrap-table.js"></script>
+        <script src="js/streams.js"></script>
+        <script src="js/formatter.js"></script>
     </body>
 </html>
