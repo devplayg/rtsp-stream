@@ -7,34 +7,31 @@ import (
 )
 
 type Stream struct {
-	Id       int64
-	Uri      string
-	Username string    `json:"-"`
-	Password string    `json:"-"`
-	cmd      *exec.Cmd `json:"-"`
-	//liveDir  string
-	//recDir string
-	recording bool
-	status    int
-
-	Storage struct {
-		Recording string
-		Live      string
-	} `json:"-"`
+	Id        string `json:"id"`
+	Uri       string `json:"uri"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Recording bool
+	Active    bool
+	LiveDir   string
+	RecDir    string
+	CmdType   int
+	cmd       *exec.Cmd
 }
 
-func NewStream(uri string) *Stream {
-	return &Stream{
-		Uri: uri,
-	}
-}
+//
+//func NewStream(uri string) *Stream {
+//	return &Stream{
+//		Uri: uri,
+//	}
+//}
 
-func (s *Stream) Start() error {
-	s.status = Running
+func (s *Stream) start() error {
+	s.Active = true
 	return nil
 }
 
-func (s *Stream) Stop() error {
+func (s *Stream) stop() error {
 	err := s.cmd.Process.Kill()
 	if strings.Contains(err.Error(), "process already finished") {
 		return nil
@@ -45,39 +42,9 @@ func (s *Stream) Stop() error {
 	return err
 }
 
-func generateStreamCmd(uri string, dir string) *exec.Cmd {
-	cmd := exec.Command(
-		"ffmpeg",
-		"-y",
-		"-fflags",
-		"nobuffer",
-		"-rtsp_transport",
-		"tcp",
-		"-i",
-		uri,
-		"-vsync",
-		"0",
-		"-copyts",
-		"-vcodec",
-		"copy",
-		"-movflags",
-		"frag_keyframe+empty_moov",
-		"-an",
-		"-hls_flags",
-		"append_list",
-		"-f",
-		"hls",
-		"-segment_list_flags",
-		"live",
-		"-hls_time",
-		"1",
-		"-hls_list_size",
-		"3",
-		"-hls_segment_filename",
-		fmt.Sprintf("%s/%%d.ts", dir),
-		fmt.Sprintf("%s/index.m3u8", dir),
-	)
-	return cmd
+func (s *Stream) StreamUri() string {
+	uri := strings.TrimPrefix(s.Uri, "rtsp://")
+	return fmt.Sprintf("rtsp://%s:%s@%s", s.Username, s.Password, uri)
 }
 
 //

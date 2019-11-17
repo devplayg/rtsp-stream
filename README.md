@@ -1,3 +1,14 @@
 # RTSP Streaming
 
-Powered by Go and FFmpeg
+### Powered by 
+
+* Go
+* FFmpeg
+* Highwayhash
+
+
+### Database structure
+
+
+streams | streams | streams
+

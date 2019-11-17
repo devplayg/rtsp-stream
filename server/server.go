@@ -1,111 +1,131 @@
 package server
 
 import (
-    "github.com/boltdb/bolt"
-    "github.com/devplayg/hippo"
-    log "github.com/sirupsen/logrus"
-    "net/http"
-    "time"
+	"github.com/boltdb/bolt"
+	"github.com/devplayg/hippo"
+	log "github.com/sirupsen/logrus"
+	"net/http"
+	"time"
 )
 
 type Server struct {
-    engine     *hippo.Engine
-    controller *Controller
-    manager    *Manager
-    addr       string
-    db         *bolt.DB
+	engine     *hippo.Engine
+	controller *Controller
+	manager    *Manager
+	addr       string
+	liveDir    string
+	recDir     string
+	db         *bolt.DB
 }
 
 func NewServer() *Server {
-    server := &Server{
-        addr: "0.0.0.0:9000",
-    }
-    manager := NewManager(server)
-    controller := NewController(server, manager)
+	server := &Server{
+		addr:    "0.0.0.0:9000",
+		liveDir: "f:/data/live/",
+		recDir:  "f:/data/rec/",
+	}
 
-    server.manager = manager
-    server.controller = controller
+	//net.ResolveTCPAddr("tcp", tcpAddr)
+	manager := NewManager(server)
 
-    return server
+	controller := NewController(server, manager)
+
+	server.manager = manager
+	server.controller = controller
+
+	return server
 }
 
 func (s *Server) Start() error {
-    err := s.init()
-    if err != nil {
-        return err
-    }
+	err := s.init()
+	if err != nil {
+		return err
+	}
 
-    srv := &http.Server{
-        Handler:      s.controller.router,
-        Addr:         s.addr,
-        WriteTimeout: 15 * time.Second,
-        ReadTimeout:  15 * time.Second,
-    }
+	srv := &http.Server{
+		Handler: s.controller.router,
+		Addr:    s.addr,
 
-    log.WithFields(log.Fields{
-        "address": s.addr,
-    }).Info("listen")
-    go func() {
-        log.Fatal(srv.ListenAndServe())
-    }()
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
 
-    return nil
+	log.WithFields(log.Fields{
+		"address": s.addr,
+	}).Info("listen")
+	go func() {
+		log.Fatal(srv.ListenAndServe())
+	}()
+
+	return nil
 }
 
 func (s *Server) Stop() error {
-    var err error
-    err = s.db.Close()
-    if err != nil {
-        log.Error(err)
-    }
+	var err error
+	err = s.db.Close()
+	if err != nil {
+		log.Error(err)
+	}
 
-    return nil
+	return nil
 }
 
 func (s *Server) SetEngine(e *hippo.Engine) {
-    s.engine = e
+	s.engine = e
 }
 
 func (s *Server) init() error {
-    var err error
+	var err error
 
-    err = s.initDatabase()
-    if err != nil {
-        return nil
-    }
-    log.Debug("database has been loaded")
+	err = s.initDatabase()
+	if err != nil {
+		return nil
+	}
+	log.Debug("database has been loaded")
 
-    return nil
+	s.manager.loadStreams()
+
+	return nil
 }
 
 func (s *Server) initDatabase() error {
-    db, err := bolt.Open(s.engine.Config.Name+".db", 0600, &bolt.Options{Timeout: 1 * time.Second})
-    if err != nil {
-        return err
-    }
+	db, err := bolt.Open(s.engine.Config.Name+".db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return err
+	}
 
-    defaultBuckets := [][]byte{
-        StreamBucket,
-        ConfigBucket,
-    }
+	defaultBuckets := [][]byte{
+		StreamBucket,
+		ConfigBucket,
+	}
 
-    tx, err := db.Begin(true)
-    if err != nil {
-        return err
-    }
-    defer tx.Rollback()
+	tx, err := db.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-    for _, b := range defaultBuckets {
-        _, err := tx.CreateBucketIfNotExists(b)
-        if err != nil {
-            return err
-        }
-    }
+	for _, b := range defaultBuckets {
+		_, err := tx.CreateBucketIfNotExists(b)
+		if err != nil {
+			return err
+		}
+	}
 
-    if err := tx.Commit(); err != nil {
-        return err
-    }
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 
-    s.db = db
-    return nil
+	s.db = db
+	return nil
+}
+
+func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
+	var data []byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucket)
+		data = bucket.Get(key)
+		return nil
+	})
+	return data, err
 }
