@@ -3,8 +3,10 @@ package server
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/minio/highwayhash"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os/exec"
@@ -24,6 +26,11 @@ func ResponseError(w http.ResponseWriter, err error, status int) {
 	b, _ := json.Marshal(Result{Error: err.Error()})
 	w.WriteHeader(status)
 	w.Write(b)
+}
+
+func GetHashString(str string) string {
+	hash := highwayhash.Sum128([]byte(str), HashKey)
+	return hex.EncodeToString(hash[:])
 }
 
 func BytesToInt64(buf []byte) int64 {

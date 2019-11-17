@@ -119,7 +119,13 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 		ResponseError(w, errors.New("empty stream key"), http.StatusBadRequest)
 		return
 	}
-	err := c.manager.startStream(vars["id"])
+	stream := c.manager.getStreamById(vars["id"])
+	if stream == nil {
+		ResponseError(w, errors.New("stream not found"), http.StatusOK)
+		return
+	}
+
+	err := c.manager.startStream(stream)
 	if err != nil {
 		ResponseError(w, err, http.StatusInternalServerError)
 		return
@@ -133,7 +139,7 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 		ResponseError(w, errors.New("empty stream key"), http.StatusBadRequest)
 		return
 	}
-	err := c.manager.stopStream(vars["id"])
+	err := c.manager.stopStreamProcess(vars["id"])
 	if err != nil {
 		ResponseError(w, err, http.StatusInternalServerError)
 		return
