@@ -7,11 +7,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
 
-var StreamsKey = []byte("streams")
+var StreamsKey = []byte("streams") // will be removed
 
 type Manager struct {
 	server  *Server
@@ -67,7 +68,7 @@ func (m *Manager) getStreams() []*Stream {
 	return streams
 }
 
-func (m *Manager) getStreamById(id string) *Stream {
+func (m *Manager) getStreamById(id int64) *Stream {
 	val, ok := m.streams.Load(id)
 	if !ok {
 		return nil
@@ -76,40 +77,44 @@ func (m *Manager) getStreamById(id string) *Stream {
 	return val.(*Stream)
 }
 
-func (m *Manager) setStream(stream *Stream) {
-	stream.Id = GetHashString(stream.Uri)
+func (m *Manager) setStream(stream *Stream, id int64) {
+	stream.Id = id
+	stream.Hash = GetHashString(stream.Uri)
 	stream.CmdType = NormalStream
-	stream.LiveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, stream.Id))
-	stream.RecDir = filepath.ToSlash(filepath.Join(m.server.recDir, stream.Id))
+	stream.LiveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, strconv.FormatInt(stream.Id, 16)))
+	stream.RecDir = filepath.ToSlash(filepath.Join(m.server.recDir, strconv.FormatInt(stream.Id, 16)))
 	stream.cmd = GenerateStreamCommand(stream)
 }
 
 func (m *Manager) addStream(stream *Stream) error {
-	// Set the stream
-	m.setStream(stream)
 
-	// Check if the stream is duplicated
-	if _, ok := m.streams.Load(stream.Id); ok {
+	// Check if the stream URI is duplicated
+	if m.IsExistUri(stream.Uri) {
 		return ErrorDuplicatedStream
 	}
 
-	// Update stream map
-	m.streams.Store(stream.Id, stream)
+	err := m.server.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(StreamBucket)
 
-	if err := m.save(); err != nil {
-		log.Error("failed to save stream")
-		return err
+		id, _ := b.NextSequence()
+		m.setStream(stream, int64(id))
+
+		buf, err := json.Marshal(stream)
+		if err != nil {
+			return err
+		}
+
+		return b.Put(Int64ToBytes(stream.Id), buf)
+	})
+
+	if err == nil {
+		m.streams.Store(stream.Id, stream)
 	}
 
-	if err := m.startStream(stream); err != nil {
-		log.Error("failed to start stream")
-		return err
-	}
-
-	return nil
+	return err
 }
 
-func (m *Manager) deleteStream(id string) error {
+func (m *Manager) deleteStream(id int64) error {
 	stream := m.getStreamById(id)
 	if stream == nil {
 		return ErrorStreamNotFound
@@ -156,8 +161,25 @@ func (m *Manager) createStreamDir(stream *Stream) error {
 	return nil
 }
 
+func (m *Manager) IsExistUri(uri string) bool {
+	duplicated := false
+	hash := GetHashString(uri)
+
+	m.streams.Range(func(k interface{}, v interface{}) bool {
+		s := v.(*Stream)
+		if s.Hash == hash {
+			duplicated = true
+			return false
+		}
+
+		return true
+	})
+
+	return duplicated
+}
+
 func (m *Manager) startStream(stream *Stream) error {
-	m.setStream(stream)
+	//m.setStream(stream)
 
 	if err := m.cleanStreamDir(stream); err != nil {
 		return err
@@ -208,4 +230,14 @@ func (m *Manager) stopStreamProcess(id string) error {
 	}
 
 	return err
+}
+
+func (m *Manager) printStream(stream *Stream) {
+	log.Debug("===================================================")
+	log.Debugf("id: %d", stream.Id)
+	log.Debugf("hash: %d", stream.Hash)
+	log.Debugf("uri: %s", stream.Uri)
+	log.Debugf("active: %s", stream.Active)
+	log.Debugf("recording: %s", stream.Recording)
+	log.Debug("===================================================")
 }

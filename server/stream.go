@@ -10,19 +10,19 @@ import (
 )
 
 type Stream struct {
-	Id        string `json:"id"`
-	Uri       string `json:"uri"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	Recording bool   `json:"recording"`
-	Active    bool   `json:"active"`
-	LiveDir   string
-	RecDir    string
-	CmdType   int
-	cmd       *exec.Cmd
+	Id        int64     `json:"id"`
+	Uri       string    `json:"uri"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	Recording bool      `json:"recording"`
+	Active    bool      `json:"active"`
+	LiveDir   string    `json:"-"`
+	RecDir    string    `json:"-"`
+	Hash      string    `json:"hash"`
+	CmdType   int       `json:"-"`
+	cmd       *exec.Cmd `json:"-"`
 }
 
-//
 //func NewStream(uri string) *Stream {
 //	return &Stream{
 //		Uri: uri,

@@ -21,8 +21,8 @@ type Server struct {
 func NewServer() *Server {
 	server := &Server{
 		addr:    "0.0.0.0:9000",
-		liveDir: "f:/data/live/",
-		recDir:  "f:/data/rec/",
+		liveDir: "e:/data/live/",
+		recDir:  "e:/data/rec/",
 	}
 
 	//net.ResolveTCPAddr("tcp", tcpAddr)
@@ -83,7 +83,7 @@ func (s *Server) init() error {
 	}
 	log.Debug("database has been loaded")
 
-	s.manager.loadStreams()
+	s.manager.load()
 
 	return nil
 }

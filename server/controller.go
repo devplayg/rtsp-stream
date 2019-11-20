@@ -23,7 +23,9 @@ func (c *Controller) init() {
 	r := mux.NewRouter()
 	r.HandleFunc("/streams", c.GetStreams).Methods("GET")
 	r.HandleFunc("/streams", c.AddStream).Methods("POST")
+
 	r.HandleFunc("/streams/{id}", c.GetStreamById).Methods("GET")
+	r.HandleFunc("/streams/{id}", c.UpdateStream).Methods("PATCH")
 	r.HandleFunc("/streams/{id}", c.DeleteStream).Methods("DELETE")
 
 	r.HandleFunc("/streams/{id}/start", c.StartStream).Methods("GET")
@@ -96,6 +98,27 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
+	data, err := ioutil.ReadAll(body)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(data, stream); err != nil {
+		return err
+	}
+
+	if _, err := url.Parse(stream.Uri); err != nil {
+		return ErrorInvalidUri
+	}
+
+	return nil
+}
+
 /*
 	curl -i -X DELETE http://192.168.0.14:9000/streams/ee3b86ddc65b2dcbf7edcc649825af2c
 */
@@ -113,6 +136,7 @@ func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// For test
 func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if len(vars["id"]) < 1 {
@@ -145,21 +169,4 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-}
-
-func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
-	data, err := ioutil.ReadAll(body)
-	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal(data, stream); err != nil {
-		return err
-	}
-
-	if _, err := url.Parse(stream.Uri); err != nil {
-		return ErrorInvalidUri
-	}
-
-	return nil
 }

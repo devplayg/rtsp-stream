@@ -23,7 +23,7 @@
         <link rel="stylesheet" href="plugins/bootstrap-table/bootstrap-table.css">
         <!--<link rel="stylesheet" media="screen, print" href="assets/css/your_styles.css">-->
     </head>
-    <body class="mod-bg-1 ">
+    <body class="mod-bg-1">
         <!-- DOC: script to save and load page settings -->
         <script>
             /**
@@ -88,7 +88,7 @@
         <div class="page-wrapper">
             <div class="page-inner">
                 <!-- BEGIN Left Aside -->
-                <aside class="page-sidebar">
+                <aside class="page-sidebar invisible">
                     <div class="page-logo">
                         <a href="#" class="page-logo-link press-scale-down d-flex align-items-center position-relative" data-toggle="modal" data-target="#modal-shortcut">
                             <img src="img/logo.png" alt="SmartAdmin WebApp" aria-roledescription="logo" class="rounded" style="height: 30px;">
@@ -101,7 +101,7 @@
                         <div class="nav-filter">
                             <div class="position-relative">
                                 <input type="text" id="nav_filter_input" placeholder="Filter menu" class="form-control" tabindex="0">
-                                <a href="#" onclick="return false;" class="btn-primary btn-search-close js-waves-off" data-action="toggle" data-class="list-filter-active" data-target=".page-sidebar">
+                                <a href="#" onclick="return false;" class="btn-default btn-search-close js-waves-off" data-action="toggle" data-class="list-filter-active" data-target=".page-sidebar">
                                     <i class="fal fa-chevron-up"></i>
                                 </a>
                             </div>
@@ -143,7 +143,7 @@
                             </a>
                         </div>
                         <!-- DOC: mobile button appears during mobile width -->
-                        <div class="hidden-lg-up">
+                        <div class="hidden-lg-up d-none">
                             <a href="#" class="header-btn btn press-scale-down" data-action="toggle" data-class="mobile-nav-on">
                                 <i class="ni ni-menu"></i>
                             </a>
@@ -154,8 +154,7 @@
                     <!-- the #js-page-content id is needed for some plugins to initialize -->
                     <main id="js-page-content" role="main" class="page-content">
                         <div class="row">
-                            <div class="col-lg-8">
-                                <buttom type="button" class="btn btn-default btn-streams-active" data-id="444"></buttom>
+                            <div class="col-lg-12">
                                 <table id="table-streams"
                                        data-search="true"
                                        data-id-field="id"
@@ -165,9 +164,7 @@
                                         data-click-to-select="true"
                                        data-show-refresh="true"
                                        data-sort-name="uri"
-                                       data-sort-order="asc"
-
-                                >
+                                       data-sort-order="asc">
                                     <thead>
                                     <tr>
                                         <th data-formatter="streamsActionFormatter" data-visible="false">Action</th>
@@ -181,11 +178,51 @@
                                     </thead>
                                 </table>
                             </div>
-                            <div class="col-lg-4">
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6">
                                 <div class="panel">
                                     <div class="panel-container show">
                                         <div class="panel-content">
-                                            <form id="form-streams">
+                                            <form id="form-streams-add">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="">-</label>
+                                                    <input type="text" name="id" class="form-control input-sm"  value="N/A" readonly>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="form-label" for="">URI</label>
+                                                    <input type="text" name="uri" class="form-control" value="rtsp://127.0.0.1:30101/Streaming/Channels/101/" />
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label class="form-label" for="">Username</label>
+                                                    <input type="text" name="username" class="form-control" value="admin"/>
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label class="form-label" for="">Password</label>
+                                                    <input type="password" name="password" class="form-control" value="1234"/>
+                                                </div>
+
+
+                                                <button type="button" class="btn btn-default btn-streams-add">Add</button>
+                                                <!--
+                                                <button type="button" class="btn btn-default btn-streams-list">List</button>
+                                                <button type="button" class="btn btn-default btn-streams-start">Start</button>
+                                                <button type="button" class="btn btn-default btn-streams-stop">Stop</button>
+                                                <button type="button" class="btn btn-default btn-streams-delete">Delete</button>
+                                                -->
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="panel">
+                                    <div class="panel-container show">
+                                        <div class="panel-content">
+                                            <form id="form-streams-edit">
                                                 <div class="form-group">
                                                     <label class="form-label" for="">ID</label>
                                                     <input type="text" name="id" class="form-control" readonly>
@@ -205,11 +242,13 @@
                                                     <input type="password" name="password" class="form-control" value="1234"/>
                                                 </div>
 
-                                                <button type="button" class="btn btn-primary btn-streams-add">Add</button>
-                                                <button type="button" class="btn btn-primary btn-streams-list">List</button>
+                                                <button type="button" class="btn btn-default btn-streams-update">Update</button>
+                                                <!--
+                                                <button type="button" class="btn btn-default btn-streams-list">List</button>
                                                 <button type="button" class="btn btn-default btn-streams-start">Start</button>
                                                 <button type="button" class="btn btn-default btn-streams-stop">Stop</button>
-                                                <button type="button" class="btn btn-danger btn-streams-delete">Delete</button>
+                                                <button type="button" class="btn btn-default btn-streams-delete">Delete</button>
+                                                -->
                                             </form>
                                         </div>
                                     </div>
