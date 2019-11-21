@@ -6,6 +6,17 @@
 * FFmpeg
 * Highwayhash
 
+### Server
+
+* Service
+
+### Controller
+
+* Routing
+    
+### Manager
+
+* Stream management 
 
 ### Database structure
 

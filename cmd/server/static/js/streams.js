@@ -10,7 +10,6 @@ $(function() {
     });
 
     $(".btn-streams-add").click(function() {
-        console.log("add");
         let $form = $("#form-streams-add"),
             url = "/streams";
 

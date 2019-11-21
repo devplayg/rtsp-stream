@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/server"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,16 +24,17 @@ func main() {
 		Verbose:     true,
 	}
 
+	configPath := "config.yaml"
+	appConfig, err := server.ReadConfig(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	hippo.InitLogger("", appName, config.Debug, config.Verbose)
 
-	addr := "0.0.0.0:9000"
-	liveDir := "e:/data/live/"
-	recDir := "e:/data/rec/"
-
-	server := server.NewServer(addr, liveDir, recDir)
+	server := server.NewServer(appConfig.BindAddress, appConfig.Storage.Live, appConfig.Storage.Recording)
 	engine := hippo.NewEngine(server, config)
-	err := engine.Start()
-	if err != nil {
-		logrus.Fatal(err)
+	if err := engine.Start(); err != nil {
+		log.Fatal(err)
 	}
 }

@@ -67,16 +67,20 @@ func (s *Server) SetEngine(e *hippo.Engine) {
 }
 
 func (s *Server) init() error {
-	var err error
 
-	err = s.initDatabase()
-	if err != nil {
+	// Initialize database
+	if err := s.initDatabase(); err != nil {
 		return nil
 	}
 	log.Debug("database has been loaded")
 
+	// Set manager
 	s.manager = NewManager(s)
-	s.manager.load()
+	if err := s.manager.load(); err != nil {
+		return err
+	}
+
+	// Set controller
 	s.controller = NewController(s)
 
 	return nil

@@ -36,9 +36,6 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id}/stop", c.StopStream).Methods("GET")
 
-	//fs := http.FileServer(http.Dir("static"))
-	//http.Handle("/static/", http.StripPrefix("/static/", fs))
-	//r.Handle("/static/", fs).Methods()
 	r.
 		PathPrefix(StaticDir).
 		Handler(http.StripPrefix(StaticDir, http.FileServer(http.Dir("."+StaticDir))))

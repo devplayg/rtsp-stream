@@ -21,7 +21,7 @@
         <link rel="stylesheet" href="assets/css/fa-solid.css">
         <link rel="stylesheet" href="assets/css/themes/cust-theme-12.css">
         <link rel="stylesheet" href="plugins/bootstrap-table/bootstrap-table.css">
-        <!--<link rel="stylesheet" media="screen, print" href="assets/css/your_styles.css">-->
+        <link rel="stylesheet" href="plugins/videojs/video-js.min.css">
     </head>
     <body class="mod-bg-1">
         <!-- DOC: script to save and load page settings -->
@@ -186,7 +186,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-lg-6">
+                            <div class="col-md-6">
                                 <div class="panel">
                                     <div class="panel-container show">
                                         <div class="panel-content">
@@ -228,7 +228,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-lg-6">
+                            <div class="col-md-6">
                                 <div class="panel">
                                     <div class="panel-container show">
                                         <div class="panel-content">
@@ -269,6 +269,14 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!--
+                        <div>
+                            <video-js id=example-video width=960 height=540 class="vjs-default-skin" controls>
+                                <source src="live/7/index.m3u8" type="application/x-mpegURL">
+                            </video-js>
+                        </div>
+                        -->
                     </main>
                     <!-- this overlay is activated only when mobile menu is triggered -->
                     <div class="page-content-overlay" data-action="toggle" data-class="mobile-nav-on"></div> <!-- END Page Content -->
@@ -305,7 +313,23 @@
         </script>
         <!-- Module -->
         <script src="plugins/bootstrap-table/bootstrap-table.js"></script>
+        <script src="plugins/videojs/video.min.js"></script>
+        <script src="plugins/videojs/videojs-http-streaming.min.js"></script>
+
         <script src="js/streams.js"></script>
         <script src="js/formatter.js"></script>
+        <script>
+            let player = videojs('example-video', {
+                playbackRates: [0.5, 1, 1.5, 2, 4]
+            });
+            player.play();
+
+            // (function(window, videojs) {
+            //     var player = window.player = videojs('videojs-playbackrate-adjuster-player', {
+            //         playbackRates: [0.5, 1, 1.5, 2, 4]
+            //     });
+            //
+            // }(window, window.videojs));
+        </script>
     </body>
 </html>

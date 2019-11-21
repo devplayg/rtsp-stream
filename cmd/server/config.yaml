@@ -1,0 +1,4 @@
+storage:
+  live: /data/live
+  recording: /data/record
+bind-address: 0.0.0.0:9000

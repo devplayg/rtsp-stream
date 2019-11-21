@@ -256,8 +256,10 @@ func (m *Manager) startStream(stream *Stream) error {
 		}
 	}()
 	log.WithFields(log.Fields{
-		"id":  stream.Id,
-		"uri": stream.Uri,
+		"id":      stream.Id,
+		"uri":     stream.Uri,
+		"liveDir": stream.LiveDir,
+		"recDir":  stream.RecDir,
 	}).Info("streaming has been started")
 	return nil
 }
