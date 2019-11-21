@@ -1,14 +1,24 @@
 function streamsControlFormatter(val, row, idx) {
     return [
-        '<a href="#" class="delete data-id="' + row.id + '">',
+        '<a href="#" class="delete" data-id="' + row.id + '">',
         "Delete",
         '</a>',
-        '<button class="btn btn-default btn-xs start data-id="' + row.id + '">',
+        '<br>',
+
+        '<a href="#" class="start" data-id="' + row.id + '">',
         "Start",
-        '</button>',
-        '<button class="btn btn-default btn-xs stop data-id="' + row.id + '">',
+        '</a>',
+        '<br>',
+
+        '<a href="#" class="stop" data-id="' + row.id + '">',
         "Stop",
-        '</button>',
+        '</a>',
+        '<br>',
+
+        '<a href="#" class="edit" data-id="' + row.id + '">',
+        "Edit",
+        '</a>',
+
     ].join("");
 }
 

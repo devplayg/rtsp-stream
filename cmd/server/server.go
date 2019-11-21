@@ -26,7 +26,11 @@ func main() {
 
 	hippo.InitLogger("", appName, config.Debug, config.Verbose)
 
-	server := server.NewServer()
+	addr := "0.0.0.0:9000"
+	liveDir := "e:/data/live/"
+	recDir := "e:/data/rec/"
+
+	server := server.NewServer(addr, liveDir, recDir)
 	engine := hippo.NewEngine(server, config)
 	err := engine.Start()
 	if err != nil {

@@ -12,49 +12,77 @@ import (
 	"sync"
 )
 
-var StreamsKey = []byte("streams") // will be removed
+// var StreamsKey = []byte("streams") // will be removed
 
 type Manager struct {
 	server  *Server
 	streams sync.Map
+	db      *bolt.DB
 }
 
 func NewManager(server *Server) *Manager {
 	return &Manager{
-		server: server,
+		server:  server,
+		streams: sync.Map{}, /* key: id(int64), value: &stream */
+		db:      server.db,
 	}
 }
 
 func (m *Manager) save() error {
-	b, err := json.Marshal(m.getStreams())
-	if err != nil {
+	if err := m.saveStreams(); err != nil {
 		return err
-	}
-
-	return m.server.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(StreamBucket)
-		return bucket.Put(StreamsKey, b)
-	})
-}
-
-func (m *Manager) loadStreams() error {
-	data, err := m.server.GetDbValue(StreamBucket, StreamsKey)
-	if err != nil {
-		return err
-	}
-
-	var streams []Stream
-	err = json.Unmarshal(data, &streams)
-	if err != nil {
-		return err
-	}
-
-	m.streams = sync.Map{}
-	for i := range streams {
-		m.streams.Store(streams[i].Id, &streams[i])
 	}
 
 	return nil
+}
+
+func (m *Manager) saveStreams() error {
+
+	return m.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(StreamBucket)
+
+		// Clear bucket
+		c := bucket.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			_ = bucket.Delete(k)
+		}
+
+		m.streams.Range(func(k interface{}, v interface{}) bool {
+			s := v.(*Stream)
+			b, err := json.Marshal(s)
+			if err != nil {
+				log.Error(err)
+				return false
+			}
+			if err := bucket.Put(Int64ToBytes(s.Id), b); err != nil {
+				log.Error(err)
+				return false
+			}
+
+			return true
+		})
+
+		return nil
+	})
+}
+
+func (m *Manager) load() error {
+	return m.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(StreamBucket))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var stream Stream
+			err := json.Unmarshal(v, &stream)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			m.setStream(&stream, stream.Id)
+			m.streams.Store(stream.Id, &stream)
+		}
+
+		return nil
+	})
 }
 
 func (m *Manager) getStreams() []*Stream {
@@ -88,16 +116,45 @@ func (m *Manager) setStream(stream *Stream, id int64) {
 
 func (m *Manager) addStream(stream *Stream) error {
 
-	// Check if the stream URI is duplicated
-	if m.IsExistUri(stream.Uri) {
+	// Check if the stream URI is empty or duplicated
+	if m.IsExistUri(stream.Uri) || len(stream.Uri) < 1 {
 		return ErrorDuplicatedStream
 	}
 
-	err := m.server.db.Update(func(tx *bolt.Tx) error {
+	err := m.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(StreamBucket)
 
 		id, _ := b.NextSequence()
 		m.setStream(stream, int64(id))
+
+		buf, err := json.Marshal(stream)
+		if err != nil {
+			return err
+		}
+
+		return b.Put(Int64ToBytes(stream.Id), buf)
+	})
+
+	if err == nil {
+		m.streams.Store(stream.Id, stream)
+	}
+
+	m.save()
+
+	return err
+}
+
+func (m *Manager) updateStream(stream *Stream) error {
+
+	// Check if the stream URI is empty or duplicated
+	if len(stream.Uri) < 1 {
+		return ErrorInvalidUri
+	}
+
+	err := m.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(StreamBucket)
+
+		m.setStream(stream, stream.Id)
 
 		buf, err := json.Marshal(stream)
 		if err != nil {
@@ -126,6 +183,8 @@ func (m *Manager) deleteStream(id int64) error {
 	}
 
 	m.streams.Delete(id)
+
+	m.saveStreams()
 	return m.save()
 }
 
@@ -203,7 +262,7 @@ func (m *Manager) startStream(stream *Stream) error {
 	return nil
 }
 
-func (m *Manager) stopStreamProcess(id string) error {
+func (m *Manager) stopStreamProcess(id int64) error {
 	stream := m.getStreamById(id)
 	if stream == nil {
 		return ErrorStreamNotFound

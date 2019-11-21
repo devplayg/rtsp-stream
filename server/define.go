@@ -1,6 +1,8 @@
 package server
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 const (
 	Stopped = 0
@@ -21,4 +23,15 @@ var ErrorStreamNotFound = errors.New("stream not found")
 
 type Result struct {
 	Error string `json:"error"`
+}
+
+func NewResult(err error) *Result {
+	var errMsg string
+	if err != nil {
+		errMsg = err.Error()
+	}
+
+	return &Result{
+		Error: errMsg,
+	}
 }

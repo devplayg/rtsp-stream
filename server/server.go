@@ -18,20 +18,12 @@ type Server struct {
 	db         *bolt.DB
 }
 
-func NewServer() *Server {
+func NewServer(addr, liveDir, recDir string) *Server {
 	server := &Server{
-		addr:    "0.0.0.0:9000",
-		liveDir: "e:/data/live/",
-		recDir:  "e:/data/rec/",
+		addr:    addr,
+		liveDir: liveDir,
+		recDir:  recDir,
 	}
-
-	//net.ResolveTCPAddr("tcp", tcpAddr)
-	manager := NewManager(server)
-
-	controller := NewController(server, manager)
-
-	server.manager = manager
-	server.controller = controller
 
 	return server
 }
@@ -83,7 +75,9 @@ func (s *Server) init() error {
 	}
 	log.Debug("database has been loaded")
 
+	s.manager = NewManager(s)
 	s.manager.load()
+	s.controller = NewController(s)
 
 	return nil
 }

@@ -20,11 +20,14 @@ func init() {
 	HashKey = sum[:]
 }
 
-func ResponseError(w http.ResponseWriter, err error, status int) {
-	log.Error(err)
+func Response(w http.ResponseWriter, err error, statusCode int) {
+	if statusCode != http.StatusOK {
+		log.Error(err)
+	}
+
 	w.Header().Add("Content-Type", ApplicationJson)
-	b, _ := json.Marshal(Result{Error: err.Error()})
-	w.WriteHeader(status)
+	b, _ := json.Marshal(NewResult(err))
+	w.WriteHeader(statusCode)
 	w.Write(b)
 }
 

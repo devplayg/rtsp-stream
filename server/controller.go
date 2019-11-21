@@ -2,12 +2,16 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/boltdb/bolt"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 var StaticDir = "/static/"
@@ -23,6 +27,7 @@ func (c *Controller) init() {
 	r := mux.NewRouter()
 	r.HandleFunc("/streams", c.GetStreams).Methods("GET")
 	r.HandleFunc("/streams", c.AddStream).Methods("POST")
+	r.HandleFunc("/streams/debug", c.DebugStream).Methods("GET")
 
 	r.HandleFunc("/streams/{id}", c.GetStreamById).Methods("GET")
 	r.HandleFunc("/streams/{id}", c.UpdateStream).Methods("PATCH")
@@ -44,10 +49,10 @@ func (c *Controller) init() {
 	c.router = r
 }
 
-func NewController(server *Server, manager *Manager) *Controller {
+func NewController(server *Server) *Controller {
 	controller := Controller{
 		server:  server,
-		manager: manager,
+		manager: server.manager,
 	}
 	controller.init()
 	return &controller
@@ -57,7 +62,7 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 	list := c.manager.getStreams()
 	data, err := json.Marshal(list)
 	if err != nil {
-		ResponseError(w, err, http.StatusInternalServerError)
+		Response(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", ApplicationJson)
@@ -67,13 +72,14 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if len(vars["id"]) < 1 {
-		ResponseError(w, errors.New("empty stream key"), http.StatusBadRequest)
+		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
 		return
 	}
-	stream := c.manager.getStreamById(vars["id"])
+	id, _ := strconv.ParseInt(vars["id"], 10, 16)
+	stream := c.manager.getStreamById(id)
 	data, err := json.Marshal(stream)
 	if err != nil {
-		ResponseError(w, err, http.StatusInternalServerError)
+		Response(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", ApplicationJson)
@@ -84,22 +90,38 @@ func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 	curl -i -X POST -d '{"uri":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"xxxx"}' http://192.168.0.14:9000/streams
 */
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
+	//log.WithFields(log.Fields{
+	//    "ip": r.RemoteAddr,
+	//    "uri": r.RequestURI,
+	//}).Debug("add stream")
 	stream := &Stream{}
 	err := c.checkStreamRequest(r.Body, stream)
 	if err != nil {
-		ResponseError(w, err, http.StatusBadRequest)
+		Response(w, err, http.StatusBadRequest)
 		return
 	}
 	err = c.manager.addStream(stream)
 	if err != nil {
-		ResponseError(w, err, http.StatusInternalServerError)
+		Response(w, err, http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	Response(w, nil, http.StatusOK)
 }
 
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
-
+	stream := &Stream{}
+	err := c.checkStreamRequest(r.Body, stream)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+	err = c.manager.updateStream(stream)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+	Response(w, nil, http.StatusOK)
 }
 
 func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
@@ -111,6 +133,8 @@ func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
 	if err = json.Unmarshal(data, stream); err != nil {
 		return err
 	}
+
+	stream.Uri = strings.TrimSpace(stream.Uri)
 
 	if _, err := url.Parse(stream.Uri); err != nil {
 		return ErrorInvalidUri
@@ -125,12 +149,13 @@ func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
 func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if len(vars["id"]) < 1 {
-		ResponseError(w, errors.New("empty stream key"), http.StatusBadRequest)
+		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
 		return
 	}
-	err := c.manager.deleteStream(vars["id"])
+	id, _ := strconv.ParseInt(vars["id"], 10, 16)
+	err := c.manager.deleteStream(id)
 	if err != nil {
-		ResponseError(w, err, http.StatusInternalServerError)
+		Response(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -140,18 +165,19 @@ func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if len(vars["id"]) < 1 {
-		ResponseError(w, errors.New("empty stream key"), http.StatusBadRequest)
+		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
 		return
 	}
-	stream := c.manager.getStreamById(vars["id"])
+	id, _ := strconv.ParseInt(vars["id"], 10, 16)
+	stream := c.manager.getStreamById(id)
 	if stream == nil {
-		ResponseError(w, errors.New("stream not found"), http.StatusOK)
+		Response(w, errors.New("stream not found"), http.StatusOK)
 		return
 	}
 
 	err := c.manager.startStream(stream)
 	if err != nil {
-		ResponseError(w, err, http.StatusInternalServerError)
+		Response(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -160,13 +186,29 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if len(vars["id"]) < 1 {
-		ResponseError(w, errors.New("empty stream key"), http.StatusBadRequest)
+		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
 		return
 	}
-	err := c.manager.stopStreamProcess(vars["id"])
+	id, _ := strconv.ParseInt(vars["id"], 10, 16)
+	err := c.manager.stopStreamProcess(id)
 	if err != nil {
-		ResponseError(w, err, http.StatusInternalServerError)
+		Response(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
+	_ = c.server.db.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte(StreamBucket))
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			log.Debugf("[%s] %s", string(k), string(v))
+		}
+
+		return nil
+	})
 }

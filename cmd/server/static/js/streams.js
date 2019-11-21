@@ -1,36 +1,57 @@
 
 $(function() {
 
-    let $form = $("#form-streams"),
-        $table = $("#table-streams");
+    let $table = $("#table-streams");
 
-    $(".btn-streams-list").click(function() {
-        console.log(3);
-        $.ajax({
-            url: "/streams",
-        }).done(function(list) {
-            console.log(list);
-            if (list.length > 0) {
-                $("input[name=id]", $form).val(list[0].id);
-            }
-        }).fail(function(xhr, status, errorThrown) {
-            console.error(xhr);
+
+    $(".btn-streams-debug").click(function() {
+        $.get("/streams/debug", function() {
         });
     });
 
     $(".btn-streams-add").click(function() {
+        console.log("add");
+        let $form = $("#form-streams-add"),
+            url = "/streams";
+
         $.ajax({
-            url: "/streams",
-            type: "POST",
-            data:JSON.stringify($form.serializeObject()),
-            datatype: 'json'
+            url: url,
+            method: "POST",
+            data: JSON.stringify($form.serializeObject()),
+            dataType: "json",
         }).done(function(data) {
             console.log(data);
             $table.bootstrapTable("refresh");
         }).fail(function(xhr, status, errorThrown) {
             console.log(xhr);
+            $form.find(".alert .msg").text(xhr.responseJSON.error);
         });
     });
+
+    $(".btn-streams-update").click(function() {
+        let $form = $("#form-streams-edit"),
+            id = $("input[name=id]", $form).val(),
+            url = "/streams/" + id;
+
+        let data = $form.serializeObject();
+        data.id =  parseInt(data.id, 10);
+        // console.log(data);
+
+        $.ajax({
+            url: url,
+            method: "PATCH",
+            data: JSON.stringify(data),
+            dataType: "json",
+        }).done(function(result) {
+            console.log(result);
+            $table.bootstrapTable("refresh");
+        }).fail(function(xhr, status, errorThrown) {
+            console.log(xhr);
+            $form.find(".alert .msg").text(xhr.responseJSON.error);
+        });
+    });
+
+    // $table.bootstrapTable('getSelections').
 
     // $(".btn-streams-start").click(function() {
     //     let id = $("input[name=id]", $form).val(),
@@ -88,9 +109,18 @@ $(function() {
             let stream = new Stream(row.id);
             stream.stop();
         },
+
+        'click .edit': function (e, value, row, index) {
+            let stream = new Stream(row.id);
+            stream.showEdit();
+        },
     };
 
     $table.bootstrapTable();
+
+    // $table.on('click-row.bs.table', function (e, row, $element) {
+    //     console.log(row);
+    // });
 
     // $(".btn-streams-active").click(function(e) {
     //     let id = $(this).data("id");
@@ -129,24 +159,38 @@ $(function() {
             $.get("/streams/" + id + "/stop", function() {
                 console.log( "stopped:" + c.id );
                 c.table.bootstrapTable("refresh");
-            }).fail(function() {
-                console.log( "error" );
+            }).fail(function(xhr, status, errorThrown) {
+                console.log(xhr);
             });
         };
 
         this.delete = function() {
-            let url = "/streams/" + this.id,
-                c = this;
+            let url = "/streams/" + this.id;
 
             $.ajax({
                 url: url,
                 type: "DELETE",
             }).done(function(data) {
-                console.log(data);
-                // c.table.bootstrapTable("refresh");
-                $("#table-streams").bootstrapTable('refresh');
+                $table.bootstrapTable('refresh');
             }).fail(function(xhr, status, errorThrown) {
                 console.log(xhr);
+            });
+        };
+
+        this.showEdit = function() {
+            let url = "/streams/" + this.id;
+            let $form = $("#form-streams-edit");
+            $.ajax({
+                url: url,
+            }).done(function(stream) {
+                console.log(stream);
+                $("input[name=id]", $form).val(stream.id);
+                $("input[name=uri]", $form).val(stream.uri);
+                $("input[name=username]", $form).val(stream.username);
+                $("input[name=password]", $form).val(stream.password);
+            }).fail(function(xhr, status, errorThrown) {
+                console.log(xhr);
+                $form.find(".alert .msg").text(xhr.responseJSON.error);
             });
         };
 
@@ -154,3 +198,17 @@ $(function() {
 
 
 });
+
+// $(".btn-streams-list").click(function() {
+//     let $form = $("#form-streams-add");
+//     $.ajax({
+//         url: "/streams",
+//     }).done(function(list) {
+//         console.log(list);
+//         if (list.length > 0) {
+//             $("input[name=id]", $form).val(list[0].id);
+//         }
+//     }).fail(function(xhr, status, errorThrown) {
+//         console.log(xhr);
+//     });
+// });
