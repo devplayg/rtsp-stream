@@ -5,21 +5,14 @@
 * Go
 * FFmpeg
 * Highwayhash
-
-### Server
-
-* Service
-
-### Controller
-
-* Routing
-    
-### Manager
-
-* Stream management 
-
-### Database structure
+* BoltDB
 
 
-streams | streams | streams
+### Modules
 
+* server
+    - boltdb
+    - controller
+    - manager
+        - stream
+            - stream assistant

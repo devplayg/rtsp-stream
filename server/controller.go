@@ -92,7 +92,7 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 	//    "uri": r.RequestURI,
 	//}).Debug("add stream")
 	stream := &Stream{}
-	err := c.checkStreamRequest(r.Body, stream)
+	err := c.parseStreamRequest(r.Body, stream)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
 		return
@@ -108,11 +108,12 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 	stream := &Stream{}
-	err := c.checkStreamRequest(r.Body, stream)
+	err := c.parseStreamRequest(r.Body, stream)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
 		return
 	}
+
 	err = c.manager.updateStream(stream)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
@@ -121,7 +122,7 @@ func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 	Response(w, nil, http.StatusOK)
 }
 
-func (c *Controller) checkStreamRequest(body io.Reader, stream *Stream) error {
+func (c *Controller) parseStreamRequest(body io.Reader, stream *Stream) error {
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
 		return err
@@ -172,7 +173,7 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := c.manager.startStream(stream)
+	err := c.manager.startStreaming(stream)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
@@ -187,7 +188,7 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := strconv.ParseInt(vars["id"], 10, 16)
-	err := c.manager.stopStreamProcess(id)
+	err := c.manager.stopStreaming(id)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return

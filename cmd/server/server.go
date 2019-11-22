@@ -8,8 +8,8 @@ import (
 
 const (
 	appName        = "rtsp-server"
-	appDisplayName = "RTSP Stream Server"
-	appDescription = "RTSP Stream server"
+	appDisplayName = "RTSP Stream"
+	appDescription = "RTSP Stream"
 	appVersion     = "1.0.0"
 )
 

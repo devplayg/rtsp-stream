@@ -8,16 +8,17 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
+	"time"
 )
 
 // var StreamsKey = []byte("streams") // will be removed
 
 type Manager struct {
-	server  *Server
-	streams sync.Map
-	db      *bolt.DB
+	server         *Server
+	streams        sync.Map
+	db             *bolt.DB
+	reConnInterval time.Duration
 }
 
 func NewManager(server *Server) *Manager {
@@ -121,6 +122,7 @@ func (m *Manager) addStream(stream *Stream) error {
 		return ErrorDuplicatedStream
 	}
 
+	// Issue auto-increment ID from database
 	err := m.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(StreamBucket)
 
@@ -139,9 +141,11 @@ func (m *Manager) addStream(stream *Stream) error {
 		m.streams.Store(stream.Id, stream)
 	}
 
-	m.save()
+	if err := m.save(); err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func (m *Manager) updateStream(stream *Stream) error {
@@ -184,7 +188,9 @@ func (m *Manager) deleteStream(id int64) error {
 
 	m.streams.Delete(id)
 
-	m.saveStreams()
+	if err := m.saveStreams(); err != nil {
+		return err
+	}
 	return m.save()
 }
 
@@ -237,60 +243,35 @@ func (m *Manager) IsExistUri(uri string) bool {
 	return duplicated
 }
 
-func (m *Manager) startStream(stream *Stream) error {
+func (m *Manager) startStreaming(stream *Stream) error {
 	//m.setStream(stream)
 
 	if err := m.cleanStreamDir(stream); err != nil {
-		return err
+		log.Warn("failed to clear streaming directories:", err)
 	}
 
 	if err := m.createStreamDir(stream); err != nil {
 		return err
 	}
 
-	// Start process
-	go func() {
-		if err := stream.cmd.Run(); err != nil {
-			log.Error(err)
-			return
-		}
-	}()
-	log.WithFields(log.Fields{
-		"id":      stream.Id,
-		"uri":     stream.Uri,
-		"liveDir": stream.LiveDir,
-		"recDir":  stream.RecDir,
-	}).Info("streaming has been started")
+	if err := stream.start(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (m *Manager) stopStreamProcess(id int64) error {
+func (m *Manager) stopStreaming(id int64) error {
 	stream := m.getStreamById(id)
 	if stream == nil {
 		return ErrorStreamNotFound
 	}
 
-	if stream.cmd == nil {
-		return nil
+	if err := stream.stop(); err != nil {
+		return err
 	}
 
-	//err := stream.cmd.Process.Kill()
-	err := stream.cmd.Process.Signal(os.Kill)
-	log.Debug("check err: ", err)
-	if err != nil {
-		log.Debug("process message check: ", err)
-		if strings.Contains(err.Error(), "process already finished") {
-			return nil
-		}
-		if strings.Contains(err.Error(), "signal: killed") {
-			return nil
-		}
-		if strings.Contains(err.Error(), "exit status 1") {
-			return nil
-		}
-	}
-
-	return err
+	return nil
 }
 
 func (m *Manager) printStream(stream *Stream) {
@@ -302,3 +283,5 @@ func (m *Manager) printStream(stream *Stream) {
 	log.Debugf("recording: %s", stream.Recording)
 	log.Debug("===================================================")
 }
+
+// NEED STREAM RECONNECTION

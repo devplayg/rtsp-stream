@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,29 +11,19 @@ import (
 )
 
 type Stream struct {
-	Id        int64     `json:"id"`
-	Uri       string    `json:"uri"`
-	Username  string    `json:"username"`
-	Password  string    `json:"password"`
-	Recording bool      `json:"recording"`
-	Active    bool      `json:"active"`
-	LiveDir   string    `json:"-"`
-	RecDir    string    `json:"-"`
-	Hash      string    `json:"hash"`
-	CmdType   int       `json:"-"`
-	cmd       *exec.Cmd `json:"-"`
+	Id        int64     `json:"id"`        // Stream unique ID
+	Uri       string    `json:"uri"`       // Stream URL
+	Username  string    `json:"username"`  // Stream username
+	Password  string    `json:"password"`  // Stream password
+	Recording bool      `json:"recording"` // Is recording
+	Active    bool      `json:"active"`    // Is active
+	LiveDir   string    `json:"-"`         // Live video directory
+	RecDir    string    `json:"-"`         // Recording directory
+	Hash      string    `json:"hash"`      // URL Hash
+	CmdType   int       `json:"cmdType"`   // FFmpeg command type
+	cmd       *exec.Cmd `json:"-"`         // Command
+	// assistant *Assistant `json:"-"`         // Stream assistant
 }
-
-//func NewStream(uri string) *Stream {
-//	return &Stream{
-//		Uri: uri,
-//	}
-//}
-//
-//func (s *Stream) start() error {
-//	//s.Active = true
-//	return nil
-//}
 
 func (s *Stream) IsActive() bool {
 	if s.cmd == nil {
@@ -47,7 +38,7 @@ func (s *Stream) IsActive() bool {
 	}
 
 	// Check if "index.m3u8" has been updated within the last 10 seconds
-	if time.Now().Sub(file.ModTime()).Seconds() > 10.0 {
+	if time.Now().Sub(file.ModTime()).Seconds() > 8.0 {
 		return false
 	}
 
@@ -55,6 +46,84 @@ func (s *Stream) IsActive() bool {
 	// devplayg
 
 	return true
+}
+
+func (s *Stream) StreamUri() string {
+	uri := strings.TrimPrefix(s.Uri, "rtsp://")
+	return fmt.Sprintf("rtsp://%s:%s@%s", s.Username, s.Password, uri)
+}
+
+//func NewStream(uri string) *Stream {
+//	return &Stream{
+//		Uri: uri,
+//	}
+//}
+//
+func (s *Stream) start() error {
+	// ctx, cancel := context.WithCancel(context.Background())
+	//done := make(chan bool)
+
+	// Start process
+	go func() {
+		s.run()
+		log.WithFields(log.Fields{
+			"id": s.Id,
+		}).Debug("streaming job is done")
+	}()
+	log.WithFields(log.Fields{
+		"id":      s.Id,
+		"uri":     s.Uri,
+		"liveDir": s.LiveDir,
+		"recDir":  s.RecDir,
+	}).Debug("streaming has been started")
+
+	//select {
+	//case result := <-done:
+	//    return result, nil
+	//case <-ctx.Done():
+	//    return "Fail", ctx.Err()
+	//}
+
+	return nil
+}
+
+func (s *Stream) run() error {
+	//defer func() {
+	//    done <- true
+	//}()
+
+	assistant := NewAssistant(s)
+	assistant.start()
+	// defer s.assistant.stop()
+	err := s.cmd.Run()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"id":      s.Id,
+			"uri":     s.Uri,
+			"liveDir": s.LiveDir,
+			"recDir":  s.RecDir,
+		}).Debug("streaming has been stopped: ", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *Stream) stop() error {
+	if s.cmd == nil {
+		return nil
+	}
+
+	//err := stream.cmd.Process.Kill()
+	err := s.cmd.Process.Signal(os.Kill)
+	log.WithFields(log.Fields{
+		"id":      s.Id,
+		"uri":     s.Uri,
+		"liveDir": s.LiveDir,
+		"recDir":  s.RecDir,
+	}).Error("result of stopping streaming: ", err)
+
+	return nil
 }
 
 //
@@ -68,11 +137,6 @@ func (s *Stream) IsActive() bool {
 //	}
 //	return err
 //}
-
-func (s *Stream) StreamUri() string {
-	uri := strings.TrimPrefix(s.Uri, "rtsp://")
-	return fmt.Sprintf("rtsp://%s:%s@%s", s.Username, s.Password, uri)
-}
 
 //
 //func (p Processor) getHLSFlags() string {

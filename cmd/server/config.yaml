@@ -1,4 +1,4 @@
 storage:
-  live: /data/live
-  recording: /data/record
-bind-address: 0.0.0.0:9000
+  live: e:/data/live
+  recording: e:/data/record
+bind-address: 0.0.0.0:8000
