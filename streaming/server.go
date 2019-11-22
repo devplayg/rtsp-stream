@@ -1,4 +1,4 @@
-package server
+package streaming
 
 import (
 	"github.com/boltdb/bolt"
@@ -72,7 +72,6 @@ func (s *Server) init() error {
 	if err := s.initDatabase(); err != nil {
 		return nil
 	}
-	log.Debug("database has been loaded")
 
 	// Set manager
 	s.manager = NewManager(s)
@@ -87,16 +86,13 @@ func (s *Server) init() error {
 }
 
 func (s *Server) initDatabase() error {
-	db, err := bolt.Open(s.engine.Config.Name+".db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	dbName := s.engine.Config.Name + ".db"
+	db, err := bolt.Open(dbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
 
-	defaultBuckets := [][]byte{
-		StreamBucket,
-		ConfigBucket,
-	}
-
+	defaultBuckets := [][]byte{StreamBucket, ConfigBucket}
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err
@@ -104,8 +100,7 @@ func (s *Server) initDatabase() error {
 	defer tx.Rollback()
 
 	for _, b := range defaultBuckets {
-		_, err := tx.CreateBucketIfNotExists(b)
-		if err != nil {
+		if _, err := tx.CreateBucketIfNotExists(b); err != nil {
 			return err
 		}
 	}
@@ -115,6 +110,7 @@ func (s *Server) initDatabase() error {
 	}
 
 	s.db = db
+	log.Debugf("boltdb(%s) has been loaded", dbName)
 	return nil
 }
 

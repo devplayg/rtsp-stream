@@ -1,4 +1,4 @@
-package server
+package streaming
 
 import (
 	"encoding/json"
@@ -87,12 +87,7 @@ func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 	curl -i -X POST -d '{"uri":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"xxxx"}' http://192.168.0.14:9000/streams
 */
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
-	//log.WithFields(log.Fields{
-	//    "ip": r.RemoteAddr,
-	//    "uri": r.RequestURI,
-	//}).Debug("add stream")
-	stream := &Stream{}
-	err := c.parseStreamRequest(r.Body, stream)
+	stream, err := c.parseStreamRequest(r.Body)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
 		return
@@ -107,8 +102,7 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
-	stream := &Stream{}
-	err := c.parseStreamRequest(r.Body, stream)
+	stream, err := c.parseStreamRequest(r.Body)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
 		return
@@ -122,23 +116,24 @@ func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 	Response(w, nil, http.StatusOK)
 }
 
-func (c *Controller) parseStreamRequest(body io.Reader, stream *Stream) error {
+func (c *Controller) parseStreamRequest(body io.Reader) (*Stream, error) {
+	stream := NewStream()
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = json.Unmarshal(data, stream); err != nil {
-		return err
+		return nil, err
 	}
 
 	stream.Uri = strings.TrimSpace(stream.Uri)
 
 	if _, err := url.Parse(stream.Uri); err != nil {
-		return ErrorInvalidUri
+		return nil, ErrorInvalidUri
 	}
 
-	return nil
+	return stream, nil
 }
 
 /*

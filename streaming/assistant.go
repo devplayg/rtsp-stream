@@ -1,39 +1,31 @@
-package server
+package streaming
 
 import (
+	"context"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
 
 type Assistant struct {
 	interval time.Duration // 1 min
+	ctx      context.Context
 	stream   *Stream
 }
 
-func NewAssistant(stream *Stream) *Assistant {
+func NewAssistant(stream *Stream, ctx context.Context) *Assistant {
 	return &Assistant{
 		interval: 5 * time.Second,
 		stream:   stream,
+		ctx:      ctx,
 	}
 }
 
 func (s *Assistant) start() error {
 
-	//go s.run()
-	//go func() {
-	//    done <- s.run()
-	//}()
-	//
-	//select {
-	//case result := <-done:
-	//    return result, nil
-	//case <-ctx.Done():
-	//    return "Fail", ctx.Err()
-	//}
-
+	go s.run()
 	log.WithFields(log.Fields{
 		"stream_id": s.stream.Id,
-	}).Debug("stream assistant has been started")
+	}).Debug("assistant has been started")
 
 	return nil
 }
@@ -70,7 +62,16 @@ func (s *Assistant) run() error {
 		log.WithFields(log.Fields{
 			"stream_id": s.stream.Id,
 		}).Debug("stream assistant is doing something..")
-		time.Sleep(s.interval)
+
+		// time.Sleep(s.interval)
+		select {
+		case <-time.After(s.interval):
+		case <-s.ctx.Done():
+			log.WithFields(log.Fields{
+				"stream_id": s.stream.Id,
+			}).Debug("stream assistant stopped..")
+			return nil
+		}
 	}
 
 	return nil

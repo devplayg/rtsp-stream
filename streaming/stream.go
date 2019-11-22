@@ -1,6 +1,7 @@
-package server
+package streaming
 
 import (
+	"context"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -23,6 +24,10 @@ type Stream struct {
 	CmdType   int       `json:"cmdType"`   // FFmpeg command type
 	cmd       *exec.Cmd `json:"-"`         // Command
 	// assistant *Assistant `json:"-"`         // Stream assistant
+}
+
+func NewStream() *Stream {
+	return &Stream{}
 }
 
 func (s *Stream) IsActive() bool {
@@ -53,14 +58,8 @@ func (s *Stream) StreamUri() string {
 	return fmt.Sprintf("rtsp://%s:%s@%s", s.Username, s.Password, uri)
 }
 
-//func NewStream(uri string) *Stream {
-//	return &Stream{
-//		Uri: uri,
-//	}
-//}
-//
 func (s *Stream) start() error {
-	// ctx, cancel := context.WithCancel(context.Background())
+
 	//done := make(chan bool)
 
 	// Start process
@@ -92,8 +91,11 @@ func (s *Stream) run() error {
 	//    done <- true
 	//}()
 
-	assistant := NewAssistant(s)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	assistant := NewAssistant(s, ctx)
 	assistant.start()
+	defer cancel()
 	// defer s.assistant.stop()
 	err := s.cmd.Run()
 	if err != nil {
