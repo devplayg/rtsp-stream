@@ -11,8 +11,10 @@
 ### Modules
 
 * server
-    - boltdb
-    - controller
-    - manager
-        - stream
-            - stream assistant
+    - boltdb: database
+    - controller : handle API
+    - manager : streaming manager
+        - stream: streaming object
+            -  assistant: checking status, merging video files
+
+

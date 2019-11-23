@@ -69,6 +69,7 @@ func (s *Stream) start() error {
 			"id": s.Id,
 		}).Debug("streaming job is done")
 	}()
+
 	log.WithFields(log.Fields{
 		"id":      s.Id,
 		"uri":     s.Uri,
@@ -87,43 +88,36 @@ func (s *Stream) start() error {
 }
 
 func (s *Stream) run() error {
-	//defer func() {
-	//    done <- true
-	//}()
-
 	ctx, cancel := context.WithCancel(context.Background())
-
 	assistant := NewAssistant(s, ctx)
 	assistant.start()
 	defer cancel()
 	// defer s.assistant.stop()
-	err := s.cmd.Run()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"id":      s.Id,
-			"uri":     s.Uri,
-			"liveDir": s.LiveDir,
-			"recDir":  s.RecDir,
-		}).Debug("streaming has been stopped: ", err)
-		return err
-	}
 
-	return nil
+	err := s.cmd.Run()
+	log.WithFields(log.Fields{
+		"id":      s.Id,
+		"uri":     s.Uri,
+		"liveDir": s.LiveDir,
+		"recDir":  s.RecDir,
+	}).Debug("streaming command has been stopped: ", err)
+	return err
 }
 
 func (s *Stream) stop() error {
-	if s.cmd == nil {
+	if s.cmd == nil || s.cmd.Process == nil {
+		log.WithFields(log.Fields{
+			"id": s.Id,
+		}).Debug("streaming is not running")
 		return nil
 	}
 
 	//err := stream.cmd.Process.Kill()
 	err := s.cmd.Process.Signal(os.Kill)
 	log.WithFields(log.Fields{
-		"id":      s.Id,
-		"uri":     s.Uri,
-		"liveDir": s.LiveDir,
-		"recDir":  s.RecDir,
-	}).Error("result of stopping streaming: ", err)
+		"id":  s.Id,
+		"pic": &s.cmd.Process.Pid,
+	}).Error("killed stream process: ", err)
 
 	return nil
 }

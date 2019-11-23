@@ -110,7 +110,9 @@ func (s *Server) initDatabase() error {
 	}
 
 	s.db = db
-	log.Debugf("boltdb(%s) has been loaded", dbName)
+	log.WithFields(log.Fields{
+		"db": dbName,
+	}).Debug("BoltDB has been loaded")
 	return nil
 }
 
