@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"github.com/minio/highwayhash"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"os/exec"
+	"path/filepath"
+	"time"
 )
 
 var HashKey []byte
@@ -81,9 +84,91 @@ func GenerateStreamCommand(stream *Stream) *exec.Cmd {
 		"1",
 		"-hls_list_size",
 		"3",
+		//"-hls_time",
+		//"60",
 		"-hls_segment_filename",
 		fmt.Sprintf("%s/live%%d.ts", stream.LiveDir),
 		fmt.Sprintf("%s/index.m3u8", stream.LiveDir),
 	)
 	return cmd
+}
+
+func GetRecentFilesInDir(dir string, after time.Duration) ([]*LiveVideoFile, error) {
+
+	files := make([]*LiveVideoFile, 0)
+
+	//err:= filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+	//	if err != nil {
+	//		log.Error(err)
+	//		return nil
+	//	}
+	//
+	//	if f.IsDir() {
+	//		return nil
+	//	}
+	//
+	//	if f.Size() < 1 {
+	//		return nil
+	//	}
+	//
+	//	ext := filepath.Ext(f.Name())
+	//	if ext != ".ts" {
+	//		return nil
+	//	}
+	//
+	//
+	//	files = append(files, NewVideoFile(f, ext, dir ))
+	//
+	//	return nil
+	//})
+
+	//var text string
+	list, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range list {
+		if f.IsDir() {
+			continue
+		}
+
+		if time.Since(f.ModTime()) < after {
+			continue
+		}
+
+		if f.Size() < 1 {
+			continue
+		}
+
+		ext := filepath.Ext(f.Name())
+		if ext != ".ts" {
+			continue
+		}
+
+		files = append(files, NewLiveVideoFile(f, ext, dir))
+
+	}
+
+	//path := filepath.Join(dir, f.Name())
+	//text += fmt.Sprintf("file '%s'\n", path)
+	return files, err
+}
+
+func ArchiveLiveVideos(inputFilePath, outputFilePath string) error {
+	cmd := exec.Command(
+		"ffmpeg",
+		"-f",
+		"concat",
+		"-safe",
+		"0",
+		"-i",
+		inputFilePath,
+		"-c",
+		"copy",
+		outputFilePath,
+	)
+
+	return cmd.Run()
+
 }

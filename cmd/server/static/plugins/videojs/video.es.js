@@ -22,13 +22,13 @@ import vtt from 'videojs-vtt.js';
 import _construct from '@babel/runtime/helpers/construct';
 import _inherits from '@babel/runtime/helpers/inherits';
 import URLToolkit from 'url-toolkit';
-import { Parser } from 'm3u8-parser';
-import { parse, parseUTCTiming } from 'mpd-parser';
+import {Parser} from 'm3u8-parser';
+import {parse, parseUTCTiming} from 'mpd-parser';
 import mp4Inspector from 'mux.js/lib/tools/mp4-inspector';
 import mp4probe from 'mux.js/lib/mp4/probe';
 import CaptionParser from 'mux.js/lib/mp4/caption-parser';
 import tsInspector from 'mux.js/lib/tools/ts-inspector.js';
-import { Decrypter, AsyncStream, decrypt } from 'aes-decrypter';
+import {AsyncStream, decrypt, Decrypter} from 'aes-decrypter';
 
 var version = "7.7.0";
 

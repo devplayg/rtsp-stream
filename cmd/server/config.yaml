@@ -2,3 +2,4 @@ storage:
   live: e:/data/live
   recording: e:/data/record
 bind-address: 0.0.0.0:8000
+timezone: Asia/Seoul

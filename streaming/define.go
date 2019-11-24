@@ -2,6 +2,7 @@ package streaming
 
 import (
 	"github.com/pkg/errors"
+	"os"
 )
 
 const (
@@ -34,4 +35,23 @@ func NewResult(err error) *Result {
 	return &Result{
 		Error: errMsg,
 	}
+}
+
+type LiveVideoFile struct {
+	File os.FileInfo
+	Ext  string
+	Dir  string
+}
+
+func NewLiveVideoFile(f os.FileInfo, ext, dir string) *LiveVideoFile {
+	return &LiveVideoFile{
+		File: f,
+		Ext:  ext,
+		Dir:  dir,
+	}
+}
+
+type VideoFile struct {
+	Name     string
+	Duration float64
 }

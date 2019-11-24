@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/boltdb/bolt v1.3.1
+	github.com/davecgh/go-spew v1.1.1
 	github.com/devplayg/hippo v0.0.0-20191115121309-114dbfce6ceb
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.7.3

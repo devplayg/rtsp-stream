@@ -112,7 +112,7 @@ func (m *Manager) setStream(stream *Stream, id int64) {
 	stream.CmdType = NormalStream
 	stream.LiveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, strconv.FormatInt(stream.Id, 16)))
 	stream.RecDir = filepath.ToSlash(filepath.Join(m.server.recDir, strconv.FormatInt(stream.Id, 16)))
-	stream.cmd = GenerateStreamCommand(stream)
+	// stream.cmd = GenerateStreamCommand(stream)
 }
 
 func (m *Manager) addStream(stream *Stream) error {
@@ -244,8 +244,6 @@ func (m *Manager) IsExistUri(uri string) bool {
 }
 
 func (m *Manager) startStreaming(stream *Stream) error {
-	//m.setStream(stream)
-
 	if err := m.cleanStreamDir(stream); err != nil {
 		log.Warn("failed to clear streaming directories:", err)
 	}

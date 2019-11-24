@@ -16,21 +16,23 @@ type Server struct {
 	liveDir    string
 	recDir     string
 	db         *bolt.DB
+	config     *Config
+	loc        *time.Location
 }
 
-func NewServer(addr, liveDir, recDir string) *Server {
+func NewServer(config *Config) *Server {
 	server := &Server{
-		addr:    addr,
-		liveDir: liveDir,
-		recDir:  recDir,
+		config:  config,
+		addr:    config.BindAddress,
+		liveDir: config.Storage.Live,
+		recDir:  config.Storage.Recording,
 	}
 
 	return server
 }
 
 func (s *Server) Start() error {
-	err := s.init()
-	if err != nil {
+	if err := s.init(); err != nil {
 		return err
 	}
 
@@ -53,9 +55,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop() error {
-	var err error
-	err = s.db.Close()
-	if err != nil {
+	if err := s.db.Close(); err != nil {
 		log.Error(err)
 	}
 
@@ -78,6 +78,13 @@ func (s *Server) init() error {
 	if err := s.manager.load(); err != nil {
 		return err
 	}
+
+	// Init timezone
+	loc, err := time.LoadLocation(s.config.Timezone)
+	if err != nil {
+		return err
+	}
+	s.loc = loc
 
 	// Set controller
 	s.controller = NewController(s)

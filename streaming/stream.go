@@ -94,6 +94,7 @@ func (s *Stream) run() error {
 	defer cancel()
 	// defer s.assistant.stop()
 
+	s.cmd = GenerateStreamCommand(s)
 	err := s.cmd.Run()
 	log.WithFields(log.Fields{
 		"id":      s.Id,
@@ -116,7 +117,7 @@ func (s *Stream) stop() error {
 	err := s.cmd.Process.Signal(os.Kill)
 	log.WithFields(log.Fields{
 		"id":  s.Id,
-		"pic": &s.cmd.Process.Pid,
+		"pid": &s.cmd.Process.Pid,
 	}).Error("killed stream process: ", err)
 
 	return nil
