@@ -12,6 +12,9 @@ type Config struct {
 	}
 	BindAddress string `json:"bind-address"`
 	Timezone    string
+	Static      struct {
+		Dir string
+	}
 }
 
 func ReadConfig(path string) (*Config, error) {

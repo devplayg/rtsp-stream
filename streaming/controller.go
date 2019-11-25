@@ -14,15 +14,11 @@ import (
 	"strings"
 )
 
-var StaticDir = "E:/gohome/src/github.com/devplayg/rtsp-stream-ui/static"
-
-//var StaticDir = "/static"
-
 type Controller struct {
-	server  *Server
-	manager *Manager
-
-	router *mux.Router
+	server    *Server
+	manager   *Manager
+	staticDir string
+	router    *mux.Router
 }
 
 func (c *Controller) init() {
@@ -40,9 +36,7 @@ func (c *Controller) init() {
 
 	r.
 		PathPrefix("/static").
-		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(StaticDir))))
-
-	//http.HandleFunc("/", serveTemplate)
+		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
 
 	http.Handle("/", r)
 	c.router = r
@@ -50,8 +44,9 @@ func (c *Controller) init() {
 
 func NewController(server *Server) *Controller {
 	controller := Controller{
-		server:  server,
-		manager: server.manager,
+		server:    server,
+		manager:   server.manager,
+		staticDir: server.config.Static.Dir,
 	}
 	controller.init()
 	return &controller

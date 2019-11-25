@@ -6,9 +6,45 @@
 * FFmpeg
 * Highwayhash
 * BoltDB
+* Hippo
 
 
-### Modules
+### Structure
+
+```
+|----------------------------------------|
+|            |  stream | stream | stream |
+|            |  assist | assist | assist |
+|----------------------------------------|
+| controller |           manager         | 
+|----------------------------------------|      
+|               server                   |
+|----------------------------------------|
+```
+
+Server
+
+- Server framework
+
+Database
+
+- Key/Value database
+- BoltDB (https://github.com/boltdb/bolt)
+
+Manager
+
+- Streaming management
+- Start, stop, add, and remove streaming
+
+Stream
+
+- Streaming object
+
+Assistant
+
+- Stream's assistant
+- Check streaming status
+- Archive live videos
 
 * server
     - boltdb: database
@@ -16,6 +52,7 @@
     - manager : streaming manager
         - stream: streaming object
             -  assistant: checking status, merging video files
+
 
 ### Database
 

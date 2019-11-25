@@ -3,3 +3,5 @@ storage:
   recording: e:/data/record
 bind-address: 0.0.0.0:8000
 timezone: Asia/Seoul
+static:
+  dir: E:/gohome/src/github.com/devplayg/rtsp-stream-ui/static
