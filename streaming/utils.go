@@ -1,17 +1,22 @@
 package streaming
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/minio/highwayhash"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -94,35 +99,7 @@ func GenerateStreamCommand(stream *Stream) *exec.Cmd {
 }
 
 func GetRecentFilesInDir(dir string, after time.Duration) ([]*LiveVideoFile, error) {
-
 	files := make([]*LiveVideoFile, 0)
-
-	//err:= filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-	//	if err != nil {
-	//		log.Error(err)
-	//		return nil
-	//	}
-	//
-	//	if f.IsDir() {
-	//		return nil
-	//	}
-	//
-	//	if f.Size() < 1 {
-	//		return nil
-	//	}
-	//
-	//	ext := filepath.Ext(f.Name())
-	//	if ext != ".ts" {
-	//		return nil
-	//	}
-	//
-	//
-	//	files = append(files, NewVideoFile(f, ext, dir ))
-	//
-	//	return nil
-	//})
-
-	//var text string
 	list, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -149,13 +126,11 @@ func GetRecentFilesInDir(dir string, after time.Duration) ([]*LiveVideoFile, err
 		files = append(files, NewLiveVideoFile(f, ext, dir))
 
 	}
-
-	//path := filepath.Join(dir, f.Name())
-	//text += fmt.Sprintf("file '%s'\n", path)
 	return files, err
 }
 
-func ArchiveLiveVideos(inputFilePath, outputFilePath string) error {
+func MergeLiveVideoFiles(inputFilePath, outputFilePath string) (float32, error) {
+	var duration float32
 	cmd := exec.Command(
 		"ffmpeg",
 		"-f",
@@ -168,7 +143,91 @@ func ArchiveLiveVideos(inputFilePath, outputFilePath string) error {
 		"copy",
 		outputFilePath,
 	)
+	//log.Debug(cmd.Args)
+	var stdOut bytes.Buffer
+	cmd.Stdout = &stdOut
 
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		return duration, err
+	}
 
+	if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
+		return duration, errors.New("failed to archive *.ts files: " + stdOut.String())
+	}
+
+	durStr, err := GetVideoDuration(outputFilePath)
+	if err != nil {
+		return duration, errors.New("failed to get duration of file: " + outputFilePath)
+	}
+
+	dur, err := strconv.ParseFloat(durStr, 32)
+	return float32(dur), nil
+
+	//videoRecordFile := VideoRecord{
+	//	Name: filepath.Base(outputFilePath),
+	//	Duration: float32(duration),
+	//}
+
+	//return &videoRecordFile, err
+	//err := s.cmd.Process.Kill()
+	//if strings.Contains(err.Error(), "process already finished") {
+	//	return nil
+	//}
+	//if strings.Contains(err.Error(), "signal: killed") {
+	//	return nil
+	//}
+	//return err
+}
+
+func GetVideoDuration(path string) (string, error) {
+
+	cmd := exec.Command(
+		"ffprobe",
+		"-v",
+		"error",
+		"-show_entries",
+		"format=duration",
+		"-of",
+		"default=noprint_wrappers=1:nokey=1",
+		path,
+	)
+	log.Debug(cmd.Args)
+
+	var stdOut bytes.Buffer
+	cmd.Stdout = &stdOut
+	err := cmd.Run()
+	return strings.TrimSpace(stdOut.String()), err
+}
+
+func GenerateLiveVideoFileListForUseWithFfmpeg(liveVideoFiles []*LiveVideoFile) (*os.File, error) {
+	var text string
+	for _, f := range liveVideoFiles {
+		path := filepath.ToSlash(filepath.Join(f.Dir, f.File.Name()))
+		text += fmt.Sprintf("file %s\n", path)
+	}
+	tempFile, err := ioutil.TempFile("", "stream")
+	if err != nil {
+		return nil, err
+	}
+	defer tempFile.Close()
+	_, err = tempFile.WriteString(text)
+	if err != nil {
+		return nil, err
+	}
+
+	return tempFile, nil
+}
+
+func GetVideRecordBucket(videoRecord *VideoRecord, id int64) []byte {
+	t := time.Unix(videoRecord.UnixTime, 0).In(Loc)
+	return []byte(fmt.Sprintf("stream-%d-%s", id, t.Format("20060102")))
+}
+
+func GetM3u8Header() string {
+	return `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-ALLOW-CACHE:YES
+`
 }

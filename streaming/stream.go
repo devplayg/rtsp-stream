@@ -48,7 +48,7 @@ func (s *Stream) IsActive() bool {
 	}
 
 	// Check if the .ts file is created continuously
-	// devplayg
+	// wondory
 
 	return true
 }

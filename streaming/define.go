@@ -3,6 +3,7 @@ package streaming
 import (
 	"github.com/pkg/errors"
 	"os"
+	"time"
 )
 
 const (
@@ -51,7 +52,15 @@ func NewLiveVideoFile(f os.FileInfo, ext, dir string) *LiveVideoFile {
 	}
 }
 
-type VideoFile struct {
-	Name     string
-	Duration float64
+type VideoRecord struct {
+	Name     string  `json:"nm"`
+	Duration float32 `json:"dur"`
+	UnixTime int64   `json:"unix"`
+}
+
+func NewVideoRecord(t time.Time, loc *time.Location, ext string) *VideoRecord {
+	return &VideoRecord{
+		Name:     t.In(loc).Format("20060102_150405") + ext,
+		UnixTime: t.Unix(),
+	}
 }

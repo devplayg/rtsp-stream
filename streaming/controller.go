@@ -6,10 +6,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -38,8 +40,63 @@ func (c *Controller) init() {
 		PathPrefix("/static").
 		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
 
+	r.HandleFunc("/streams/", serveTemplate2).Methods("GET")
+	//http.HandleFunc("/ui", serveTemplate)
 	http.Handle("/", r)
+
 	c.router = r
+}
+
+func serveTemplate(w http.ResponseWriter, r *http.Request) {
+	lp := filepath.Join("templates", "layout.html")
+	fp := filepath.Join("templates", "example.html")
+
+	tmpl, _ := template.ParseFiles(lp, fp)
+	tmpl.ExecuteTemplate(w, "layout", nil)
+}
+
+func serveTemplate2(w http.ResponseWriter, r *http.Request) {
+	//tpl, _ := template.New("layout").Parse(ui.Hello())
+	//template.New().
+	//tpl.ExecuteTemplate(w, "layout", nil)
+	const letter = `
+Dear {{.Name}},
+{{if .Attended}}
+It was a pleasure to see you at the wedding.
+{{- else}}
+It is a shame you couldn't make it to the wedding.
+{{- end}}
+
+{{with .Gift -}}
+    Thank you for the lovely {{.}}.
+{{end}}
+Best wishes,
+Josie
+---
+`
+
+	// Prepare some data to insert into the template.
+	//type Recipient struct {
+	//    Name, Gift string
+	//    Attended   bool
+	//}
+	//var recipients = []Recipient{
+	//    {"Aunt Mildred", "bone china tea set", true},
+	//    {"Uncle John", "moleskin pants", false},
+	//    {"Cousin Rodney", "", false},
+	//}
+	//
+	//// Create a new template and parse the letter into it.
+	//t := template.Must(template.New("l111etter").Parse(ui.Layout()))
+	//t.
+	//
+	//// Execute the template for each recipient.
+	//for _, r := range recipients {
+	//    err := t.Execute(w, r)
+	//    if err != nil {
+	//        log.Println("executing template:", err)
+	//    }
+	//}
 }
 
 func NewController(server *Server) *Controller {
@@ -189,7 +246,7 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
-	_ = c.server.db.View(func(tx *bolt.Tx) error {
+	_ = DB.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte(StreamBucket))
 
@@ -202,3 +259,40 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 }
+
+//
+//func Download(file string, filename ...string) {
+//    // check get file error, file not found or other error.
+//    if _, err := os.Stat(file); err != nil {
+//        http.ServeFile(output.Context.ResponseWriter, output.Context.Request, file)
+//        return
+//    }
+//
+//    var fName string
+//    if len(filename) > 0 && filename[0] != "" {
+//        fName = filename[0]
+//    } else {
+//        fName = filepath.Base(file)
+//    }
+//    //https://tools.ietf.org/html/rfc6266#section-4.3
+//    fn := url.PathEscape(fName)
+//    if fName == fn {
+//        fn = "filename=" + fn
+//    } else {
+//        /**
+//          The parameters "filename" and "filename*" differ only in that
+//          "filename*" uses the encoding defined in [RFC5987], allowing the use
+//          of characters not present in the ISO-8859-1 character set
+//          ([ISO-8859-1]).
+//        */
+//        fn = "filename=" + fName + "; filename*=utf-8''" + fn
+//    }
+//    output.Header("Content-Disposition", "attachment; "+fn)
+//    output.Header("Content-Description", "File Transfer")
+//    output.Header("Content-Type", "application/octet-stream")
+//    output.Header("Content-Transfer-Encoding", "binary")
+//    output.Header("Expires", "0")
+//    output.Header("Cache-Control", "must-revalidate")
+//    output.Header("Pragma", "public")
+//    http.ServeFile(output.Context.ResponseWriter, output.Context.Request, file)
+//}

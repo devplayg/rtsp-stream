@@ -17,7 +17,6 @@ import (
 type Manager struct {
 	server         *Server
 	streams        sync.Map
-	db             *bolt.DB
 	reConnInterval time.Duration
 }
 
@@ -25,7 +24,6 @@ func NewManager(server *Server) *Manager {
 	return &Manager{
 		server:  server,
 		streams: sync.Map{}, /* key: id(int64), value: &stream */
-		db:      server.db,
 	}
 }
 
@@ -39,7 +37,7 @@ func (m *Manager) save() error {
 
 func (m *Manager) saveStreams() error {
 
-	return m.db.Update(func(tx *bolt.Tx) error {
+	return DB.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(StreamBucket)
 
 		// Clear bucket
@@ -68,7 +66,7 @@ func (m *Manager) saveStreams() error {
 }
 
 func (m *Manager) load() error {
-	return m.db.View(func(tx *bolt.Tx) error {
+	return DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(StreamBucket))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -123,7 +121,7 @@ func (m *Manager) addStream(stream *Stream) error {
 	}
 
 	// Issue auto-increment ID from database
-	err := m.db.Update(func(tx *bolt.Tx) error {
+	err := DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(StreamBucket)
 
 		id, _ := b.NextSequence()
@@ -155,7 +153,7 @@ func (m *Manager) updateStream(stream *Stream) error {
 		return ErrorInvalidUri
 	}
 
-	err := m.db.Update(func(tx *bolt.Tx) error {
+	err := DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(StreamBucket)
 
 		m.setStream(stream, stream.Id)

@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+var (
+	DB  *bolt.DB
+	Loc *time.Location
+)
+
 type Server struct {
 	engine     *hippo.Engine
 	controller *Controller
@@ -15,9 +20,8 @@ type Server struct {
 	addr       string
 	liveDir    string
 	recDir     string
-	db         *bolt.DB
-	config     *Config
-	loc        *time.Location
+	//db         *bolt.DB
+	config *Config
 }
 
 func NewServer(config *Config) *Server {
@@ -55,7 +59,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop() error {
-	if err := s.db.Close(); err != nil {
+	if err := DB.Close(); err != nil {
 		log.Error(err)
 	}
 
@@ -84,7 +88,7 @@ func (s *Server) init() error {
 	if err != nil {
 		return err
 	}
-	s.loc = loc
+	Loc = loc
 
 	// Set controller
 	s.controller = NewController(s)
@@ -116,7 +120,7 @@ func (s *Server) initDatabase() error {
 		return err
 	}
 
-	s.db = db
+	DB = db
 	log.WithFields(log.Fields{
 		"db": dbName,
 	}).Debug("BoltDB has been loaded")
@@ -125,7 +129,7 @@ func (s *Server) initDatabase() error {
 
 func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
 	var data []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err := DB.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucket)
 		data = bucket.Get(key)
 		return nil
