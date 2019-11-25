@@ -31,8 +31,6 @@ func main() {
 	}
 
 	hippo.InitLogger("", appName, config.Debug, config.Verbose)
-
-	// server := streaming.NewServer(appConfig.BindAddress, appConfig.Storage.Live, appConfig.Storage.Recording)
 	server := streaming.NewServer(appConfig)
 	engine := hippo.NewEngine(server, config)
 	if err := engine.Start(); err != nil {

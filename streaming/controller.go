@@ -14,7 +14,9 @@ import (
 	"strings"
 )
 
-var StaticDir = "/static/"
+var StaticDir = "E:/gohome/src/github.com/devplayg/rtsp-stream-ui/static"
+
+//var StaticDir = "/static"
 
 type Controller struct {
 	server  *Server
@@ -37,8 +39,8 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id}/stop", c.StopStream).Methods("GET")
 
 	r.
-		PathPrefix(StaticDir).
-		Handler(http.StripPrefix(StaticDir, http.FileServer(http.Dir("."+StaticDir))))
+		PathPrefix("/static").
+		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(StaticDir))))
 
 	//http.HandleFunc("/", serveTemplate)
 
