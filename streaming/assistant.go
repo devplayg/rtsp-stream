@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
+	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"math"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -24,7 +25,7 @@ type Assistant struct {
 
 func NewAssistant(stream *Stream, ctx context.Context) *Assistant {
 	return &Assistant{
-		mergeInterval:       30 * time.Second,
+		mergeInterval:       10 * time.Second,
 		healthCheckInterval: 4 * time.Second,
 		stream:              stream,
 		ctx:                 ctx,
@@ -83,33 +84,66 @@ func (s *Assistant) getLiveVideoFiles() ([]*LiveVideoFile, error) {
 //
 //    return tempFile, nil
 //}
-
-func (s *Assistant) mergeLiveVideoFiles(liveVideoFiles []*LiveVideoFile, file *os.File) (*VideoRecord, error) {
+func (s *Assistant) mergeLiveVideoFiles(liveVideoFiles []*LiveVideoFile, fileList *os.File) (*VideoRecord, error) {
 
 	// Merge live *.ts files to record *.ts files
 	ext := ".ts"
 	videoRecord := NewVideoRecord(liveVideoFiles[0].File.ModTime(), Loc, ext)
-	date := liveVideoFiles[0].File.ModTime().In(Loc).Format("20060102")
-	if err := hippo.EnsureDir(filepath.Join(s.stream.RecDir, date)); err != nil {
+	tempDir := filepath.Join(os.TempDir(), fmt.Sprintf("stream-%d", s.stream.Id))
+	if err := hippo.EnsureDir(tempDir); err != nil {
 		return nil, err
 	}
-	outputFilePath := filepath.Join(s.stream.RecDir, date, videoRecord.Name)
-	duration, err := MergeLiveVideoFiles(file.Name(), outputFilePath)
+	videoRecord.path = filepath.Join(tempDir, videoRecord.Name)
+	//date := liveVideoFiles[0].File.ModTime().In(Loc).Format("20060102")
+	//if err := hippo.EnsureDir(filepath.Join(s.stream.RecDir, date)); err != nil {
+	//	return nil, err
+	//}
+	//outputFilePath := filepath.Join(s.stream.RecDir, date, videoRecord.Name)
+	duration, err := MergeLiveVideoFiles(fileList.Name(), videoRecord.path)
 	log.WithFields(log.Fields{
-		"stream_id":       s.stream.Id,
-		"liveDir":         s.stream.LiveDir,
-		"recDir":          s.stream.RecDir,
-		"list":            file.Name(),
-		"output":          outputFilePath,
+		"stream_id":   s.stream.Id,
+		"liveDir":     s.stream.LiveDir,
+		"recDir":      s.stream.RecDir,
+		"listFile":    fileList.Name(),
+		"mergedFiles": len(liveVideoFiles),
+		//"output":          videoRecord,
 		"archivingResult": err,
 		"duration":        duration,
 	}).Debug("assistant merged video files")
 	for _, f := range liveVideoFiles {
-		log.Debugf("    - %s", f.File.Name())
+		log.Tracef("    - %s", f.File.Name())
 	}
 	videoRecord.Duration = duration
 	return videoRecord, err
 }
+
+//
+//func (s *Assistant) mergeLiveVideoFiles_old(liveVideoFiles []*LiveVideoFile, file *os.File) (*VideoRecord, error) {
+//
+//	// Merge live *.ts files to record *.ts files
+//	ext := ".ts"
+//	videoRecord := NewVideoRecord(liveVideoFiles[0].File.ModTime(), Loc, "", ext)
+//	date := liveVideoFiles[0].File.ModTime().In(Loc).Format("20060102")
+//	if err := hippo.EnsureDir(filepath.Join(s.stream.RecDir, date)); err != nil {
+//		return nil, err
+//	}
+//	outputFilePath := filepath.Join(s.stream.RecDir, date, videoRecord.Name)
+//	duration, err := MergeLiveVideoFiles(file.Name(), outputFilePath)
+//	log.WithFields(log.Fields{
+//		"stream_id":       s.stream.Id,
+//		"liveDir":         s.stream.LiveDir,
+//		"recDir":          s.stream.RecDir,
+//		"list":            file.Name(),
+//		"output":          outputFilePath,
+//		"archivingResult": err,
+//		"duration":        duration,
+//	}).Debug("assistant merged video files")
+//	for _, f := range liveVideoFiles {
+//		log.Debugf("    - %s", f.File.Name())
+//	}
+//	videoRecord.Duration = duration
+//	return videoRecord, err
+//}
 
 func (s *Assistant) archiveLiveVideos() error {
 
@@ -120,73 +154,153 @@ func (s *Assistant) archiveLiveVideos() error {
 	}
 
 	// Generate file list of live video files for use with ffmpeg
-	fileList, err := GenerateLiveVideoFileListForUseWithFfmpeg(liveVideoFiles)
+	fileList, err := GenerateLiveVideoFileListToMergeForUseWithFfmpeg(liveVideoFiles)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(fileList.Name())
 
 	// Merge live video files
-	videoFile, err := s.mergeLiveVideoFiles(liveVideoFiles, fileList)
+	videoRecord, err := s.mergeLiveVideoFiles(liveVideoFiles, fileList)
 	if err != nil {
 		return err
 	}
-	//spew.Dump(videoFile)
 
-	if err := s.saveVideoRecord(videoFile); err != nil {
+	err = s.saveVideoRecord(videoRecord)
+	if err != nil {
 		return err
 	}
 
-	// update m3u8
-	if err := s.updateM3u8(videoFile); err != nil {
+	log.WithFields(log.Fields{
+		"stream_id": s.stream.Id,
+		"seq":       videoRecord.Seq,
+	}).Debug("videoRecord has been saved")
+
+	if err := s.putVideoFileToObjectStorage(videoRecord); err != nil {
 		return err
 	}
+	defer os.Remove(videoRecord.path)
+
+	spew.Dump(videoRecord)
+
+	//// update m3u8
+	//if err := s.updateM3u8(videoFile); err != nil {
+	//	return err
+	//}
 
 	s.removeLiveVideos(liveVideoFiles)
 	return nil
 }
 
-func (s *Assistant) updateM3u8(videoRecord *VideoRecord) error {
-	bucketName := GetVideRecordBucket(videoRecord, s.stream.Id)
-	//videoRecords := make([]*VideoRecord, 0)
-	var maxTargetDuration float32
-	m3u8Header := GetM3u8Header()
-	var body string
+func (s *Assistant) putVideoFileToObjectStorage(videoRecord *VideoRecord) error {
+	bucketName := "record"
+	prefix := "media"
+	streamId := strconv.FormatInt(s.stream.Id, 10)
+	date := time.Unix(videoRecord.UnixTime, 0).In(Loc).Format("20060102")
+	objectName := filepath.ToSlash(filepath.Join(streamId, date, prefix+strconv.FormatInt(videoRecord.Seq, 10)+".ts"))
 
-	err := DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			var videoRecord VideoRecord
-			err := json.Unmarshal(k, &videoRecord)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			//spew.Dump(videoRecord)
+	file, err := os.Open(videoRecord.path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-			//videoRecords = append(videoRecords, &videoRecord)
-			if videoRecord.Duration > maxTargetDuration {
-				maxTargetDuration = videoRecord.Duration
-			}
-			body += fmt.Sprintf("#EXTINF:%.6f,\n", videoRecord.Duration)
-			body += videoRecord.Name + "\n"
-		}
-
-		return nil
-	})
+	fileStat, err := file.Stat()
 	if err != nil {
 		return err
 	}
 
-	m3u8Header += fmt.Sprintf("#EXT-X-TARGETDURATION:%.0f\n", math.Ceil(float64(maxTargetDuration)))
-	m3u8Footer := "#EXT-X-ENDLIST"
-	m3u8 := m3u8Header + body + m3u8Footer
+	_, err = MinioClient.PutObject(bucketName, objectName, file, fileStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if err != nil {
 
-	date := time.Unix(videoRecord.UnixTime, 0).In(Loc).Format("20060102")
-	outputFilePath := filepath.Join(s.stream.RecDir, date, "index.m3u8")
-	return ioutil.WriteFile(outputFilePath, []byte(m3u8), 0644)
+		return err
+	}
+
+	//url, err := MinioClient.PresignedGetObject(bucketName, objectName, time.Second * 24 * 60 * 60, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//videoRecord.Url = url.String()
+
+	return nil
 }
+
+//
+//func (s *Assistant) archiveLiveVideos_old() error {
+//
+//	// Get live video files
+//	liveVideoFiles, err := s.getLiveVideoFiles()
+//	if err != nil || len(liveVideoFiles) < 1 {
+//		return err
+//	}
+//
+//	// Generate file list of live video files for use with ffmpeg
+//	fileList, err := GenerateLiveVideoFileListToMergeForUseWithFfmpeg(liveVideoFiles)
+//	if err != nil {
+//		return err
+//	}
+//	defer os.Remove(fileList.Name())
+//
+//	// Merge live video files
+//	videoFile, err := s.mergeLiveVideoFiles(liveVideoFiles, fileList)
+//	if err != nil {
+//		return err
+//	}
+//	//spew.Dump(videoFile)
+//
+//	if err := s.saveVideoRecord(videoFile); err != nil {
+//		return err
+//	}
+//
+//	// update m3u8
+//	if err := s.updateM3u8(videoFile); err != nil {
+//		return err
+//	}
+//
+//	s.removeLiveVideos(liveVideoFiles)
+//	return nil
+//}
+
+//func (s *Assistant) updateM3u8(videoRecord *VideoRecord) error {
+//	bucketName := GetVideRecordBucket(videoRecord, s.stream.Id)
+//	//videoRecords := make([]*VideoRecord, 0)
+//	var maxTargetDuration float32
+//	m3u8Header := GetM3u8Header()
+//	var body string
+//
+//	err := DB.View(func(tx *bolt.Tx) error {
+//		b := tx.Bucket(bucketName)
+//		c := b.Cursor()
+//		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+//			var videoRecord VideoRecord
+//			err := json.Unmarshal(k, &videoRecord)
+//			if err != nil {
+//				log.Error(err)
+//				continue
+//			}
+//
+//			//videoRecords = append(videoRecords, &videoRecord)
+//			if videoRecord.Duration > maxTargetDuration {
+//				maxTargetDuration = videoRecord.Duration
+//			}
+//			body += fmt.Sprintf("#EXTINF:%.6f,\n", videoRecord.Duration)
+//			body += videoRecord.Name + "\n"
+//		}
+//
+//		return nil
+//	})
+//	if err != nil {
+//		return err
+//	}
+//
+//	m3u8Header += fmt.Sprintf("#EXT-X-TARGETDURATION:%.0f\n", math.Ceil(float64(maxTargetDuration)))
+//	m3u8Footer := "#EXT-X-ENDLIST"
+//	m3u8 := m3u8Header + body + m3u8Footer
+//
+//	date := time.Unix(videoRecord.UnixTime, 0).In(Loc).Format("20060102")
+//	outputFilePath := filepath.Join(s.stream.RecDir, date, "index.m3u8")
+//	return ioutil.WriteFile(outputFilePath, []byte(m3u8), 0644)
+//}
 
 func (s *Assistant) saveVideoRecord(videoRecord *VideoRecord) error {
 	bucketName := GetVideRecordBucket(videoRecord, s.stream.Id)
@@ -198,13 +312,15 @@ func (s *Assistant) saveVideoRecord(videoRecord *VideoRecord) error {
 			return err
 		}
 
-		key, err := json.Marshal(videoRecord)
+		data, err := json.Marshal(videoRecord)
 		if err != nil {
 			return err
 		}
 
 		bucket := tx.Bucket(bucketName)
-		return bucket.Put(key, []byte{})
+		uid, _ := bucket.NextSequence()
+		videoRecord.Seq = int64(uid)
+		return bucket.Put(Int64ToBytes(videoRecord.Seq), data)
 	})
 }
 

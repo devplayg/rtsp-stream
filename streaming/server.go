@@ -3,14 +3,16 @@ package streaming
 import (
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
+	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
 
 var (
-	DB  *bolt.DB
-	Loc *time.Location
+	DB          *bolt.DB
+	Loc         *time.Location
+	MinioClient *minio.Client
 )
 
 type Server struct {
@@ -20,8 +22,7 @@ type Server struct {
 	addr       string
 	liveDir    string
 	recDir     string
-	//db         *bolt.DB
-	config *Config
+	config     *Config
 }
 
 func NewServer(config *Config) *Server {
@@ -92,6 +93,11 @@ func (s *Server) init() error {
 
 	// Set controller
 	s.controller = NewController(s)
+
+	MinioClient, err = minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

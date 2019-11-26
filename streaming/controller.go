@@ -1,19 +1,26 @@
 package streaming
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/devplayg/rtsp-stream/ui"
 	"github.com/gorilla/mux"
+	"github.com/minio/minio-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"html/template"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Controller struct {
@@ -36,6 +43,10 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id}/stop", c.StopStream).Methods("GET")
 
+	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetM3u8).Methods("GET")
+	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/media{seq:[0-9]+}.ts", c.Wondory).Methods("GET")
+	//http://127.0.0.1:8000/videos/1/date/20191126/1.ts
+
 	r.
 		PathPrefix("/static").
 		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
@@ -47,56 +58,37 @@ func (c *Controller) init() {
 	c.router = r
 }
 
-func serveTemplate(w http.ResponseWriter, r *http.Request) {
-	lp := filepath.Join("templates", "layout.html")
-	fp := filepath.Join("templates", "example.html")
+func formatAsDollars(valueInCents int) (string, error) {
+	dollars := valueInCents / 100
+	cents := valueInCents % 100
+	return fmt.Sprintf("$%d.%2d", dollars, cents), nil
+}
 
-	tmpl, _ := template.ParseFiles(lp, fp)
-	tmpl.ExecuteTemplate(w, "layout", nil)
+func formatAsDate(t time.Time) string {
+	year, month, day := t.Date()
+	return fmt.Sprintf("%d/%d/%d", day, month, year)
+}
+
+func urgentNote(acc ui.Account) string {
+	return fmt.Sprintf("You have earned 100 VIP points that can be used for purchases")
 }
 
 func serveTemplate2(w http.ResponseWriter, r *http.Request) {
-	//tpl, _ := template.New("layout").Parse(ui.Hello())
-	//template.New().
-	//tpl.ExecuteTemplate(w, "layout", nil)
-	const letter = `
-Dear {{.Name}},
-{{if .Attended}}
-It was a pleasure to see you at the wedding.
-{{- else}}
-It is a shame you couldn't make it to the wedding.
-{{- end}}
+	fmap := template.FuncMap{
+		"formatAsDollars": formatAsDollars,
+		"formatAsDate":    formatAsDate,
+		"urgentNote":      urgentNote,
+	}
 
-{{with .Gift -}}
-    Thank you for the lovely {{.}}.
-{{end}}
-Best wishes,
-Josie
----
-`
+	// Create a new template and parse the letter into it.
+	str := "hello"
 
-	// Prepare some data to insert into the template.
-	//type Recipient struct {
-	//    Name, Gift string
-	//    Attended   bool
-	//}
-	//var recipients = []Recipient{
-	//    {"Aunt Mildred", "bone china tea set", true},
-	//    {"Uncle John", "moleskin pants", false},
-	//    {"Cousin Rodney", "", false},
-	//}
-	//
-	//// Create a new template and parse the letter into it.
-	//t := template.Must(template.New("l111etter").Parse(ui.Layout()))
-	//t.
-	//
-	//// Execute the template for each recipient.
-	//for _, r := range recipients {
-	//    err := t.Execute(w, r)
-	//    if err != nil {
-	//        log.Println("executing template:", err)
-	//    }
-	//}
+	//t := template.Must(template.New("email.tmpl").Funcs(fmap).Parse(ui.Layout(str)))
+	t := template.Must(template.New("streams").Funcs(fmap).Parse(ui.Layout(str)))
+	err := t.Execute(w, ui.CreateMockStatement())
+	if err != nil {
+		log.Println("executing template:", err)
+	}
 }
 
 func NewController(server *Server) *Controller {
@@ -182,7 +174,6 @@ func (c *Controller) parseStreamRequest(body io.Reader) (*Stream, error) {
 	}
 
 	stream.Uri = strings.TrimSpace(stream.Uri)
-
 	if _, err := url.Parse(stream.Uri); err != nil {
 		return nil, ErrorInvalidUri
 	}
@@ -258,6 +249,215 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 
 		return nil
 	})
+}
+
+func (c *Controller) Wondory(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	//bucketName := "record"
+	//bucket := []byte(fmt.Sprintf("stream-%s-%s", vars["id"], vars["date"]))
+	bucketName := "record"
+	objectName := filepath.ToSlash(filepath.Join(vars["id"], vars["date"], "media"+vars["seq"]+".ts"))
+
+	object, err := MinioClient.GetObject(bucketName, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	//reader := bufio.NewReader(object)
+	//s, _ := object.Stat()
+	//s.Size
+	//info, _ := object.Stat()
+
+	w.Header().Set("Accept-Range", "bytes")
+	w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
+
+	//if _, err = io.Copy(w, object); err != nil{
+	//    Response(w, err, http.StatusInternalServerError)
+	//    return
+	//}
+
+	buf := new(bytes.Buffer)
+	n, err := buf.ReadFrom(object)
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
+	w.WriteHeader(http.StatusOK)
+	w.Write(buf.Bytes())
+
+	//Accept-Ranges: bytes
+	//Content-Length: 1099988
+	//Content-Type: video/vnd.dlna.mpeg-tts
+	//Date: Tue, 26 Nov 2019 10:50:15 GMT
+	//Last-Modified: Tue, 26 Nov 2019 10:34:51 GMT
+
+	//w.WriteHeader(http.StatusOK)
+	//b := bytes.NewBuffer(object)
+	//bufre
+
+	//fmt.Fprintf()
+	//localFile, err := os.Create("/tmp/local-file.jpg")
+	//if err != nil {
+	//    fmt.Println(err)
+	//    return
+	//}
+	//if _, err = io.Copy(localFile, object); err != nil {
+	//   fmt.Println(err)
+	//   return
+	//}
+
+}
+
+func (c *Controller) RedirectToVideoFile(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seq, _ := strconv.ParseInt(vars["seq"], 10, 16)
+	var data []byte
+	//streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+	//date := vars["date"]
+	bucket := []byte(fmt.Sprintf("stream-%s-%s", vars["id"], vars["date"]))
+
+	err := DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		if b == nil {
+			return nil
+		}
+
+		data = b.Get(Int64ToBytes(seq))
+
+		//spew.Dump(data)
+
+		//c := b.Cursor()
+		//
+		//for k, v := c.First(); k != nil; k, v = c.Next() {
+		//   var videoRecord VideoRecord
+		//   err := json.Unmarshal(v, &videoRecord)
+		//   if err != nil {
+		//       log.Error(err)
+		//       continue
+		//   }
+
+		//    if videoRecord.Duration > maxTargetDuration {
+		//        maxTargetDuration = videoRecord.Duration
+		//    }
+		//    if firstSeq < 1 {
+		//        firstSeq = BytesToInt64(k)
+		//    }
+		//
+		//    body += fmt.Sprintf("#EXTINF:%.6f,\n", videoRecord.Duration)
+		//    body += fmt.Sprintf("%d.ts\n", BytesToInt64(k))
+
+		//keys = append(keys, BytesToInt64(k))
+		//videos = append(videos, &videoRecord)
+		//}
+		return nil
+	})
+
+	if data == nil {
+		Response(w, errors.New("no data"), http.StatusBadRequest)
+		return
+	}
+	spew.Dump(data)
+	var videoRecord VideoRecord
+	err = json.Unmarshal(data, &videoRecord)
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	if len(videoRecord.Url) < 1 {
+		Response(w, errors.New("no data"), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, videoRecord.Url, http.StatusSeeOther)
+
+}
+
+func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+	date := vars["date"]
+	bucket := []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
+	var maxTargetDuration float32
+	var firstSeq int64
+	//videos := make([]*VideoRecord, 0)
+	//keys := make([]int64, 0)
+
+	body := ""
+	err := DB.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket(bucket)
+		if b == nil {
+			return nil
+		}
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var videoRecord VideoRecord
+			err := json.Unmarshal(v, &videoRecord)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+
+			if videoRecord.Duration > maxTargetDuration {
+				maxTargetDuration = videoRecord.Duration
+			}
+			if firstSeq < 1 {
+				firstSeq = BytesToInt64(k)
+			}
+
+			body += fmt.Sprintf("#EXTINF:%.6f,\n", videoRecord.Duration)
+			body += fmt.Sprintf("media%d.ts\n", BytesToInt64(k))
+
+			//keys = append(keys, BytesToInt64(k))
+			//videos = append(videos, &videoRecord)
+		}
+		return nil
+	})
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+	//sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	//sort.SliceStable(videos, func(i, j int) bool {
+	//   return videos[i].UnixTime < videos[j].UnixTime
+	//})
+
+	//for _, v := range videos {
+	//if v.Duration > maxTargetDuration {
+	//    maxTargetDuration = v.Duration
+	//}
+	//    body += fmt.Sprintf("#EXTINF:%.6f,\n", v.Duration)
+	//    body += v.Url+ "\n"
+	//}
+	m3u8 := GetM3u8Header(firstSeq, math.Ceil(float64(maxTargetDuration))) + body + GetM3u8Footer()
+	//w.Header().Set("Access-Control-Allow-Origin", "*")
+	//w.Header().Set("Access-Control-Allow-Methods", "GET")
+	//w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Length", strconv.Itoa(len(m3u8)))
+	//w.Header().Set("Accept-Ranges", "bytes")
+	//w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.WriteHeader(http.StatusOK)
+
+	// application/vnd.apple.mpegurl
+
+	//url, _ := url.Parse(url.QueryEscape(str))
+	//if err != nil { panic(err) }
+	//fmt.Println(url.String())
+
+	//fmt.Fprintf(w, m3u8)
+	if _, err = w.Write([]byte(m3u8)); err != nil {
+		log.Error(err)
+	}
 }
 
 //

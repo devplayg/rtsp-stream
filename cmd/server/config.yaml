@@ -1,4 +1,7 @@
 storage:
+  address: 192.168.0.11:9000
+  accessKey: M1V1FBMZBE72L6C5BMD0
+  secretKey: +an2hp0d7ldStaOBdUiQePGtTqlXGApJTs3r52iw
   live: e:/data/live
   recording: e:/data/record
 bind-address: 0.0.0.0:8000

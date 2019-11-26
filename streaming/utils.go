@@ -133,6 +133,7 @@ func MergeLiveVideoFiles(inputFilePath, outputFilePath string) (float32, error) 
 	var duration float32
 	cmd := exec.Command(
 		"ffmpeg",
+		"-y",
 		"-f",
 		"concat",
 		"-safe",
@@ -147,6 +148,7 @@ func MergeLiveVideoFiles(inputFilePath, outputFilePath string) (float32, error) 
 	var stdOut bytes.Buffer
 	cmd.Stdout = &stdOut
 
+	log.Debug(cmd.Args)
 	err := cmd.Run()
 	if err != nil {
 		return duration, err
@@ -200,7 +202,7 @@ func GetVideoDuration(path string) (string, error) {
 	return strings.TrimSpace(stdOut.String()), err
 }
 
-func GenerateLiveVideoFileListForUseWithFfmpeg(liveVideoFiles []*LiveVideoFile) (*os.File, error) {
+func GenerateLiveVideoFileListToMergeForUseWithFfmpeg(liveVideoFiles []*LiveVideoFile) (*os.File, error) {
 	var text string
 	for _, f := range liveVideoFiles {
 		path := filepath.ToSlash(filepath.Join(f.Dir, f.File.Name()))
@@ -224,10 +226,14 @@ func GetVideRecordBucket(videoRecord *VideoRecord, id int64) []byte {
 	return []byte(fmt.Sprintf("stream-%d-%s", id, t.Format("20060102")))
 }
 
-func GetM3u8Header() string {
-	return `#EXTM3U
+func GetM3u8Header(firstSeq int64, maxTargetDuration float64) string {
+	return fmt.Sprintf(`#EXTM3U
 #EXT-X-VERSION:3
-#EXT-X-MEDIA-SEQUENCE:0
-#EXT-X-ALLOW-CACHE:YES
-`
+#EXT-X-MEDIA-SEQUENCE:%d
+#EXT-X-TARGETDURATION:%.0f
+`, firstSeq, maxTargetDuration)
+}
+
+func GetM3u8Footer() string {
+	return "#EXT-X-ENDLIST"
 }

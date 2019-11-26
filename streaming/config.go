@@ -7,6 +7,10 @@ import (
 
 type Config struct {
 	Storage struct {
+		Address   string
+		AccessKey string
+		SecretKey string
+		UseSSL    bool
 		Live      string
 		Recording string
 	}

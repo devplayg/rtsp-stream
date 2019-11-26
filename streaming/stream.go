@@ -90,9 +90,10 @@ func (s *Stream) start() error {
 func (s *Stream) run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	assistant := NewAssistant(s, ctx)
-	assistant.start()
+	if err := assistant.start(); err != nil {
+		return err
+	}
 	defer cancel()
-	// defer s.assistant.stop()
 
 	s.cmd = GenerateStreamCommand(s)
 	err := s.cmd.Run()

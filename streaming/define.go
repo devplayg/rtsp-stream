@@ -19,9 +19,12 @@ var (
 )
 
 var ApplicationJson = "application/json"
-var ErrorInvalidUri = errors.New("invalid URI")
-var ErrorDuplicatedStream = errors.New("duplicated stream")
-var ErrorStreamNotFound = errors.New("stream not found")
+
+var (
+	ErrorInvalidUri       = errors.New("invalid URI")
+	ErrorDuplicatedStream = errors.New("duplicated stream")
+	ErrorStreamNotFound   = errors.New("stream not found")
+)
 
 type Result struct {
 	Error string `json:"error"`
@@ -53,9 +56,12 @@ func NewLiveVideoFile(f os.FileInfo, ext, dir string) *LiveVideoFile {
 }
 
 type VideoRecord struct {
+	Seq      int64   `json:"seq"`
 	Name     string  `json:"nm"`
 	Duration float32 `json:"dur"`
 	UnixTime int64   `json:"unix"`
+	Url      string  `json:"url"`
+	path     string
 }
 
 func NewVideoRecord(t time.Time, loc *time.Location, ext string) *VideoRecord {
