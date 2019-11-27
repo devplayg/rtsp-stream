@@ -95,15 +95,17 @@ func (s *Stream) run() error {
 	}
 	defer cancel()
 
-	s.cmd = GenerateStreamCommand(s)
-	err := s.cmd.Run()
+	if err := GenerateStreamCommand(s); err != nil {
+		return err
+	}
+	//err := s.cmd.Run()
 	log.WithFields(log.Fields{
 		"id":      s.Id,
 		"uri":     s.Uri,
 		"liveDir": s.LiveDir,
 		"recDir":  s.RecDir,
-	}).Debug("streaming command has been stopped: ", err)
-	return err
+	}).Debug("streaming command has been stopped")
+	return nil
 }
 
 func (s *Stream) stop() error {

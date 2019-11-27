@@ -11,14 +11,24 @@ const (
 	Running = 1
 
 	NormalStream = 1
+	DateFormat   = "20060102"
 )
 
 var (
+	// BoltDB buckets
 	StreamBucket = []byte("stream")
 	ConfigBucket = []byte("config")
-)
 
-var ApplicationJson = "application/json"
+	// Minio buckets
+	VideoRecordBucket = "record"
+
+	// Content types
+	ContentTypeJson = "application/json"
+	ContentTypeTs   = "video/mp2t"
+	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
+
+	IndexM3u8 = "index.m3u8"
+)
 
 var (
 	ErrorInvalidUri       = errors.New("invalid URI")
@@ -41,17 +51,16 @@ func NewResult(err error) *Result {
 	}
 }
 
-type LiveVideoFile struct {
+type VideoFile struct {
 	File os.FileInfo
-	Ext  string
-	Dir  string
+	//Ext  string
+	dir string
 }
 
-func NewLiveVideoFile(f os.FileInfo, ext, dir string) *LiveVideoFile {
-	return &LiveVideoFile{
+func NewVideoFile(f os.FileInfo, dir string) *VideoFile {
+	return &VideoFile{
 		File: f,
-		Ext:  ext,
-		Dir:  dir,
+		dir:  dir,
 	}
 }
 
