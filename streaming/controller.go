@@ -436,6 +436,10 @@ func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
 	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], IndexM3u8)
 	object, err := MinioClient.GetObject(VideoRecordBucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
+		log.WithFields(log.Fields{
+			"bucket": VideoRecordBucket,
+			"object": objectName,
+		}).Debugf("failed to get object from Minio")
 		Response(w, err, http.StatusInternalServerError)
 		return
 	}

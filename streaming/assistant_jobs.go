@@ -101,7 +101,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 
 	lastSentIdx := -1
 	lastSentMediaFileSeq := -1
-	count := 0
+	sent := 0
 	for idx, f := range videoFiles {
 		mediaFileSeq, err := GetVideoFileSeq(f.File.Name())
 		if err != nil {
@@ -140,7 +140,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 		// Send video files to storage
 		objectName := fmt.Sprintf("%d/%s/%s", s.stream.Id, t.Format(DateFormat), f.File.Name())
 		// wondory "SendToVirtualStorage"
-		if err := SendToVirtualStorage(VideoRecordBucket, objectName, filepath.Join(f.dir, f.File.Name()), ContentTypeTs); err != nil {
+		if err := SendToStorage(VideoRecordBucket, objectName, filepath.Join(f.dir, f.File.Name()), ContentTypeTs); err != nil {
 			return err
 		}
 
@@ -151,13 +151,17 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 
 		lastSentMediaFileSeq = mediaFileSeq
 		lastSentIdx = idx
-		count++
+		sent++
+	}
+
+	if sent < 1 {
+		return nil
 	}
 
 	// Send m3u8 file to storage
 	objectName := fmt.Sprintf("%d/%s/%s", s.stream.Id, t.Format(DateFormat), IndexM3u8)
 	// wondory
-	if err := SendToVirtualStorage(VideoRecordBucket, objectName, filepath.Join(tempDir, IndexM3u8), ContentTypeM3u8); err != nil {
+	if err := SendToStorage(VideoRecordBucket, objectName, filepath.Join(tempDir, IndexM3u8), ContentTypeM3u8); err != nil {
 		return err
 	}
 
@@ -182,7 +186,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 		"lastSentMediaFileSeq": s.lastSentMediaFileSeq,
 		"lastSentHash":         hex.EncodeToString(s.lastSentHash),
 		"date":                 t.Format(DateFormat),
-		"count":                count,
+		"count":                sent,
 	}).Debug("sent file to object storage")
 	return nil
 }
