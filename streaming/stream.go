@@ -65,9 +65,11 @@ func (s *Stream) start() error {
 
 	// Start process
 	go func() {
-		s.run()
+		err := s.run()
 		log.WithFields(log.Fields{
-			"id": s.Id,
+			"id":  s.Id,
+			"err": err,
+			"pid": s.cmd.Process.Pid,
 		}).Debug("streaming job is done")
 	}()
 
@@ -96,7 +98,7 @@ func (s *Stream) run() error {
 	}
 	defer cancel()
 
-	if err := GenerateStreamCommand(s); err != nil {
+	if err := RunStream(s); err != nil {
 		return err
 	}
 	//err := s.cmd.Run()

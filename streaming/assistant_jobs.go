@@ -3,13 +3,14 @@ package streaming
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -87,37 +88,41 @@ func (s *Assistant) archiveLiveVideos() error {
 }
 
 func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
+
+	// Get video files
 	videoFiles, err := GetVideoFilesInDir(tempDir, VideoFilePrefix)
 	if err != nil {
 		return err
 	}
+
+	if len(videoFiles) < 1 {
+		return nil
+	}
+
 	lastSentIdx := -1
 	lastSentMediaFileSeq := -1
-	//spew.Dump(videoFiles)
-	//bucketName := "record"
-	//streamId := strconv.FormatInt(s.stream.Id, 10)
+	count := 0
 	for idx, f := range videoFiles {
-		name := strings.TrimPrefix(f.File.Name(), VideoFilePrefix)
-		name = strings.TrimSuffix(name, VideoFileExt)
-		mediaFileSeq, err := strconv.Atoi(name)
+		mediaFileSeq, err := GetVideoFileSeq(f.File.Name())
 		if err != nil {
 			log.WithFields(log.Fields{
 				"name": f.File.Name(),
 			}).Debug("invalid video file name")
 			continue
 		}
+
+		// Skip sent files
 		if mediaFileSeq < s.lastSentMediaFileSeq {
-			//log.Debug("already sent: " + f.File.Name())
 			continue
 		}
 
-		// Need to check checksum
+		// Last sent video is needed to check checksum, because it could be changed
 		if mediaFileSeq == s.lastSentMediaFileSeq {
 			hash, err := GetHashFromFile(filepath.Join(f.dir, f.File.Name()))
 			if err != nil {
 				log.WithFields(log.Fields{
 					"name": f.File.Name(),
-				}).Debug("failed to get file hash")
+				}).Debugf("[%d] failed to get file hash", s.stream.Id)
 				return err
 			}
 			if bytes.Equal(s.lastSentHash, hash) {
@@ -129,43 +134,69 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 				"size_old": s.lastSentSize,
 				"hash_now": hex.EncodeToString(hash),
 				"size_now": f.File.Size(),
-			}).Debug("already sent before, but hash is changed")
+			}).Debugf("    [%d] already sent before, but hash is changed", s.stream.Id)
 		}
 
-		//
+		// Send video files to storage
 		objectName := fmt.Sprintf("%d/%s/%s", s.stream.Id, t.Format(DateFormat), f.File.Name())
-		if err := SendToStorage(VideoRecordBucket, objectName, filepath.Join(f.dir, f.File.Name()), ContentTypeTs); err != nil {
+		// wondory "SendToVirtualStorage"
+		if err := SendToVirtualStorage(VideoRecordBucket, objectName, filepath.Join(f.dir, f.File.Name()), ContentTypeTs); err != nil {
 			return err
 		}
 
 		log.WithFields(log.Fields{
 			"name": f.File.Name(),
 			"size": f.File.Size(),
-		}).Debug("    [*] sent to object")
+		}).Debugf("    [%d] sent to object", s.stream.Id)
 
 		lastSentMediaFileSeq = mediaFileSeq
 		lastSentIdx = idx
+		count++
 	}
+
+	// Send m3u8 file to storage
 	objectName := fmt.Sprintf("%d/%s/%s", s.stream.Id, t.Format(DateFormat), IndexM3u8)
-	if err := SendToStorage("record", objectName, filepath.Join(tempDir, IndexM3u8), ContentTypeM3u8); err != nil {
+	// wondory
+	if err := SendToVirtualStorage(VideoRecordBucket, objectName, filepath.Join(tempDir, IndexM3u8), ContentTypeM3u8); err != nil {
 		return err
 	}
 
-	s.lastSentMediaFileSeq = lastSentMediaFileSeq
 	hash, err := GetHashFromFile(filepath.Join(videoFiles[lastSentIdx].dir, videoFiles[lastSentIdx].File.Name()))
 	if err != nil {
-		log.Error("failed to get hash: " + videoFiles[lastSentIdx].File.Name())
+		log.WithFields(log.Fields{
+			"name": videoFiles[lastSentIdx].File.Name(),
+		}).Debugf("    [%d] failed to get hash", s.stream.Id)
 		return err
 	}
+	s.lastSentMediaFileSeq = lastSentMediaFileSeq
 	s.lastSentHash = hash
 	s.lastSentSize = videoFiles[lastSentIdx].File.Size()
 
+	transmissionResult := NewTransmissionResult(s.stream.Id, s.lastSentMediaFileSeq, s.lastSentSize, s.lastSentHash, t.Format(DateFormat))
+	if err := s.recordTransmission(transmissionResult); err != nil {
+		return err
+	}
+
 	log.WithFields(log.Fields{
+		"id":                   s.stream.Id,
 		"lastSentMediaFileSeq": s.lastSentMediaFileSeq,
 		"lastSentHash":         hex.EncodeToString(s.lastSentHash),
+		"date":                 t.Format(DateFormat),
+		"count":                count,
 	}).Debug("sent file to object storage")
-
 	return nil
+}
+
+func (s *Assistant) recordTransmission(result *TransmissionResult) error {
+	return DB.Update(func(tx *bolt.Tx) error {
+		data, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		bucket := tx.Bucket(TransmissionBucket)
+		key := Int64ToBytes(result.StreamId)
+		return bucket.Put(key, data)
+	})
 }
 
 func (s *Assistant) generateHlsFiles(tempDir string) error {
@@ -194,20 +225,21 @@ func (s *Assistant) moveLiveVideoFilesToTempDir(liveVideoFiles []*VideoFile, tem
 		liveVideoFiles[i].dir = tempDir
 		log.WithFields(log.Fields{
 			"name": filepath.Base(dst),
-		}).Debug("   - live video file is moved")
+		}).Tracef("    [%d] live video file is moved", s.stream.Id)
 	}
 
 	return nil
 }
 
 //
-//func (s *Assistant) stop() error {
-//	log.WithFields(log.Fields{
-//		"stream_id": s.stream.Id,
-//	}).Debug("stream assistant has been stopped")
-//
-//	return nil
-//}
+func (s *Assistant) stop() error {
+	// Send remains to storage
+	log.WithFields(log.Fields{
+		"stream_id": s.stream.Id,
+	}).Debug("stream assistant has been stopped")
+
+	return nil
+}
 
 func (s *Assistant) getLiveVideoFilesToMove(t time.Time) ([]*VideoFile, error) {
 	liveVideoFiles := make([]*VideoFile, 0)

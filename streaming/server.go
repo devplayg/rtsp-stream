@@ -59,6 +59,10 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop() error {
+	if err := s.manager.Stop(); err != nil {
+		log.Error(err)
+	}
+
 	if err := DB.Close(); err != nil {
 		log.Error(err)
 	}
@@ -112,7 +116,7 @@ func (s *Server) initDatabase() error {
 		return err
 	}
 
-	defaultBuckets := [][]byte{StreamBucket, ConfigBucket}
+	defaultBuckets := [][]byte{StreamBucket, TransmissionBucket, ConfigBucket}
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err

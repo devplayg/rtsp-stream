@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -78,7 +79,7 @@ func Int64ToBytes(i int64) []byte {
 //	return nil
 //}
 
-func GenerateStreamCommand(stream *Stream) error {
+func RunStream(stream *Stream) error {
 	cmd := exec.Command(
 		"ffmpeg",
 		"-y",
@@ -215,7 +216,6 @@ func GetVideoFilesInDir(dir string, prefix string) ([]*VideoFile, error) {
 		videoFiles = append(videoFiles, NewVideoFile(f, dir))
 	}
 	sort.SliceStable(videoFiles, func(i, j int) bool {
-
 		return videoFiles[i].File.ModTime().Before(videoFiles[j].File.ModTime())
 	})
 
@@ -223,7 +223,6 @@ func GetVideoFilesInDir(dir string, prefix string) ([]*VideoFile, error) {
 }
 
 func SendToStorage(bucketName, objectName, path, contentType string) error {
-
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -242,6 +241,21 @@ func SendToStorage(bucketName, objectName, path, contentType string) error {
 		return err
 	}
 	return nil
+}
+
+func SendToVirtualStorage(bucketName, objectName, path, contentType string) error {
+	return nil
+}
+
+func GetVideoFileSeq(name string) (int, error) {
+	str := strings.TrimPrefix(filepath.Base(name), VideoFilePrefix)
+	str = strings.TrimSuffix(str, VideoFileExt)
+	mediaFileSeq, err := strconv.Atoi(str)
+	if err != nil {
+		return 0, err
+	}
+
+	return mediaFileSeq, nil
 }
 
 //

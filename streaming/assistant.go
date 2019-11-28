@@ -2,6 +2,8 @@ package streaming
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -34,7 +36,42 @@ func NewAssistant(stream *Stream, ctx context.Context) *Assistant {
 	}
 }
 
+func (s *Assistant) init() error {
+	err := DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(TransmissionBucket)
+		data := b.Get(Int64ToBytes(s.stream.Id))
+		if data == nil {
+			return nil
+		}
+
+		var result TransmissionResult
+		err := json.Unmarshal(data, &result)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+
+		if time.Now().In(Loc).Format(DateFormat) == result.Date {
+			s.lastSentMediaFileSeq = result.Seq
+			s.lastSentHash = result.Hash
+		}
+		log.WithFields(log.Fields{
+			"stream_id": s.stream.Id,
+			"seq":       result.Seq,
+			"hash":      string(result.Hash),
+			"size":      result.Size,
+		}).Debugf("[%d] detected last tx result", s.stream.Id)
+		return nil
+	})
+
+	return err
+}
+
 func (s *Assistant) start() error {
+	if err := s.init(); err != nil {
+		return nil
+	}
+
 	go s.startCheckingStreamStatus()
 	go s.startMergingVideoFiles()
 	log.WithFields(log.Fields{
@@ -47,10 +84,15 @@ func (s *Assistant) start() error {
 func (s *Assistant) startCheckingStreamStatus() error {
 	for {
 		if s.stream.IsActive() != s.stream.Active {
+			var pid int
+			if s.stream.cmd != nil {
+				pid = s.stream.cmd.Process.Pid
+			}
 			s.stream.Active = s.stream.IsActive()
 			log.WithFields(log.Fields{
 				"stream_id": s.stream.Id,
 				"active":    s.stream.Active,
+				"pid":       pid,
 			}).Debug("stream status changed")
 
 		}

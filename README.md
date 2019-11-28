@@ -12,39 +12,42 @@
 ### Structure
 
 ```
-+----------------------------------------+  
-|            |  stream | stream | stream |          +-----------+
-|            |  assist | assist | assist |          |           |
-|----------------------------------------|          |   Minio   |
-| controller |           manager         |          |           |
-|----------------------------------------|          +-----------+
-|               server                   |   
-+----------------------------------------+
++-------------------------------------------------+  
+|                     |  stream | stream | stream |          +-----------+
+|                     |  assist | assist | assist |          |           |
+|-------------------------------------------------|          |   Minio   |
+|  db  |  controller  |           manager         |          |           |
+|-------------------------------------------------|          +-----------+
+|               server                            |   
++-------------------------------------------------+
 ```
 
-Server
+### Server
 
-- Server framework
+framework
 
-Database
+### Database
 
 - Key/Value database
 - BoltDB (https://github.com/boltdb/bolt)
 
-Manager
+### Manager
 
-- Streaming management
-- Start, stop, add, and remove streaming
+- manages all streams
+- starts, stops, adds, and removes streams
 
-Stream
+### Stream
 
-- Streaming object
+receives live stream
 
-Assistant
+### Assistant (Stream's assistant)
 
-- Stream's assistant
-- Check streaming status
-- Archive live videos
+helps stream. He is like a slave.
+
+- checks streaming status
+- archives live videos and send it to object storage
+
+### Structure
 
 * server
     - boltdb: database

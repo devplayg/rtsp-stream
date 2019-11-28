@@ -3,16 +3,16 @@ package streaming
 import (
 	"encoding/json"
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 )
-
-// var StreamsKey = []byte("streams") // will be removed
 
 type Manager struct {
 	server         *Server
@@ -192,10 +192,27 @@ func (m *Manager) deleteStream(id int64) error {
 }
 
 func (m *Manager) cleanStreamDir(stream *Stream) error {
-	err := os.RemoveAll(stream.LiveDir)
+	// Remove all files but created today in live directory
+
+	files, err := ioutil.ReadDir(stream.LiveDir)
 	if err != nil {
 		return err
 	}
+	t := time.Now().In(Loc)
+	for _, f := range files {
+		if f.ModTime().In(Loc).Format(DateFormat) == t.Format(DateFormat) {
+			continue
+		}
+		if err := os.Remove(filepath.Join(stream.LiveDir, f.Name())); err != nil {
+			log.Error(err)
+			continue
+		}
+	}
+
+	//err := os.RemoveAll(stream.LiveDir)
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }
 
@@ -265,6 +282,23 @@ func (m *Manager) stopStreaming(id int64) error {
 	if err := stream.stop(); err != nil {
 		return err
 	}
+
+	//log.WithFields(log.Fields{
+	//	"stream_id": id,
+	//}).Debugf("stream has been stopped")
+	return nil
+}
+
+func (m *Manager) Stop() error {
+	// Stop all running streamings
+	m.streams.Range(func(k interface{}, v interface{}) bool {
+		s := v.(*Stream)
+		if err := m.stopStreaming(s.Id); err != nil {
+			log.Error("failed to stop streaming")
+			spew.Dump(s)
+		}
+		return true
+	})
 
 	return nil
 }

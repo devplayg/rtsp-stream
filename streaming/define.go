@@ -3,7 +3,6 @@ package streaming
 import (
 	"github.com/pkg/errors"
 	"os"
-	"time"
 )
 
 const (
@@ -16,8 +15,9 @@ const (
 
 var (
 	// BoltDB buckets
-	StreamBucket = []byte("stream")
-	ConfigBucket = []byte("config")
+	StreamBucket       = []byte("stream")
+	TransmissionBucket = []byte("transmission")
+	ConfigBucket       = []byte("config")
 
 	// Minio buckets
 	VideoRecordBucket = "record"
@@ -64,18 +64,37 @@ func NewVideoFile(f os.FileInfo, dir string) *VideoFile {
 	}
 }
 
-type VideoRecord struct {
-	Seq      int64   `json:"seq"`
-	Name     string  `json:"nm"`
-	Duration float32 `json:"dur"`
-	UnixTime int64   `json:"unix"`
-	Url      string  `json:"url"`
-	path     string
+type TransmissionResult struct {
+	StreamId int64
+	Seq      int
+	Hash     []byte
+	Size     int64
+	Date     string
 }
 
-func NewVideoRecord(t time.Time, loc *time.Location, ext string) *VideoRecord {
-	return &VideoRecord{
-		Name:     t.In(loc).Format("20060102_150405") + ext,
-		UnixTime: t.Unix(),
+func NewTransmissionResult(streamId int64, seq int, size int64, hash []byte, date string) *TransmissionResult {
+	return &TransmissionResult{
+		StreamId: streamId,
+		Seq:      seq,
+		Size:     size,
+		Hash:     hash,
+		Date:     date,
 	}
 }
+
+//
+//type VideoRecord struct {
+//    Seq      int64   `json:"seq"`
+//    Name     string  `json:"nm"`
+//    Duration float32 `json:"dur"`
+//    UnixTime int64   `json:"unix"`
+//    Url      string  `json:"url"`
+//    path     string
+//}
+//
+//func NewVideoRecord(t time.Time, loc *time.Location, ext string) *VideoRecord {
+//    return &VideoRecord{
+//        Name:     t.In(loc).Format("20060102_150405") + ext,
+//        UnixTime: t.Unix(),
+//    }
+//}
