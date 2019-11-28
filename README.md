@@ -59,8 +59,7 @@ helps stream. He is like a slave.
 
 ### Database
 
-|Bucket|Key|Value|
+|Bucket|Key|Value type|
 |---|---|---|
-|streams|Stream ID (int64)|Stream object|
-|stream-{id}|YYYYMMDD (string)|m3u8 Info.|
-|stream-{id}-{YYYYMMDD}|VideoFile (struct)|[]byte{}|
+|streams|Stream ID (int64)|Stream|
+|transmission|Stream ID|TransmissionResult|
