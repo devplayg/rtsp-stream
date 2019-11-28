@@ -27,7 +27,7 @@ type Assistant struct {
 
 func NewAssistant(stream *Stream, ctx context.Context) *Assistant {
 	return &Assistant{
-		mergeInterval:        10 * time.Second,
+		mergeInterval:        60 * time.Second,
 		healthCheckInterval:  4 * time.Second,
 		stream:               stream,
 		ctx:                  ctx,
