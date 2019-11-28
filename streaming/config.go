@@ -10,9 +10,9 @@ type Config struct {
 		Address   string
 		AccessKey string
 		SecretKey string
+		Bucket    string
 		UseSSL    bool
 		Live      string
-		Recording string
 	}
 	BindAddress string `json:"bind-address"`
 	Timezone    string

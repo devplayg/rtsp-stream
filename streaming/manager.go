@@ -114,7 +114,6 @@ func (m *Manager) setStream(stream *Stream, id int64) {
 }
 
 func (m *Manager) addStream(stream *Stream) error {
-
 	// Check if the stream URI is empty or duplicated
 	if m.IsExistUri(stream.Uri) || len(stream.Uri) < 1 {
 		return ErrorDuplicatedStream
@@ -217,9 +216,9 @@ func (m *Manager) createStreamDir(stream *Stream) error {
 		return err
 	}
 
-	if err := hippo.EnsureDir(stream.RecDir); err != nil {
-		return err
-	}
+	//if err := hippo.EnsureDir(stream.RecDir); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

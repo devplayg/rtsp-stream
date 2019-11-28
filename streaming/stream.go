@@ -23,6 +23,7 @@ type Stream struct {
 	Hash      string    `json:"hash"`      // URL Hash
 	CmdType   int       `json:"cmdType"`   // FFmpeg command type
 	cmd       *exec.Cmd `json:"-"`         // Command
+	//manager   *Manager  `json:"-"`         // Manager
 	// assistant *Assistant `json:"-"`         // Stream assistant
 }
 

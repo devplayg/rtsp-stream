@@ -30,7 +30,6 @@ func NewServer(config *Config) *Server {
 		config:  config,
 		addr:    config.BindAddress,
 		liveDir: config.Storage.Live,
-		recDir:  config.Storage.Recording,
 	}
 
 	return server
@@ -90,6 +89,10 @@ func (s *Server) init() error {
 		return err
 	}
 	Loc = loc
+
+	if len(s.config.Storage.Bucket) > 0 {
+		VideoRecordBucket = s.config.Storage.Bucket
+	}
 
 	// Set controller
 	s.controller = NewController(s)

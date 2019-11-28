@@ -321,7 +321,7 @@ func (c *Controller) Wondory(w http.ResponseWriter, r *http.Request) {
 	//info, _ := object.Stat()
 
 	w.Header().Set("Accept-Range", "bytes")
-	w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
+	w.Header().Set("Content-Type", ContentTypeTs)
 
 	//if _, err = io.Copy(w, object); err != nil{
 	//    Response(w, err, http.StatusInternalServerError)
@@ -442,7 +442,7 @@ func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Accept-Range", "bytes")
 	//w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
-	w.Header().Set("Content-Type", ContentTypeM3u8)
+	//w.Header().Set("Content-Type", ContentTypeM3u8)
 
 	//if _, err = io.Copy(w, object); err != nil{
 	//    Response(w, err, http.StatusInternalServerError)
