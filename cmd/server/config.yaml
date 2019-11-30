@@ -1,10 +1,10 @@
+bind-address: 0.0.0.0:8000
+timezone: Asia/Seoul
 storage:
   address: 192.168.0.12:9000
   accessKey: unisem
   secretKey: Uniiot12!@
   bucket: record_test
-  live: e:/data/live
-bind-address: 0.0.0.0:8000
-timezone: Asia/Seoul
+  live: c:/temp/live
 static:
   dir: E:/gohome/src/github.com/devplayg/rtsp-stream-ui/static

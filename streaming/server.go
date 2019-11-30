@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"errors"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/minio/minio-go"
@@ -81,6 +82,8 @@ func (s *Server) init() error {
 		return nil
 	}
 
+
+
 	// Set manager
 	s.manager = NewManager(s)
 	if err := s.manager.load(); err != nil {
@@ -103,7 +106,7 @@ func (s *Server) init() error {
 
 	MinioClient, err = minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
 	if err != nil {
-		return err
+		return errors.New("failed to connect to object storage; "+ err.Error())
 	}
 
 	return nil
@@ -149,3 +152,5 @@ func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
 	})
 	return data, err
 }
+
+func (s *Server) initStor() error {
