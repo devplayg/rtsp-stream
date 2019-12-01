@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+func Base() string {
+	return `<!doctype html>
+<html lang="en">
+  <body>
+     {{ block "content" . }}{{ end }}
+   <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+ {{ block "script" . }}{{ end }}
+
+  </body>
+</html>
+`
+
+}
+
 func Layout(body string) string {
 	tpl := `<!doctype html>
 <html>

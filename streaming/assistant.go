@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/boltdb/bolt"
+	"github.com/devplayg/rtsp-stream/utils"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -39,7 +40,7 @@ func NewAssistant(stream *Stream, ctx context.Context) *Assistant {
 func (s *Assistant) init() error {
 	err := DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(TransmissionBucket)
-		data := b.Get(Int64ToBytes(s.stream.Id))
+		data := b.Get(utils.Int64ToBytes(s.stream.Id))
 		if data == nil {
 			return nil
 		}
@@ -60,7 +61,7 @@ func (s *Assistant) init() error {
 			"seq":       result.Seq,
 			"hash":      string(result.Hash),
 			"size":      result.Size,
-		}).Debugf("[%d] detected last tx result", s.stream.Id)
+		}).Debugf("[stream-%d] detected last tx result", s.stream.Id)
 		return nil
 	})
 

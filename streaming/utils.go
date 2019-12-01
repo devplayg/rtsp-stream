@@ -2,7 +2,6 @@ package streaming
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/minio/highwayhash"
@@ -62,14 +61,13 @@ func GetHashFromFile(path string) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
-func BytesToInt64(buf []byte) int64 {
-	return int64(binary.BigEndian.Uint64(buf))
-}
+func GetStreamingCommand(stream *Stream) *exec.Cmd {
+	if stream.Protocol == HLS {
+		return GetHlsStreamingCommand(stream)
+	}
 
-func Int64ToBytes(i int64) []byte {
-	var buf = make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, uint64(i))
-	return buf
+	return GetHlsStreamingCommand(stream)
+
 }
 
 //func checkStreamUri(stream *Stream) error {
@@ -78,51 +76,6 @@ func Int64ToBytes(i int64) []byte {
 //
 //	return nil
 //}
-
-func RunStream(stream *Stream) error {
-	cmd := exec.Command(
-		"ffmpeg",
-		"-y",
-		"-fflags",
-		"nobuffer",
-		"-rtsp_transport",
-		"tcp",
-		"-i",
-		stream.StreamUri(),
-		"-vsync",
-		"0",
-		"-copyts",
-		"-vcodec",
-		"copy",
-		"-movflags",
-		"frag_keyframe+empty_moov",
-		"-an",
-		"-hls_flags",
-		"append_list",
-		"-f",
-		"hls",
-		"-segment_list_flags",
-		"live",
-		"-hls_time",
-		"1",
-		"-hls_list_size",
-		"3",
-		//"-hls_time",
-		//"60",
-		"-hls_segment_filename",
-		stream.LiveDir+"/"+LiveVideoFilePrefix+"%d.ts",
-		stream.LiveDir+"/index.m3u8",
-	)
-
-	stream.cmd = cmd
-	//output, err := cmd.CombinedOutput()
-	//if err != nil {
-	//    log.Error(string(output))
-	//    return err
-	//}
-
-	return cmd.Run()
-}
 
 //
 //func GetRecentFilesInDir(dir string, after time.Duration) ([]*LiveVideoFile, error) {

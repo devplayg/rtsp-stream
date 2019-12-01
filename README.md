@@ -5,6 +5,7 @@
 * Go
 * FFmpeg
 * BoltDB
+* MinIO
 * Highwayhash
 * Hippo
 

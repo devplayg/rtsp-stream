@@ -49,7 +49,7 @@ func (c *Controller) init() {
 		PathPrefix("/static").
 		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
 
-	r.HandleFunc("/streams/", serveTemplate2).Methods("GET")
+	r.HandleFunc("/streams/", ui.Stream).Methods("GET")
 	//http.HandleFunc("/ui", serveTemplate)
 	http.Handle("/", r)
 
@@ -99,43 +99,16 @@ func NewController(server *Server) *Controller {
 	return &controller
 }
 
-func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
-	list := c.manager.getStreams()
-	data, err := json.Marshal(list)
-	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", ContentTypeJson)
-	w.Write(data)
-}
-
-func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	if len(vars["id"]) < 1 {
-		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
-		return
-	}
-	id, _ := strconv.ParseInt(vars["id"], 10, 16)
-	stream := c.manager.getStreamById(id)
-	data, err := json.Marshal(stream)
-	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", ContentTypeJson)
-	w.Write(data)
-}
-
 /*
 	curl -i -X POST -d '{"uri":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"xxxx"}' http://192.168.0.14:9000/streams
 */
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
-	stream, err := c.parseStreamRequest(r.Body)
+	stream, err := parseAndGetStream(r.Body)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
 		return
 	}
+
 	err = c.manager.addStream(stream)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
@@ -145,8 +118,35 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 	Response(w, nil, http.StatusOK)
 }
 
+func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
+	list := c.manager.getStreams()
+	data, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Write(data)
+}
+
+func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+	stream := c.manager.getStreamById(streamId)
+	data, err := json.MarshalIndent(stream, "", "  ")
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Write(data)
+}
+
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
-	stream, err := c.parseStreamRequest(r.Body)
+	stream, err := parseAndGetStream(r.Body)
 	if err != nil {
 		Response(w, err, http.StatusBadRequest)
 		return
@@ -160,7 +160,7 @@ func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 	Response(w, nil, http.StatusOK)
 }
 
-func (c *Controller) parseStreamRequest(body io.Reader) (*Stream, error) {
+func parseAndGetStream(body io.Reader) (*Stream, error) {
 	stream := NewStream()
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
@@ -183,13 +183,12 @@ func (c *Controller) parseStreamRequest(body io.Reader) (*Stream, error) {
 	curl -i -X DELETE http://192.168.0.14:9000/streams/ee3b86ddc65b2dcbf7edcc649825af2c
 */
 func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	if len(vars["id"]) < 1 {
-		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
 		return
 	}
-	id, _ := strconv.ParseInt(vars["id"], 10, 16)
-	err := c.manager.deleteStream(id)
+	err = c.manager.deleteStream(streamId)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
@@ -199,24 +198,41 @@ func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 
 // For test
 func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	if len(vars["id"]) < 1 {
-		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
-		return
-	}
-	id, _ := strconv.ParseInt(vars["id"], 10, 16)
-	stream := c.manager.getStreamById(id)
-	if stream == nil {
-		Response(w, errors.New("stream not found"), http.StatusOK)
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
 		return
 	}
 
-	err := c.manager.startStreaming(stream)
+	err = c.manager.startStreaming(streamId)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+
+	//streamId, err := parseAndGetStreamId(r)
+	//if err != nil {
+	//	Response(w, err, http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//c.manager.startStream(streamId)
+	//if err != nil {
+	//	Response(w, err, http.StatusInternalServerError)
+	//	return
+	//}
+	//w.WriteHeader(http.StatusOK)
+}
+
+func parseAndGetStreamId(r *http.Request) (int64, error) {
+	vars := mux.Vars(r)
+	if len(vars["id"]) < 1 {
+		return 0, errors.New("empty stream id")
+	}
+
+	streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+	return streamId, nil
 }
 
 func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
@@ -433,7 +449,7 @@ func (c *Controller) Wondory(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], IndexM3u8)
+	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], "xxxx")
 	object, err := MinioClient.GetObject(VideoRecordBucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
 		log.WithFields(log.Fields{

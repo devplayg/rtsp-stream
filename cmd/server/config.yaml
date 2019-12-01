@@ -7,4 +7,4 @@ storage:
   bucket: record_test
   live: c:/temp/live
 static:
-  dir: E:/gohome/src/github.com/devplayg/rtsp-stream-ui/static
+  dir: d:/dev/static

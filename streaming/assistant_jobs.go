@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
+	"github.com/devplayg/rtsp-stream/utils"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -22,7 +23,7 @@ func (s *Assistant) archiveLiveVideos() error {
 		s.date = t.Format(DateFormat)
 		s.lastSentMediaFileSeq = -1
 	}
-	tempDir := filepath.Join(s.stream.LiveDir, t.Format(DateFormat))
+	tempDir := filepath.Join(s.stream.liveDir, t.Format(DateFormat))
 	if err := hippo.EnsureDir(tempDir); err != nil {
 		return err
 	}
@@ -122,7 +123,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 			if err != nil {
 				log.WithFields(log.Fields{
 					"name": f.File.Name(),
-				}).Debugf("[%d] failed to get file hash", s.stream.Id)
+				}).Debugf("[stream-%d] failed to get file hash", s.stream.Id)
 				return err
 			}
 			if bytes.Equal(s.lastSentHash, hash) {
@@ -134,7 +135,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 				"size_old": s.lastSentSize,
 				"hash_now": hex.EncodeToString(hash),
 				"size_now": f.File.Size(),
-			}).Debugf("    [%d] already sent before, but hash is changed", s.stream.Id)
+			}).Debugf("    [stream-%d] already sent before, but hash is changed", s.stream.Id)
 		}
 
 		// Send video files to storage
@@ -147,7 +148,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 		log.WithFields(log.Fields{
 			"name": f.File.Name(),
 			"size": f.File.Size(),
-		}).Debugf("    [%d] sent to object", s.stream.Id)
+		}).Debugf("    [stream-%d] sent to object", s.stream.Id)
 
 		lastSentMediaFileSeq = mediaFileSeq
 		lastSentIdx = idx
@@ -159,9 +160,9 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 	}
 
 	// Send m3u8 file to storage
-	objectName := fmt.Sprintf("%d/%s/%s", s.stream.Id, t.Format(DateFormat), IndexM3u8)
+	objectName := fmt.Sprintf("%d/%s/%s", s.stream.Id, t.Format(DateFormat), s.stream.ProtocolInfo.MetaFileName)
 	// wondory
-	if err := SendToStorage(VideoRecordBucket, objectName, filepath.Join(tempDir, IndexM3u8), ContentTypeM3u8); err != nil {
+	if err := SendToStorage(VideoRecordBucket, objectName, filepath.Join(tempDir, s.stream.ProtocolInfo.MetaFileName), ContentTypeM3u8); err != nil {
 		return err
 	}
 
@@ -169,7 +170,7 @@ func (s *Assistant) sendVideoFilesToStorage(tempDir string, t time.Time) error {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"name": videoFiles[lastSentIdx].File.Name(),
-		}).Debugf("    [%d] failed to get hash", s.stream.Id)
+		}).Debugf("    [stream-%d] failed to get hash", s.stream.Id)
 		return err
 	}
 	s.lastSentMediaFileSeq = lastSentMediaFileSeq
@@ -198,7 +199,7 @@ func (s *Assistant) recordTransmission(result *TransmissionResult) error {
 			return err
 		}
 		bucket := tx.Bucket(TransmissionBucket)
-		key := Int64ToBytes(result.StreamId)
+		key := utils.Int64ToBytes(result.StreamId)
 		return bucket.Put(key, data)
 	})
 }
@@ -229,7 +230,7 @@ func (s *Assistant) moveLiveVideoFilesToTempDir(liveVideoFiles []*VideoFile, tem
 		liveVideoFiles[i].dir = tempDir
 		log.WithFields(log.Fields{
 			"name": filepath.Base(dst),
-		}).Tracef("    [%d] live video file is moved", s.stream.Id)
+		}).Tracef("    [stream-%d] live video file is moved", s.stream.Id)
 	}
 
 	return nil
@@ -248,7 +249,7 @@ func (s *Assistant) stop() error {
 func (s *Assistant) getLiveVideoFilesToMove(t time.Time) ([]*VideoFile, error) {
 	liveVideoFiles := make([]*VideoFile, 0)
 
-	files, err := ioutil.ReadDir(s.stream.LiveDir)
+	files, err := ioutil.ReadDir(s.stream.liveDir)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +280,7 @@ func (s *Assistant) getLiveVideoFilesToMove(t time.Time) ([]*VideoFile, error) {
 		//    continue
 		//}
 
-		liveVideoFiles = append(liveVideoFiles, NewVideoFile(f, s.stream.LiveDir))
+		liveVideoFiles = append(liveVideoFiles, NewVideoFile(f, s.stream.liveDir))
 	}
 
 	// Sort ts files by modification time (live9.ts, live10.ts, live11.ts ...)

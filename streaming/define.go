@@ -6,11 +6,31 @@ import (
 )
 
 const (
-	Stopped = 0
-	Running = 1
+	// Status
+	Failed   = -1
+	Stopped  = 1
+	Stopping = 2
+	Starting = 3
+	Started  = 4
 
-	NormalStream = 1
-	DateFormat   = "20060102"
+	// Protocol types
+	HLS  = 1
+	WEBM = 2
+
+	DateFormat = "20060102"
+
+	// Content types
+	ContentTypeJson = "application/json"
+	ContentTypeTs   = "video/mp2t"
+	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
+
+	// Streaming status
+
+	// FailedToStop
+	//StreamStopped  = 1
+	//StreamStopping = 2
+	//StreamStarting = 3
+	//StreamStarted  = 4
 )
 
 var (
@@ -19,15 +39,8 @@ var (
 	TransmissionBucket = []byte("transmission")
 	ConfigBucket       = []byte("config")
 
-	// Minio buckets
 	VideoRecordBucket = "record"
-
-	// Content types
-	ContentTypeJson = "application/json"
-	ContentTypeTs   = "video/mp2t"
-	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
-
-	IndexM3u8 = "index.m3u8"
+	//IndexM3u8         = "index.m3u8"
 )
 
 var (
@@ -79,6 +92,27 @@ func NewTransmissionResult(streamId int64, seq int, size int64, hash []byte, dat
 		Size:     size,
 		Hash:     hash,
 		Date:     date,
+	}
+}
+
+type ProtocolInfo struct {
+	MetaFileName    string
+	LiveFilePrefix  string
+	VideoFilePrefix string
+}
+
+func NewProtocolInfo(protocol int) *ProtocolInfo {
+	if protocol == HLS {
+		return &ProtocolInfo{
+			MetaFileName:    "index.m3u8",
+			LiveFilePrefix:  "live",
+			VideoFilePrefix: "media",
+		}
+	}
+	return &ProtocolInfo{
+		MetaFileName:    "index.m3u8",
+		LiveFilePrefix:  "live",
+		VideoFilePrefix: "media",
 	}
 }
 

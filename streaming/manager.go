@@ -2,8 +2,8 @@ package streaming
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/boltdb/bolt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -15,59 +15,23 @@ import (
 )
 
 type Manager struct {
-	server         *Server
-	streams        sync.Map
-	reConnInterval time.Duration
+	server  *Server
+	streams map[int64]*Stream // Stream pool
+	sync.RWMutex
 }
 
 func NewManager(server *Server) *Manager {
 	return &Manager{
 		server:  server,
-		streams: sync.Map{}, /* key: id(int64), value: &stream */
+		streams: make(map[int64]*Stream), /* key: id(int64), value: &stream */
 	}
 }
 
-func (m *Manager) save() error {
-	if err := m.saveStreams(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *Manager) saveStreams() error {
-
-	return DB.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(StreamBucket)
-
-		// Clear bucket
-		c := bucket.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			_ = bucket.Delete(k)
-		}
-
-		m.streams.Range(func(k interface{}, v interface{}) bool {
-			s := v.(*Stream)
-			b, err := json.Marshal(s)
-			if err != nil {
-				log.Error(err)
-				return false
-			}
-			if err := bucket.Put(Int64ToBytes(s.Id), b); err != nil {
-				log.Error(err)
-				return false
-			}
-
-			return true
-		})
-
-		return nil
-	})
-}
-
-func (m *Manager) load() error {
+func (m *Manager) start() error {
+	m.Lock()
+	defer m.Unlock()
 	return DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(StreamBucket))
+		b := tx.Bucket(StreamBucket)
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			var stream Stream
@@ -76,8 +40,7 @@ func (m *Manager) load() error {
 				log.Error(err)
 				continue
 			}
-			m.setStream(&stream, stream.Id)
-			m.streams.Store(stream.Id, &stream)
+			m.streams[stream.Id] = &stream
 		}
 
 		return nil
@@ -86,115 +49,97 @@ func (m *Manager) load() error {
 
 func (m *Manager) getStreams() []*Stream {
 	streams := make([]*Stream, 0)
-	m.streams.Range(func(k interface{}, v interface{}) bool {
-		s := v.(*Stream)
-		s.Active = s.IsActive()
-		streams = append(streams, s)
-		return true
-	})
+	m.RLock()
+	defer m.RUnlock()
+	for _, stream := range m.streams {
+		streams = append(streams, stream)
+	}
+
 	return streams
 }
 
 func (m *Manager) getStreamById(id int64) *Stream {
-	val, ok := m.streams.Load(id)
-	if !ok {
-		return nil
-	}
-
-	return val.(*Stream)
-}
-
-func (m *Manager) setStream(stream *Stream, id int64) {
-	stream.Id = id
-	stream.Hash = GetHashString(stream.Uri)
-	stream.CmdType = NormalStream
-	stream.LiveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, strconv.FormatInt(stream.Id, 16)))
-	stream.RecDir = filepath.ToSlash(filepath.Join(m.server.recDir, strconv.FormatInt(stream.Id, 16)))
-	// stream.cmd = GenerateStreamCommand(stream)
+	m.RLock()
+	defer m.RUnlock()
+	return m.streams[id]
 }
 
 func (m *Manager) addStream(stream *Stream) error {
-	// Check if the stream URI is empty or duplicated
-	if m.IsExistUri(stream.Uri) || len(stream.Uri) < 1 {
-		return ErrorDuplicatedStream
-	}
-
-	// Issue auto-increment ID from database
-	err := DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(StreamBucket)
-
-		id, _ := b.NextSequence()
-		m.setStream(stream, int64(id))
-
-		buf, err := json.Marshal(stream)
-		if err != nil {
-			return err
-		}
-
-		return b.Put(Int64ToBytes(stream.Id), buf)
-	})
-
-	if err == nil {
-		m.streams.Store(stream.Id, stream)
-	}
-
-	if err := m.save(); err != nil {
+	// Check if the stream is valid
+	if err := m.isValidStream(stream); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (m *Manager) updateStream(stream *Stream) error {
-
-	// Check if the stream URI is empty or duplicated
-	if len(stream.Uri) < 1 {
-		return ErrorInvalidUri
-	}
-
-	err := DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(StreamBucket)
-
-		m.setStream(stream, stream.Id)
-
-		buf, err := json.Marshal(stream)
-		if err != nil {
-			return err
-		}
-
-		return b.Put(Int64ToBytes(stream.Id), buf)
-	})
-
-	if err == nil {
-		m.streams.Store(stream.Id, stream)
-	}
-
-	return err
-}
-
-func (m *Manager) deleteStream(id int64) error {
-	stream := m.getStreamById(id)
-	if stream == nil {
-		return ErrorStreamNotFound
-	}
-
-	err := m.removeStreamDir(stream)
+	err := m.issueStream(stream)
 	if err != nil {
 		return err
 	}
 
-	m.streams.Delete(id)
+	log.WithFields(log.Fields{
+		"stream_id": stream.Id,
+		"uri":       stream.Uri,
+		"err":       err,
+	}).Debugf("issue new stream")
 
-	if err := m.saveStreams(); err != nil {
+	return err
+}
+
+func (m *Manager) isValidStream(stream *Stream) error {
+	if len(stream.Uri) < 1 {
+		return errors.New("empty stream url")
+	}
+	stream.UrlHash = GetHashString(stream.Uri)
+
+	if !(stream.Protocol == HLS || stream.Protocol == WEBM) {
+		return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
+	}
+	stream.ProtocolInfo = NewProtocolInfo(stream.Protocol)
+
+	return nil
+}
+
+func (m *Manager) issueStream(input *Stream) error {
+	var maxStreamId int64
+	m.Lock()
+	for id, stream := range m.streams {
+		if input.UrlHash == stream.UrlHash {
+			return errors.New("duplicated stream uri:" + input.Uri)
+		}
+		if maxStreamId < id {
+			maxStreamId = id
+		}
+	}
+	maxStreamId++ // issue new stream ID
+	input.Id = maxStreamId
+	m.streams[maxStreamId] = input
+	m.Unlock()
+	return SaveStream(input)
+}
+
+func (m *Manager) updateStream(stream *Stream) error {
+	if err := m.isValidStream(stream); err != nil {
 		return err
 	}
-	return m.save()
+
+	m.Lock()
+	m.streams[stream.Id] = stream
+	m.Unlock()
+
+	return SaveStream(stream)
+}
+
+func (m *Manager) deleteStream(id int64) error {
+	m.Lock()
+	delete(m.streams, id)
+	m.Unlock()
+
+	return DeleteStream(id)
 }
 
 func (m *Manager) cleanStreamDir(stream *Stream) error {
 	// Remove all files but created today in live directory
 
-	files, err := ioutil.ReadDir(stream.LiveDir)
+	files, err := ioutil.ReadDir(stream.liveDir)
 	if err != nil {
 		return err
 	}
@@ -203,13 +148,13 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 		if f.ModTime().In(Loc).Format(DateFormat) == t.Format(DateFormat) {
 			continue
 		}
-		if err := os.Remove(filepath.Join(stream.LiveDir, f.Name())); err != nil {
+		if err := os.Remove(filepath.Join(stream.liveDir, f.Name())); err != nil {
 			log.Error(err)
 			continue
 		}
 	}
 
-	//err := os.RemoveAll(stream.LiveDir)
+	//err := os.RemoveAll(stream.liveDir)
 	//if err != nil {
 	//	return err
 	//}
@@ -217,58 +162,106 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 }
 
 func (m *Manager) removeStreamDir(stream *Stream) error {
-	err := os.RemoveAll(stream.LiveDir)
+	err := os.RemoveAll(stream.liveDir)
 	if err != nil {
 		return err
 	}
-	err = os.RemoveAll(stream.RecDir)
-	if err != nil {
-		return err
-	}
+	//err = os.RemoveAll(stream.RecDir)
+	//if err != nil {
+	//	return err
+	//}
 	return nil
 }
 
 func (m *Manager) createStreamDir(stream *Stream) error {
-	if err := hippo.EnsureDir(stream.LiveDir); err != nil {
+	stream.liveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, strconv.FormatInt(stream.Id, 10)))
+
+	if err := hippo.EnsureDir(stream.liveDir); err != nil {
 		return err
 	}
-
-	//if err := hippo.EnsureDir(stream.RecDir); err != nil {
-	//	return err
-	//}
 
 	return nil
 }
 
-func (m *Manager) IsExistUri(uri string) bool {
-	duplicated := false
-	hash := GetHashString(uri)
+//
+//func (m *Manager) IsExistUri(uri string) bool {
+//	hash := GetHashString(uri)
+//	m.RLock()
+//	for _, stream := range m.streams {
+//		if stream.Hash == hash {
+//			return true
+//		}
+//	}
+//	m.RUnlock()
+//	return false
+//}
 
-	m.streams.Range(func(k interface{}, v interface{}) bool {
-		s := v.(*Stream)
-		if s.Hash == hash {
-			duplicated = true
-			return false
+func (m *Manager) makeStreamStatus(id int64, status int) (*Stream, error) {
+	m.Lock()
+	defer m.Unlock()
+	stream := m.streams[id]
+	if stream == nil {
+		return nil, ErrorStreamNotFound
+	}
+	if status == Stopped {
+		if stream.Status == Stopped {
+			return nil, errors.New("stream is already stopped")
+		}
+		if stream.Status == Stopping {
+			return nil, errors.New("stream is stopping now")
 		}
 
-		return true
-	})
+		if stream.Status == Starting {
+			return nil, errors.New("stream is about to start now")
+		}
 
-	return duplicated
+		stream.Status = status
+		return stream, nil
+	}
+
+	if stream.Status == Stopping {
+		return nil, errors.New("stream is stopping now")
+	}
+
+	if stream.Status == Starting {
+		return nil, errors.New("stream is about to start now")
+	}
+
+	if stream.Status == Started {
+		return nil, errors.New("stream is already started")
+	}
+
+	stream.Status = status
+	return stream, nil
 }
 
-func (m *Manager) startStreaming(stream *Stream) error {
-	if err := m.cleanStreamDir(stream); err != nil {
-		log.Warn("failed to clear streaming directories:", err)
+func (m *Manager) startStreaming(id int64) error {
+	log.WithFields(log.Fields{
+		"id": id,
+	}).Debug("received stream start request")
+
+	stream, err := m.makeStreamStatus(id, Started)
+	if err != nil {
+		return err
 	}
 
 	if err := m.createStreamDir(stream); err != nil {
 		return err
 	}
 
-	if err := stream.start(); err != nil {
-		return err
+	if err := m.cleanStreamDir(stream); err != nil {
+		log.Warn("failed to clear streaming directories:", err)
 	}
+
+	go func() {
+		if err := stream.start(); err != nil {
+			log.WithFields(log.Fields{
+				"id": id,
+			}).Error("failed to start stream: ", err)
+			return
+		}
+		log.Debug("stream started")
+	}()
 
 	return nil
 }
@@ -291,26 +284,26 @@ func (m *Manager) stopStreaming(id int64) error {
 
 func (m *Manager) Stop() error {
 	// Stop all running streamings
-	m.streams.Range(func(k interface{}, v interface{}) bool {
-		s := v.(*Stream)
-		if err := m.stopStreaming(s.Id); err != nil {
-			log.Error("failed to stop streaming")
-			spew.Dump(s)
-		}
-		return true
-	})
-
+	for _, stream := range m.streams {
+		err := stream.stop()
+		log.WithFields(log.Fields{
+			"stream_id": stream.Id,
+			"uri":       stream.Uri,
+			"err":       err,
+		}).Debugf("stream stop")
+	}
 	return nil
 }
 
-func (m *Manager) printStream(stream *Stream) {
-	log.Debug("===================================================")
-	log.Debugf("id: %d", stream.Id)
-	log.Debugf("hash: %d", stream.Hash)
-	log.Debugf("uri: %s", stream.Uri)
-	log.Debugf("active: %s", stream.Active)
-	log.Debugf("recording: %s", stream.Recording)
-	log.Debug("===================================================")
-}
+//
+//func (m *Manager) printStream(stream *Stream) {
+//	log.Debug("===================================================")
+//	log.Debugf("id: %d", stream.Id)
+//	log.Debugf("hash: %d", stream.hash)
+//	log.Debugf("uri: %s", stream.Uri)
+//	log.Debugf("active: %s", stream.Active)
+//	log.Debugf("recording: %s", stream.Recording)
+//	log.Debug("===================================================")
+//}
 
 // NEED STREAM RECONNECTION

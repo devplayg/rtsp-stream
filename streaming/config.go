@@ -13,7 +13,7 @@ type Config struct {
 		Bucket    string
 		UseSSL    bool
 		Live      string
-	}
+	} `json:"storage"`
 	BindAddress string `json:"bind-address"`
 	Timezone    string
 	Static      struct {

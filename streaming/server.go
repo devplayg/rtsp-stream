@@ -1,7 +1,6 @@
 package streaming
 
 import (
-	"errors"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/minio/minio-go"
@@ -77,19 +76,6 @@ func (s *Server) SetEngine(e *hippo.Engine) {
 
 func (s *Server) init() error {
 
-	// Initialize database
-	if err := s.initDatabase(); err != nil {
-		return nil
-	}
-
-
-
-	// Set manager
-	s.manager = NewManager(s)
-	if err := s.manager.load(); err != nil {
-		return err
-	}
-
 	// Init timezone
 	loc, err := time.LoadLocation(s.config.Timezone)
 	if err != nil {
@@ -97,17 +83,22 @@ func (s *Server) init() error {
 	}
 	Loc = loc
 
-	if len(s.config.Storage.Bucket) > 0 {
-		VideoRecordBucket = s.config.Storage.Bucket
+	if err := s.initDatabase(); err != nil {
+		return err
+	}
+
+	if err := s.initStorage(); err != nil {
+		return err
+	}
+
+	// Set manager
+	s.manager = NewManager(s)
+	if err := s.manager.start(); err != nil {
+		return err
 	}
 
 	// Set controller
 	s.controller = NewController(s)
-
-	MinioClient, err = minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
-	if err != nil {
-		return errors.New("failed to connect to object storage; "+ err.Error())
-	}
 
 	return nil
 }
@@ -135,7 +126,6 @@ func (s *Server) initDatabase() error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-
 	DB = db
 	log.WithFields(log.Fields{
 		"db": dbName,
@@ -153,4 +143,19 @@ func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
 	return data, err
 }
 
-func (s *Server) initStor() error {
+func (s *Server) initStorage() error {
+	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"address":   s.config.Storage.Address,
+			"accessKey": s.config.Storage.AccessKey,
+		}).Error("failed to connect to object storage")
+		return err
+	}
+	MinioClient = client
+
+	if len(s.config.Storage.Bucket) > 0 {
+		VideoRecordBucket = s.config.Storage.Bucket
+	}
+	return nil
+}
