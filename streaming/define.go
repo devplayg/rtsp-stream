@@ -24,7 +24,9 @@ const (
 	ContentTypeTs   = "video/mp2t"
 	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
 
-	// Streaming status
+	// Streaming requester
+	FromClient  = 1
+	FromWatcher = 2
 
 	// FailedToStop
 	//StreamStopped  = 1

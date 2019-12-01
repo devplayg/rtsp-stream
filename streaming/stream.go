@@ -13,20 +13,20 @@ import (
 )
 
 type Stream struct {
-	Id           int64         `json:"id"`        // Stream unique ID
-	Uri          string        `json:"uri"`       // Stream URL
-	Username     string        `json:"username"`  // Stream username
-	Password     string        `json:"password"`  // Stream password
-	Recording    bool          `json:"recording"` // Is recording
-	Enabled      bool          `json:"enabled"`
-	Active       bool          `json:"active"`   // Is active
-	Protocol     int           `json:"protocol"` // FFmpeg command type
-	ProtocolInfo *ProtocolInfo `json:"protocolInfo"`
-	UrlHash      string        `json:"urlHash"` // URL Hash
-	cmd          *exec.Cmd     `json:"-"`       // Command
-	liveDir      string        `json:"-"`       // Live video directory
-	Status       int           `json:"status"`  // 1:stopped, 2:stopping, 3:starting, 4:started
-
+	Id        int64  `json:"id"`        // Stream unique ID
+	Uri       string `json:"uri"`       // Stream URL
+	Username  string `json:"username"`  // Stream username
+	Password  string `json:"password"`  // Stream password
+	Recording bool   `json:"recording"` // Is recording
+	Enabled   bool   `json:"enabled"`   // Enabled
+	//Active             bool          `json:"active"`       // Is active
+	Protocol           int           `json:"protocol"`     // Protocol (HLS, WebM)s
+	ProtocolInfo       *ProtocolInfo `json:"protocolInfo"` // Protocol info
+	UrlHash            string        `json:"urlHash"`      // URL Hash
+	cmd                *exec.Cmd     `json:"-"`            // Command
+	liveDir            string        `json:"-"`            // Live video directory
+	Status             int           `json:"status"`       // Stream status
+	DataRetentionHours int           `json:"dataRetentionHours"`
 }
 
 func NewStream() *Stream {
@@ -79,9 +79,6 @@ func (s *Stream) WaitUntilStreamingStarts(ch chan<- bool, ctx context.Context) {
 		select {
 		case <-time.After(1 * time.Second):
 		case <-ctx.Done():
-			//log.WithFields(log.Fields{
-			//	"id": s.Id,
-			//}).Debugf("    [stream-%d] time exceeded. failed to start stream", s.Id)
 			return
 		}
 	}
@@ -95,13 +92,17 @@ func (s *Stream) start() error {
 	go func() {
 		s.Status = Starting
 		err := s.cmd.Run()
-		if strings.Contains(err.Error(), "exit status 1") {
-			return
-		}
+		s.Status = Stopped
+
+		//if err != nil {
+		//	if strings.Contains(err.Error(), "exit status 1") {
+		//		return
+		//	}
+		//}
 		log.WithFields(log.Fields{
 			"err": err,
-			"pid": s.cmd.Process.Pid,
-		}).Debug("run_result")
+			"pid": GetStreamPid(s),
+		}).Debugf("stream-%d command has been terminated", s.Id)
 	}()
 
 	// Wait until streaming starts
@@ -115,41 +116,34 @@ func (s *Stream) start() error {
 	case <-ch:
 		log.WithFields(log.Fields{
 			"id":  s.Id,
-			"pid": s.cmd.Process.Pid,
+			"pid": GetStreamPid(s),
 		}).Debugf("    [stream-%d] stream has been started", s.Id)
 		s.Status = Started
 		return nil
 	case <-ctx.Done():
-		//log.WithFields(log.Fields{
-		//	"id": s.Id,
-		//	"pid": s.cmd.Process.Pid,
-		//}).Debugf("    [stream-%d] failed to start stream", s.Id)
 		msg := "time exceeded"
 		log.WithFields(log.Fields{
 			"id": s.Id,
 		}).Debugf("    [stream-%d] %s", s.Id, msg)
+		if err := s.stop(); err != nil {
+			log.WithFields(log.Fields{
+				"id": s.Id,
+			}).Error(err)
+		}
 		s.Status = Failed
-		s.stop()
 		return errors.New(msg)
 	}
 }
 
 func (s *Stream) stop() error {
+	defer func() {
+		s.Status = Stopped
+	}()
 	if s.cmd == nil || s.cmd.Process == nil {
-		//log.WithFields(log.Fields{
-		//	"id": s.Id,
-		//}).Debug("streaming is not running")
 		return nil
 	}
-
 	//err := stream.cmd.Process.Kill()
 	return s.cmd.Process.Signal(os.Kill)
-	//log.WithFields(log.Fields{
-	//	"id":  s.Id,
-	//	"pid": &s.cmd.Process.Pid,
-	//}).Error("killed stream process: ", err)
-
-	//return nil
 }
 
 //

@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/boltdb/bolt"
@@ -15,19 +16,37 @@ import (
 )
 
 type Manager struct {
-	server  *Server
-	streams map[int64]*Stream // Stream pool
+	server               *Server
+	streams              map[int64]*Stream // Stream pool
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	watcherCheckInterval time.Duration
 	sync.RWMutex
 }
 
 func NewManager(server *Server) *Manager {
+
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		server:  server,
-		streams: make(map[int64]*Stream), /* key: id(int64), value: &stream */
+		server:               server,
+		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
+		ctx:                  ctx,
+		cancel:               cancel,
+		watcherCheckInterval: 20 * time.Second,
 	}
 }
 
 func (m *Manager) start() error {
+	if err := m.loadStreamsFromDatabase(); err != nil {
+		return err
+	}
+
+	m.startWatcher()
+
+	return nil
+}
+
+func (m *Manager) loadStreamsFromDatabase() error {
 	m.Lock()
 	defer m.Unlock()
 	return DB.View(func(tx *bolt.Tx) error {
@@ -40,9 +59,9 @@ func (m *Manager) start() error {
 				log.Error(err)
 				continue
 			}
+			stream.Status = Stopped
 			m.streams[stream.Id] = &stream
 		}
-
 		return nil
 	})
 }
@@ -154,10 +173,6 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 		}
 	}
 
-	//err := os.RemoveAll(stream.liveDir)
-	//if err != nil {
-	//	return err
-	//}
 	return nil
 }
 
@@ -166,35 +181,17 @@ func (m *Manager) removeStreamDir(stream *Stream) error {
 	if err != nil {
 		return err
 	}
-	//err = os.RemoveAll(stream.RecDir)
-	//if err != nil {
-	//	return err
-	//}
 	return nil
 }
 
 func (m *Manager) createStreamDir(stream *Stream) error {
 	stream.liveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, strconv.FormatInt(stream.Id, 10)))
-
 	if err := hippo.EnsureDir(stream.liveDir); err != nil {
 		return err
 	}
 
 	return nil
 }
-
-//
-//func (m *Manager) IsExistUri(uri string) bool {
-//	hash := GetHashString(uri)
-//	m.RLock()
-//	for _, stream := range m.streams {
-//		if stream.Hash == hash {
-//			return true
-//		}
-//	}
-//	m.RUnlock()
-//	return false
-//}
 
 func (m *Manager) makeStreamStatus(id int64, status int) (*Stream, error) {
 	m.Lock()
@@ -235,13 +232,24 @@ func (m *Manager) makeStreamStatus(id int64, status int) (*Stream, error) {
 	return stream, nil
 }
 
-func (m *Manager) startStreaming(id int64) error {
+func (m *Manager) startStreaming(id int64, from int) error {
+	whoSent := ""
+	if from == FromClient {
+		whoSent = "Rest API"
+	} else if from == FromWatcher {
+		whoSent = "Watcher"
+	} else {
+		whoSent = "unknown"
+	}
 	log.WithFields(log.Fields{
-		"id": id,
-	}).Debug("received stream start request")
+		"from": whoSent,
+	}).Infof("received stream-%d start request", id)
 
 	stream, err := m.makeStreamStatus(id, Started)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Errorf("cannot change stream-%d status", id)
 		return err
 	}
 
@@ -257,10 +265,13 @@ func (m *Manager) startStreaming(id int64) error {
 		if err := stream.start(); err != nil {
 			log.WithFields(log.Fields{
 				"id": id,
-			}).Error("failed to start stream: ", err)
+			}).Errorf("failed to start stream-%d: %s", id, err)
 			return
 		}
-		log.Debug("stream started")
+		log.WithFields(log.Fields{
+			"id":  id,
+			"url": stream.Uri,
+		}).Errorf("stream-%d has been started", id)
 	}()
 
 	return nil
@@ -292,18 +303,43 @@ func (m *Manager) Stop() error {
 			"err":       err,
 		}).Debugf("stream stop")
 	}
+
+	m.cancel()
 	return nil
 }
+func (m *Manager) startWatcher() {
+	go func() {
+		log.WithFields(log.Fields{
+			"interval(sec)": m.watcherCheckInterval.Seconds(),
+		}).Debug("stream watcher hash been started")
+		for {
+			m.checkStreams()
 
-//
-//func (m *Manager) printStream(stream *Stream) {
-//	log.Debug("===================================================")
-//	log.Debugf("id: %d", stream.Id)
-//	log.Debugf("hash: %d", stream.hash)
-//	log.Debugf("uri: %s", stream.Uri)
-//	log.Debugf("active: %s", stream.Active)
-//	log.Debugf("recording: %s", stream.Recording)
-//	log.Debug("===================================================")
-//}
+			select {
+			case <-time.After(m.watcherCheckInterval):
+			case <-m.ctx.Done():
+				log.Debug("stream watcher has been stopped")
+				return
+			}
+		}
+	}()
+}
 
-// NEED STREAM RECONNECTION
+func (m *Manager) checkStreams() {
+	for id, stream := range m.streams {
+		if !stream.Enabled {
+			continue
+		}
+		if stream.IsActive() {
+			continue
+		}
+
+		log.WithFields(log.Fields{
+			"stream_id": id,
+		}).Debugf("[watcher] since stream-%d is not running, restart it", id)
+		if err := m.startStreaming(id, FromWatcher); err != nil {
+			log.Error(err)
+		}
+	}
+
+}

@@ -84,18 +84,14 @@ func (s *Assistant) start() error {
 
 func (s *Assistant) startCheckingStreamStatus() error {
 	for {
-		if s.stream.IsActive() != s.stream.Active {
-			var pid int
-			if s.stream.cmd != nil {
-				pid = s.stream.cmd.Process.Pid
+		if s.stream.Status == Started {
+			if !s.stream.IsActive() {
+				if err := s.stream.stop(); err != nil {
+					log.WithFields(log.Fields{
+						"id": s.stream.Id,
+					}).Error("stream status was 'started' but it was not alive. failed to stop stream")
+				}
 			}
-			s.stream.Active = s.stream.IsActive()
-			log.WithFields(log.Fields{
-				"stream_id": s.stream.Id,
-				"active":    s.stream.Active,
-				"pid":       pid,
-			}).Debug("stream status changed")
-
 		}
 
 		select {

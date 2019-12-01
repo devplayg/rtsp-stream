@@ -67,7 +67,18 @@ func GetStreamingCommand(stream *Stream) *exec.Cmd {
 	}
 
 	return GetHlsStreamingCommand(stream)
+}
 
+func GetStreamPid(stream *Stream) int {
+	if stream.cmd == nil {
+		return 0
+	}
+
+	if stream.cmd.Process == nil {
+		return 0
+	}
+
+	return stream.cmd.Process.Pid
 }
 
 //func checkStreamUri(stream *Stream) error {
