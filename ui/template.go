@@ -8,15 +8,14 @@ import (
 func Base() string {
 	return `<!doctype html>
 <html lang="en">
-  <body>
-     {{ block "content" . }}{{ end }}
-   <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
- {{ block "script" . }}{{ end }}
+ <body>
+    {{ block "content" . }}{{ end }}
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+{{ block "script" . }}{{ end }}
 
-  </body>
+ </body>
 </html>
 `
-
 }
 
 func Layout(body string) string {

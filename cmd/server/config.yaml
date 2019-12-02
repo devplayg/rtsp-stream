@@ -1,7 +1,7 @@
 bind-address: 0.0.0.0:8000
 timezone: Asia/Seoul
 storage:
-  address: 192.168.0.12:9000
+  address: 127.0.0.1:9000
   accessKey: unisem
   secretKey: Uniiot12!@
   bucket: record_test

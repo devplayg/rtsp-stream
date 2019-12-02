@@ -1,6 +1,6 @@
 # RTSP Streaming V2
 
-### Powered by 
+### Powered by
 
 * Go
 * FFmpeg
@@ -13,13 +13,13 @@
 ### Structure
 
 ```
-+-------------------------------------------------+  
++-------------------------------------------------+
 |                     |  stream | stream | stream |          +-----------+
 |                     |  assist | assist | assist |          |           |
 |-------------------------------------------------|          |   Minio   |
 |  db  |  controller  |           manager         |          |           |
 |-------------------------------------------------|          +-----------+
-|               server                            |   
+|               server                            |
 +-------------------------------------------------+
 ```
 
@@ -60,7 +60,8 @@ helps stream. He is like a slave.
 
 ### Database
 
-|Bucket|Key|Value type|
+|Bucket|Key|Value|
 |---|---|---|
-|streams|Stream ID (int64)|Stream|
+|streams|Stream ID (int64)|Stream information (Stream)|
+|stream-{id}-{YYYYMMDD}|media file name (string)|Media information (Media)|
 |transmission|Stream ID|TransmissionResult|
