@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	log "github.com/sirupsen/logrus"
@@ -249,7 +250,7 @@ func (m *Manager) startStreaming(id int64, from int) error {
 	}
 	log.WithFields(log.Fields{
 		"from": whoSent,
-	}).Infof("received stream-%d start request", id)
+	}).Infof("[manager] received stream-%d start request", id)
 
 	stream, err := m.canMakeStreamStatus(id, Started)
 	if err != nil {
@@ -294,19 +295,19 @@ func (m *Manager) stopStreaming(id int64) error {
 
 func (m *Manager) Stop() error {
 	m.cancel()
-	log.Debug("[manager] stopping all streams")
 	for _, stream := range m.streams {
 		//if stream.IsActive() {
 		stream.stop()
 		//}
 	}
+	log.Debug("[manager] all streams have been stopped")
 
 	return nil
 }
 func (m *Manager) startStreamWatcher() {
 	go func() {
 		log.WithFields(log.Fields{
-			"interval(sec)": m.watcherCheckInterval.Seconds(),
+			"interval": fmt.Sprintf("%3.1fsec", m.watcherCheckInterval.Seconds()),
 		}).Debug("[manager] stream watcher hash been started")
 		for {
 			m.checkStreams()
@@ -330,7 +331,7 @@ func (m *Manager) checkStreams() {
 			continue
 		}
 
-		log.WithFields(log.Fields{}).Debugf("[watcher] since stream-%d is not running, restart it", id)
+		log.WithFields(log.Fields{}).Errorf("[watcher] since stream-%d is not running, restart it", id)
 		if err := m.startStreaming(id, FromWatcher); err != nil {
 			log.Error(err)
 		}

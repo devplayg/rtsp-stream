@@ -41,16 +41,15 @@ func (s *Server) Start() error {
 	}
 
 	srv := &http.Server{
-		Handler: s.controller.router,
-		Addr:    s.addr,
-
+		Handler:      s.controller.router,
+		Addr:         s.addr,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
 
 	log.WithFields(log.Fields{
 		"address": s.addr,
-	}).Info("listen")
+	}).Info("[server] listen")
 	go func() {
 		log.Fatal(srv.ListenAndServe())
 	}()
@@ -129,7 +128,7 @@ func (s *Server) initDatabase() error {
 	DB = db
 	log.WithFields(log.Fields{
 		"db": dbName,
-	}).Debug("BoltDB has been loaded")
+	}).Debug("[server] BoltDB has been loaded")
 	return nil
 }
 

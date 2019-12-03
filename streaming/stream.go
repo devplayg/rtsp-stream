@@ -66,15 +66,17 @@ func (s *Stream) StreamUri() string {
 func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- bool, ctx context.Context) {
 	count := 1
 	for {
-		active := s.IsActive()
-		log.WithFields(log.Fields{
-			"active": active,
-			"count":  count,
-		}).Debugf("    [stream-%d] is waiting until streaming starts", s.Id)
-		if active {
+		if s.IsActive() {
 			startedChan <- true
+
+			// Assistant start
+			s.assistant = NewAssistant(s)
+			s.assistant.start()
 			return
 		}
+		log.WithFields(log.Fields{
+			"count": count,
+		}).Debugf("    [stream-%d] waiting until streaming starts", s.Id)
 		count++
 
 		select {
@@ -91,8 +93,8 @@ func (s *Stream) start() error {
 
 	// Start process
 	go func() {
-		s.assistant = NewAssistant(s)
-		s.assistant.start()
+		//s.assistant = NewAssistant(s)
+		//s.assistant.start()
 
 		//defer s.cancel()
 		s.Status = Starting
@@ -133,7 +135,9 @@ func (s *Stream) start() error {
 }
 
 func (s *Stream) stop() {
-	s.assistant.stop()
+	if s.assistant != nil {
+		s.assistant.stop()
+	}
 	//s.cancel()
 	//<-time.After(4 * time.Second)
 	defer func() {
@@ -143,11 +147,11 @@ func (s *Stream) stop() {
 		return
 	}
 	//err := s.cmd.Process.Kill()
-	err := s.cmd.Process.Signal(os.Kill)
-	log.WithFields(log.Fields{
-		"uri": s.Uri,
-		"err": err,
-	}).Debugf("    [stream-%d] has been stopped", s.Id)
+	s.cmd.Process.Signal(os.Kill)
+	//log.WithFields(log.Fields{
+	//	"uri": s.Uri,
+	//	"err": err,
+	//}).Debugf("    [stream-%d] has been stopped", s.Id)
 }
 
 //

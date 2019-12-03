@@ -42,9 +42,9 @@ func (s *Assistant) init() error {
 }
 
 func (s *Assistant) start() error {
-	if err := s.init(); err != nil {
-		return nil
-	}
+	//if err := s.init(); err != nil {
+	//	return nil
+	//}
 
 	//go s.startCheckingStreamStatus()
 
