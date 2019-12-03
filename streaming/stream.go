@@ -2,8 +2,11 @@ package streaming
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/boltdb/bolt"
+	"github.com/grafov/m3u8"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
@@ -27,8 +30,6 @@ type Stream struct {
 	Status             int           `json:"status"`       // Stream status
 	DataRetentionHours int           `json:"dataRetentionHours"`
 	assistant          *Assistant
-	//ctx                context.Context
-	//cancel             context.CancelFunc
 }
 
 func NewStream() *Stream {
@@ -47,8 +48,10 @@ func (s *Stream) IsActive() bool {
 		return false
 	}
 
-	// Check if "index.m3u8" has been updated within the last 10 seconds
-	if time.Now().Sub(file.ModTime()).Seconds() > 8.0 {
+	// Check if "index.m3u8" has been updated within the last 8 seconds
+	since := time.Now().Sub(file.ModTime()).Seconds()
+	log.Debugf("    [stream-%d] is active? %3.1f", s.Id, since)
+	if since > 8.0 {
 		return false
 	}
 
@@ -63,11 +66,11 @@ func (s *Stream) StreamUri() string {
 	return fmt.Sprintf("rtsp://%s:%s@%s", s.Username, s.Password, uri)
 }
 
-func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- bool, ctx context.Context) {
+func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Context) {
 	count := 1
 	for {
 		if s.IsActive() {
-			startedChan <- true
+			startedChan <- count
 
 			// Assistant start
 			s.assistant = NewAssistant(s)
@@ -93,22 +96,17 @@ func (s *Stream) start() error {
 
 	// Start process
 	go func() {
-		//s.assistant = NewAssistant(s)
-		//s.assistant.start()
-
-		//defer s.cancel()
 		s.Status = Starting
 		err := s.cmd.Run()
 		log.WithFields(log.Fields{
 			"err": err,
 			"pid": GetStreamPid(s),
 		}).Debugf("    [stream-%d] process has been terminated", s.Id)
-		// s.stop()
-		//s.cancel()
+		s.stop()
 	}()
 
 	// Wait until streaming starts
-	startedChan := make(chan bool)
+	startedChan := make(chan int)
 	go func() {
 		s.WaitUntilStreamingStarts(startedChan, ctx)
 	}()
@@ -116,22 +114,18 @@ func (s *Stream) start() error {
 	// Wait signals
 	select {
 	case <-startedChan:
-		log.WithFields(log.Fields{
-			"id":  s.Id,
-			"pid": GetStreamPid(s),
-		}).Debugf("    [stream-%d] stream has been started", s.Id)
+		//log.WithFields(log.Fields{
+		//	"id":    s.Id,
+		//	"pid":   GetStreamPid(s),
+		//	"count": count,
+		//}).Debugf("    [stream-%d] stream has been started", s.Id)
 		s.Status = Started
 		return nil
 	case <-ctx.Done():
-		msg := "canceled"
-		//log.WithFields(log.Fields{
-		//    "id": s.Id,
-		//}).Debugf("    [stream-%d] %s", s.Id, msg)
 		s.stop()
 		s.Status = Failed
-		return errors.New(msg)
+		return errors.New("canceled")
 	}
-
 }
 
 func (s *Stream) stop() {
@@ -152,6 +146,40 @@ func (s *Stream) stop() {
 	//	"uri": s.Uri,
 	//	"err": err,
 	//}).Debugf("    [stream-%d] has been stopped", s.Id)
+}
+
+func (s *Stream) makeM3u8Tags(segments []*Segment) string {
+	size := uint(len(segments))
+	playlist, _ := m3u8.NewMediaPlaylist(size, size)
+	defer playlist.Close()
+
+	for _, seg := range segments {
+		err := playlist.Append(seg.URI, seg.Duration, "")
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	playlist.Close()
+	return playlist.Encode().String()
+}
+
+func (s *Stream) getM3u8Segments(date string) []*Segment {
+	segments := make([]*Segment, 0)
+	_ = DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(GetStreamBucketName(s.Id, date))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var seg Segment
+			err := json.Unmarshal(v, &seg)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			segments = append(segments, &seg)
+		}
+		return nil
+	})
+	return segments
 }
 
 //

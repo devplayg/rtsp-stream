@@ -34,13 +34,14 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams", c.AddStream).Methods("POST")
 	r.HandleFunc("/streams/debug", c.DebugStream).Methods("GET")
 
-	r.HandleFunc("/streams/{id}", c.GetStreamById).Methods("GET")
-	r.HandleFunc("/streams/{id}", c.UpdateStream).Methods("PATCH")
-	r.HandleFunc("/streams/{id}", c.DeleteStream).Methods("DELETE")
+	r.HandleFunc("/streams/{id:[0-9]+}", c.GetStreamById).Methods("GET")
+	r.HandleFunc("/streams/{id:[0-9]+}", c.UpdateStream).Methods("PATCH")
+	r.HandleFunc("/streams/{id:[0-9]+}", c.DeleteStream).Methods("DELETE")
 
-	r.HandleFunc("/streams/{id}/start", c.StartStream).Methods("GET")
-	r.HandleFunc("/streams/{id}/stop", c.StopStream).Methods("GET")
+	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
+	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
 
+	r.HandleFunc("/videos/{id:[0-9]+}/today/m3u8", c.GetTodayM3u8).Methods("GET")
 	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetM3u8).Methods("GET")
 	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/{media}.ts", c.Wondory).Methods("GET")
 	//http://127.0.0.1:8000/videos/1/date/20191126/1.ts
@@ -143,6 +144,28 @@ func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", ContentTypeJson)
 	w.Write(data)
+}
+
+func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+	tags, err := c.manager.getM3u8(streamId)
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	//list := c.manager.getStreams()
+	//data, err := json.MarshalIndent(list, "", "  ")
+	//if err != nil {
+	//	Response(w, err, http.StatusInternalServerError)
+	//	return
+	//}
+	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Write([]byte(tags))
 }
 
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {

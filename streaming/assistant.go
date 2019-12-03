@@ -154,6 +154,7 @@ func (s *Assistant) readLiveM3u8(size int) (*m3u8.MediaPlaylist, error) {
 
 func (s *Assistant) stop() error {
 	s.cancel()
+	log.WithFields(log.Fields{}).Debugf("    [assistant-%d] has been stopped", s.stream.Id)
 	return nil
 }
 

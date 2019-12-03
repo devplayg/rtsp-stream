@@ -278,7 +278,8 @@ func (m *Manager) startStreaming(id int64, from int) error {
 		log.WithFields(log.Fields{
 			"id":  id,
 			"url": stream.Uri,
-		}).Errorf("stream-%d has been started", id)
+			"pid": GetStreamPid(stream),
+		}).Infof("stream-%d has been started", id)
 	}()
 
 	return nil
@@ -322,6 +323,19 @@ func (m *Manager) startStreamWatcher() {
 	}()
 }
 
+func (m *Manager) getM3u8(id int64) (string, error) {
+	stream := m.getStreamById(id)
+	if stream == nil {
+		return "", ErrorStreamNotFound
+	}
+
+	segs := stream.getM3u8Segments("")
+	tags := stream.makeM3u8Tags(segs)
+
+	return tags, nil
+
+}
+
 func (m *Manager) checkStreams() {
 	for id, stream := range m.streams {
 		if !stream.Enabled {
@@ -331,7 +345,7 @@ func (m *Manager) checkStreams() {
 			continue
 		}
 
-		log.WithFields(log.Fields{}).Errorf("[watcher] since stream-%d is not running, restart it", id)
+		log.WithFields(log.Fields{}).Errorf("[watcher] since stream-%d is not running, start it", id)
 		if err := m.startStreaming(id, FromWatcher); err != nil {
 			log.Error(err)
 		}
