@@ -28,6 +28,10 @@ func GetStream(id int64) (*Stream, error) {
 
 func SaveStream(stream *Stream) error {
 	return DB.Update(func(tx *bolt.Tx) error {
+		if _, err := tx.CreateBucketIfNotExists(GetStreamBucketName(stream.Id, "")); err != nil {
+			return err
+		}
+
 		b := tx.Bucket(StreamBucket)
 		buf, err := json.Marshal(stream)
 		if err != nil {

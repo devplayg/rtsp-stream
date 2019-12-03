@@ -25,7 +25,6 @@ type Manager struct {
 }
 
 func NewManager(server *Server) *Manager {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
 		server:               server,
@@ -40,8 +39,7 @@ func (m *Manager) start() error {
 	if err := m.loadStreamsFromDatabase(); err != nil {
 		return err
 	}
-
-	m.startWatcher()
+	m.startStreamWatcher()
 
 	return nil
 }
@@ -64,6 +62,12 @@ func (m *Manager) loadStreamsFromDatabase() error {
 		}
 		return nil
 	})
+
+	// wondory
+	// fetch and unmarshal
+	// lock
+	// assign
+	// unlock
 }
 
 func (m *Manager) getStreams() []*Stream {
@@ -78,9 +82,10 @@ func (m *Manager) getStreams() []*Stream {
 }
 
 func (m *Manager) getStreamById(id int64) *Stream {
-	m.RLock()
-	defer m.RUnlock()
-	return m.streams[id]
+	m.Lock()
+	stream := m.streams[id]
+	m.Unlock()
+	return stream
 }
 
 func (m *Manager) addStream(stream *Stream) error {
@@ -193,14 +198,15 @@ func (m *Manager) createStreamDir(stream *Stream) error {
 	return nil
 }
 
-func (m *Manager) makeStreamStatus(id int64, status int) (*Stream, error) {
+func (m *Manager) canMakeStreamStatus(id int64, want int) (*Stream, error) {
 	m.Lock()
-	defer m.Unlock()
 	stream := m.streams[id]
+	m.Unlock()
+
 	if stream == nil {
 		return nil, ErrorStreamNotFound
 	}
-	if status == Stopped {
+	if want == Stopped {
 		if stream.Status == Stopped {
 			return nil, errors.New("stream is already stopped")
 		}
@@ -212,7 +218,7 @@ func (m *Manager) makeStreamStatus(id int64, status int) (*Stream, error) {
 			return nil, errors.New("stream is about to start now")
 		}
 
-		stream.Status = status
+		//stream.Status = status
 		return stream, nil
 	}
 
@@ -228,7 +234,7 @@ func (m *Manager) makeStreamStatus(id int64, status int) (*Stream, error) {
 		return nil, errors.New("stream is already started")
 	}
 
-	stream.Status = status
+	//stream.Status = status
 	return stream, nil
 }
 
@@ -245,11 +251,11 @@ func (m *Manager) startStreaming(id int64, from int) error {
 		"from": whoSent,
 	}).Infof("received stream-%d start request", id)
 
-	stream, err := m.makeStreamStatus(id, Started)
+	stream, err := m.canMakeStreamStatus(id, Started)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
-		}).Errorf("cannot change stream-%d status", id)
+		}).Errorf("cannot change stream-%d status to 'started", id)
 		return err
 	}
 
@@ -265,7 +271,7 @@ func (m *Manager) startStreaming(id int64, from int) error {
 		if err := stream.start(); err != nil {
 			log.WithFields(log.Fields{
 				"id": id,
-			}).Errorf("failed to start stream-%d: %s", id, err)
+			}).Errorf("[manager] failed to start stream-%d: %s", id, err)
 			return
 		}
 		log.WithFields(log.Fields{
@@ -282,43 +288,33 @@ func (m *Manager) stopStreaming(id int64) error {
 	if stream == nil {
 		return ErrorStreamNotFound
 	}
-
-	if err := stream.stop(); err != nil {
-		return err
-	}
-
-	//log.WithFields(log.Fields{
-	//	"stream_id": id,
-	//}).Debugf("stream has been stopped")
+	stream.stop()
 	return nil
 }
 
 func (m *Manager) Stop() error {
-	// Stop all running streamings
+	m.cancel()
+	log.Debug("[manager] stopping all streams")
 	for _, stream := range m.streams {
-		err := stream.stop()
-		log.WithFields(log.Fields{
-			"stream_id": stream.Id,
-			"uri":       stream.Uri,
-			"err":       err,
-		}).Debugf("stream stop")
+		if stream.IsActive() {
+			stream.stop()
+		}
 	}
 
-	m.cancel()
 	return nil
 }
-func (m *Manager) startWatcher() {
+func (m *Manager) startStreamWatcher() {
 	go func() {
 		log.WithFields(log.Fields{
 			"interval(sec)": m.watcherCheckInterval.Seconds(),
-		}).Debug("stream watcher hash been started")
+		}).Debug("[manager] stream watcher hash been started")
 		for {
 			m.checkStreams()
 
 			select {
 			case <-time.After(m.watcherCheckInterval):
 			case <-m.ctx.Done():
-				log.Debug("stream watcher has been stopped")
+				log.Debug("[manager] stream watcher has been stopped")
 				return
 			}
 		}
@@ -334,9 +330,7 @@ func (m *Manager) checkStreams() {
 			continue
 		}
 
-		log.WithFields(log.Fields{
-			"stream_id": id,
-		}).Debugf("[watcher] since stream-%d is not running, restart it", id)
+		log.WithFields(log.Fields{}).Debugf("[watcher] since stream-%d is not running, restart it", id)
 		if err := m.startStreaming(id, FromWatcher); err != nil {
 			log.Error(err)
 		}

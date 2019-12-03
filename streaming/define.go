@@ -28,6 +28,12 @@ const (
 	FromClient  = 1
 	FromWatcher = 2
 
+	LiveBucketDbName = "live"
+
+	VideoFilePrefix     = "media"
+	LiveVideoFilePrefix = "live"
+	VideoFileExt        = ".ts"
+
 	// FailedToStop
 	//StreamStopped  = 1
 	//StreamStopping = 2

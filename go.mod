@@ -1,6 +1,6 @@
 module github.com/devplayg/rtsp-stream
 
-go 1.12
+go 1.13
 
 require (
 	github.com/boltdb/bolt v1.3.1
@@ -14,7 +14,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.2
-	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c // indirect
-	golang.org/x/net v0.0.0-20191125084936-ffdde1057850 // indirect
+	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e // indirect
+	golang.org/x/net v0.0.0-20191126235420-ef20fe5d7933 // indirect
 	gopkg.in/yaml.v2 v2.2.7 // indirect
 )

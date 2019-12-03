@@ -36,6 +36,7 @@ framework
 
 - manages all streams
 - starts, stops, adds, and removes streams
+- watches all streams
 
 ### Stream
 

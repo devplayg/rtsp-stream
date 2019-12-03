@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/minio/highwayhash"
 	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
@@ -207,8 +208,11 @@ func SendToStorage(bucketName, objectName, path, contentType string) error {
 	return nil
 }
 
-func SendToVirtualStorage(bucketName, objectName, path, contentType string) error {
-	return nil
+func GetStreamBucketName(streamId int64, date string) []byte {
+	if len(date) < 1 {
+		date = LiveBucketDbName
+	}
+	return []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
 }
 
 func GetVideoFileSeq(name string) (int, error) {
