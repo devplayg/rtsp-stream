@@ -296,9 +296,9 @@ func (m *Manager) Stop() error {
 	m.cancel()
 	log.Debug("[manager] stopping all streams")
 	for _, stream := range m.streams {
-		if stream.IsActive() {
-			stream.stop()
-		}
+		//if stream.IsActive() {
+		stream.stop()
+		//}
 	}
 
 	return nil

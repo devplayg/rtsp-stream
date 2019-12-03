@@ -9,6 +9,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ini/ini v1.51.0 // indirect
 	github.com/gorilla/mux v1.7.3
+	github.com/grafov/m3u8 v0.11.1
 	github.com/minio/highwayhash v1.0.0
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0 // indirect

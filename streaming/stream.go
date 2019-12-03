@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
@@ -27,6 +26,9 @@ type Stream struct {
 	liveDir            string        `json:"-"`            // Live video directory
 	Status             int           `json:"status"`       // Stream status
 	DataRetentionHours int           `json:"dataRetentionHours"`
+	assistant          *Assistant
+	//ctx                context.Context
+	//cancel             context.CancelFunc
 }
 
 func NewStream() *Stream {
@@ -85,10 +87,14 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- bool, ctx context.C
 
 func (s *Stream) start() error {
 	s.cmd = GetHlsStreamingCommand(s)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	// Start process
 	go func() {
+		s.assistant = NewAssistant(s)
+		s.assistant.start()
+
+		//defer s.cancel()
 		s.Status = Starting
 		err := s.cmd.Run()
 		log.WithFields(log.Fields{
@@ -96,7 +102,7 @@ func (s *Stream) start() error {
 			"pid": GetStreamPid(s),
 		}).Debugf("    [stream-%d] process has been terminated", s.Id)
 		// s.stop()
-		cancel()
+		//s.cancel()
 	}()
 
 	// Wait until streaming starts
@@ -127,6 +133,9 @@ func (s *Stream) start() error {
 }
 
 func (s *Stream) stop() {
+	s.assistant.stop()
+	//s.cancel()
+	//<-time.After(4 * time.Second)
 	defer func() {
 		s.Status = Stopped
 	}()
@@ -139,8 +148,6 @@ func (s *Stream) stop() {
 		"uri": s.Uri,
 		"err": err,
 	}).Debugf("    [stream-%d] has been stopped", s.Id)
-	spew.Dump(s.cmd.Process.Signal(os.Kill))
-
 }
 
 //
