@@ -32,7 +32,7 @@ func NewManager(server *Server) *Manager {
 		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
 		ctx:                  ctx,
 		cancel:               cancel,
-		watcherCheckInterval: 5 * time.Second,
+		watcherCheckInterval: 20 * time.Second,
 	}
 }
 

@@ -35,6 +35,8 @@ const (
 	//StreamStopping = 2
 	//StreamStarting = 3
 	//StreamStarted  = 4
+
+	LiveM3u8FileName = "index.m3u8"
 )
 
 var (
@@ -108,13 +110,13 @@ type ProtocolInfo struct {
 func NewProtocolInfo(protocol int) *ProtocolInfo {
 	if protocol == HLS {
 		return &ProtocolInfo{
-			MetaFileName:    "index.m3u8",
+			MetaFileName:    LiveM3u8FileName,
 			LiveFilePrefix:  "live",
 			VideoFilePrefix: "media",
 		}
 	}
 	return &ProtocolInfo{
-		MetaFileName:    "index.m3u8",
+		MetaFileName:    LiveM3u8FileName,
 		LiveFilePrefix:  "live",
 		VideoFilePrefix: "media",
 	}

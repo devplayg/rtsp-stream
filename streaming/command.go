@@ -34,7 +34,7 @@ func GetHlsStreamingCommand(stream *Stream) *exec.Cmd {
 		//"60",
 		"-hls_segment_filename",
 		stream.liveDir+"/"+stream.ProtocolInfo.VideoFilePrefix+"%d.ts",
-		stream.liveDir+"/index.m3u8",
+		stream.liveDir+"/"+stream.ProtocolInfo.MetaFileName,
 	)
 	//output, err := cmd.CombinedOutput()
 	//if err != nil {

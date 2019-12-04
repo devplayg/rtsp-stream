@@ -10,7 +10,9 @@ import (
 	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"html/template"
+	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -36,9 +38,20 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
 
+	// Today
+	// http://127.0.0.1:8000/videos/1/today/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/today/m3u8", c.GetTodayM3u8).Methods("GET")
-	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetM3u8).Methods("GET")
-	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/{media}.ts", c.Wondory).Methods("GET")
+	// http://127.0.0.1:8000/videos/1/today/media0.ts
+	r.HandleFunc("/videos/{id:[0-9]+}/today/{media}.ts", c.GetTodayVideo).Methods("GET")
+
+	// Live
+	// http://127.0.0.1:8000/videos/1/live/m3u8
+	r.HandleFunc("/videos/{id:[0-9]+}/live/m3u8", c.GetLiveM3u8).Methods("GET")
+	//  http://127.0.0.1:8000/videos/1/live/media0.ts
+	r.HandleFunc("/videos/{id:[0-9]+}/live/{media}.ts", c.GetLiveVideo).Methods("GET")
+
+	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetDailyM3u8).Methods("GET")
+	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/{media}.ts", c.GetDailyVideo).Methods("GET")
 	//http://127.0.0.1:8000/videos/1/date/20191126/1.ts
 
 	r.
@@ -182,6 +195,48 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(tags))
 }
 
+func (c *Controller) GetLiveM3u8(w http.ResponseWriter, r *http.Request) {
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+
+	path := filepath.Join(c.server.liveDir, strconv.FormatInt(streamId, 10), LiveM3u8FileName)
+	http.ServeFile(w, r, path)
+
+	//file, err := os.Open(path)
+	//if err != nil {
+	//	Response(w, err, http.StatusBadRequest)
+	//	return
+	//}
+	//stat, err := file.Stat()
+	//if err != nil {
+	//	Response(w, err, http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	//w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	//if _, err = io.Copy(w, file); err != nil{
+	//	Response(w, err, http.StatusInternalServerError)
+	//	return
+	//}
+}
+
+func (c *Controller) GetLiveVideo(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	path := filepath.ToSlash(filepath.Join(c.server.liveDir, vars["id"], vars["media"]+".ts"))
+
+	//streamId, err := parseAndGetStreamId(r)
+	//if err != nil {
+	//	Response(w, err, http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//path := filepath.Join(c.server.liveDir, strconv.FormatInt(streamId, 10), LiveM3u8FileName)
+	http.ServeFile(w, r, path)
+}
+
 func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
@@ -209,6 +264,30 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 		}
 		return nil
 	})
+}
+
+func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	path := filepath.ToSlash(filepath.Join(c.server.liveDir, vars["id"], vars["media"]+".ts"))
+	file, err := os.Open(path)
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Accept-Range", "bytes")
+	w.Header().Set("Content-Type", ContentTypeTs)
+	w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	if _, err = io.Copy(w, file); err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
 }
 
 //func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
@@ -268,7 +347,7 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 //
 //}
 
-func (c *Controller) Wondory(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	objectName := filepath.ToSlash(filepath.Join(vars["id"], vars["date"], vars["media"]+".ts"))
 	object, err := MinioClient.GetObject(VideoRecordBucket, objectName, minio.GetObjectOptions{})
@@ -393,7 +472,7 @@ func (c *Controller) Wondory(w http.ResponseWriter, r *http.Request) {
 //
 //}
 
-func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], "xxxx")
 	object, err := MinioClient.GetObject(VideoRecordBucket, objectName, minio.GetObjectOptions{})

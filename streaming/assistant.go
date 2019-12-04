@@ -124,6 +124,10 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]
 			log.Error(err)
 			continue
 		}
+		if file.Size() < 1 {
+			log.Warnf("    [stream-%d] file size is zero: ", s.stream.Id, file.Name())
+			continue
+		}
 
 		if seg.SeqId > maxSeqId {
 			maxSeqId = seg.SeqId
@@ -138,7 +142,7 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]
 }
 
 func (s *Assistant) readLiveM3u8(size int) (*m3u8.MediaPlaylist, error) {
-	path := filepath.Join(s.stream.liveDir, "index.m3u8")
+	path := filepath.Join(s.stream.liveDir, s.stream.ProtocolInfo.MetaFileName)
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
