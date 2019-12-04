@@ -227,7 +227,7 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.manager.startStreaming(streamId, FromClient)
+	err = c.manager.startStreaming(streamId, "request from "+r.RemoteAddr)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return

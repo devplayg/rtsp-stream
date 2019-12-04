@@ -46,7 +46,7 @@ func (s *Assistant) start() error {
 	//	return nil
 	//}
 
-	//go s.startCheckingStreamStatus()
+	go s.startCheckingStreamStatus()
 
 	go s.startCapturingLiveM3u8(3)
 
@@ -88,7 +88,7 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 		return nil
 	}
 
-	segments := s.generateSegments(playlist)
+	segments, maxSeqId := s.generateSegments(playlist)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,8 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 	}
 
 	log.WithFields(log.Fields{
-		"count": len(segments),
+		"count":     len(segments),
+		"lastSeqId": maxSeqId,
 	}).Debugf("    [stream-%d] read m3u8", s.stream.Id)
 
 	return nil
@@ -118,8 +119,9 @@ func (s *Assistant) saveSegments(segments map[int64][]byte, date string) error {
 	})
 }
 
-func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) map[int64][]byte {
+func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]byte, int64) {
 	m := make(map[int64][]byte)
+	var maxSeqId uint64
 	for _, seg := range playlist.Segments {
 		if seg == nil {
 			continue
@@ -131,12 +133,16 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) map[int64][]b
 			continue
 		}
 
+		if seg.SeqId > maxSeqId {
+			maxSeqId = seg.SeqId
+		}
+
 		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, "media"), ".ts")
 		seqId, _ := strconv.ParseInt(str, 10, 16)
 		b, _ := json.Marshal(NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
 		m[seqId] = b
 	}
-	return m
+	return m, int64(maxSeqId)
 }
 
 func (s *Assistant) readLiveM3u8(size int) (*m3u8.MediaPlaylist, error) {
@@ -154,7 +160,7 @@ func (s *Assistant) readLiveM3u8(size int) (*m3u8.MediaPlaylist, error) {
 
 func (s *Assistant) stop() error {
 	s.cancel()
-	log.WithFields(log.Fields{}).Debugf("    [assistant-%d] has been stopped", s.stream.Id)
+	// log.WithFields(log.Fields{}).Debugf("    [assistant-%d] has been stopped", s.stream.Id)
 	return nil
 }
 
@@ -162,7 +168,12 @@ func (s *Assistant) startCheckingStreamStatus() error {
 	for {
 		// just in case
 		if s.stream.Status == Started && !s.stream.IsActive() {
-			log.WithFields(log.Fields{}).Errorf("[stream-%d] status was 'started' but it wasn't alive.", s.stream.Id)
+			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", s.stream.Id)
+			s.stream.stop()
+		}
+
+		if s.stream.Status != Started && s.stream.IsActive() {
+			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", s.stream.Id)
 			s.stream.stop()
 		}
 

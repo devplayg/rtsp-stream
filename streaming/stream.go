@@ -29,7 +29,10 @@ type Stream struct {
 	liveDir            string        `json:"-"`            // Live video directory
 	Status             int           `json:"status"`       // Stream status
 	DataRetentionHours int           `json:"dataRetentionHours"`
+	Pid                int           `json:"pid"`
 	assistant          *Assistant
+	ctx                context.Context
+	cancel             context.CancelFunc
 }
 
 func NewStream() *Stream {
@@ -37,7 +40,7 @@ func NewStream() *Stream {
 }
 
 func (s *Stream) IsActive() bool {
-	if s.cmd == nil {
+	if s.cmd == nil || s.cmd.Process == nil {
 		return false
 	}
 
@@ -50,7 +53,7 @@ func (s *Stream) IsActive() bool {
 
 	// Check if "index.m3u8" has been updated within the last 8 seconds
 	since := time.Now().Sub(file.ModTime()).Seconds()
-	log.Debugf("    [stream-%d] is active? %3.1f", s.Id, since)
+	//log.Debugf("    [stream-%d] is active? %3.1f", s.Id, since)
 	if since > 8.0 {
 		return false
 	}
@@ -90,62 +93,56 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Co
 	}
 }
 
-func (s *Stream) start() error {
-	s.cmd = GetHlsStreamingCommand(s)
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+func (s *Stream) start() (int, error) {
 
 	// Start process
+	s.cmd = GetHlsStreamingCommand(s)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
-		s.Status = Starting
+		//s.Status = Starting
+		//defer s.stop()
+		defer func() {
+			if s.assistant != nil {
+				s.assistant.stop()
+			}
+			s.cancel()
+			s.Status = Stopped
+		}()
 		err := s.cmd.Run()
 		log.WithFields(log.Fields{
 			"err": err,
 			"pid": GetStreamPid(s),
 		}).Debugf("    [stream-%d] process has been terminated", s.Id)
-		s.stop()
+		//s.cmd = nil
 	}()
 
 	// Wait until streaming starts
 	startedChan := make(chan int)
 	go func() {
-		s.WaitUntilStreamingStarts(startedChan, ctx)
+		s.WaitUntilStreamingStarts(startedChan, s.ctx)
 	}()
 
 	// Wait signals
 	select {
-	case <-startedChan:
-		//log.WithFields(log.Fields{
-		//	"id":    s.Id,
-		//	"pid":   GetStreamPid(s),
-		//	"count": count,
-		//}).Debugf("    [stream-%d] stream has been started", s.Id)
-		s.Status = Started
-		return nil
-	case <-ctx.Done():
-		s.stop()
-		s.Status = Failed
-		return errors.New("canceled")
+	case count := <-startedChan:
+		//s.Status = Started
+		return count, nil
+	case <-s.ctx.Done():
+		//s.stop()
+		//s.Status = Failed
+		return 0, errors.New("failed or canceled")
 	}
 }
 
 func (s *Stream) stop() {
-	if s.assistant != nil {
-		s.assistant.stop()
-	}
-	//s.cancel()
-	//<-time.After(4 * time.Second)
-	defer func() {
-		s.Status = Stopped
-	}()
 	if s.cmd == nil || s.cmd.Process == nil {
 		return
 	}
-	//err := s.cmd.Process.Kill()
-	s.cmd.Process.Signal(os.Kill)
-	//log.WithFields(log.Fields{
-	//	"uri": s.Uri,
-	//	"err": err,
-	//}).Debugf("    [stream-%d] has been stopped", s.Id)
+	err := s.cmd.Process.Kill()
+	log.WithFields(log.Fields{
+		"uri":    s.Uri,
+		"result": err,
+	}).Debugf("    [stream-%d] process has been stopped", s.Id)
 }
 
 func (s *Stream) makeM3u8Tags(segments []*Segment) string {
@@ -181,25 +178,3 @@ func (s *Stream) getM3u8Segments(date string) []*Segment {
 	})
 	return segments
 }
-
-//
-//func (s *Stream) stop() error {
-//	err := s.cmd.Process.Kill()
-//	if strings.Contains(err.Error(), "process already finished") {
-//		return nil
-//	}
-//	if strings.Contains(err.Error(), "signal: killed") {
-//		return nil
-//	}
-//	return err
-//}
-
-//
-//func (p Processor) getHLSFlags() string {
-//    if p.keepFiles {
-//        return "append_list"
-//    }
-//    return "delete_segments+append_list"
-//}
-
-//

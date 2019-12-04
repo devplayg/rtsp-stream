@@ -32,7 +32,7 @@ func NewManager(server *Server) *Manager {
 		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
 		ctx:                  ctx,
 		cancel:               cancel,
-		watcherCheckInterval: 20 * time.Second,
+		watcherCheckInterval: 5 * time.Second,
 	}
 }
 
@@ -85,6 +85,9 @@ func (m *Manager) getStreams() []*Stream {
 func (m *Manager) getStreamById(id int64) *Stream {
 	m.Lock()
 	stream := m.streams[id]
+	if stream.cmd != nil && stream.cmd.Process != nil {
+		stream.Pid = stream.cmd.Process.Pid
+	}
 	m.Unlock()
 	return stream
 }
@@ -199,98 +202,98 @@ func (m *Manager) createStreamDir(stream *Stream) error {
 	return nil
 }
 
-func (m *Manager) canMakeStreamStatus(id int64, want int) (*Stream, error) {
+func (m *Manager) startStreaming(id int64, from string) error {
+	// Who sent?
+	log.WithFields(log.Fields{
+		"from": from,
+	}).Infof("[manager] received to start stream-%d", id)
+
+	// Check stream status
 	m.Lock()
 	stream := m.streams[id]
-	m.Unlock()
-
 	if stream == nil {
-		return nil, ErrorStreamNotFound
-	}
-	if want == Stopped {
-		if stream.Status == Stopped {
-			return nil, errors.New("stream is already stopped")
-		}
-		if stream.Status == Stopping {
-			return nil, errors.New("stream is stopping now")
-		}
-
-		if stream.Status == Starting {
-			return nil, errors.New("stream is about to start now")
-		}
-
-		//stream.Status = status
-		return stream, nil
-	}
-
-	if stream.Status == Stopping {
-		return nil, errors.New("stream is stopping now")
-	}
-
-	if stream.Status == Starting {
-		return nil, errors.New("stream is about to start now")
+		m.Unlock()
+		return ErrorStreamNotFound
 	}
 
 	if stream.Status == Started {
-		return nil, errors.New("stream is already started")
+		log.Warnf("[manager] stream-%d has been already started", id)
+		m.Unlock()
+		return nil
 	}
-
-	//stream.Status = status
-	return stream, nil
-}
-
-func (m *Manager) startStreaming(id int64, from int) error {
-	whoSent := ""
-	if from == FromClient {
-		whoSent = "Rest API"
-	} else if from == FromWatcher {
-		whoSent = "Watcher"
-	} else {
-		whoSent = "unknown"
+	if stream.Status == Starting {
+		log.Warnf("[manager] stream-%d is already starting now", id)
+		m.Unlock()
+		return nil
 	}
-	log.WithFields(log.Fields{
-		"from": whoSent,
-	}).Infof("[manager] received stream-%d start request", id)
-
-	stream, err := m.canMakeStreamStatus(id, Started)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Errorf("cannot change stream-%d status to 'started", id)
-		return err
+	if stream.Status == Stopping {
+		log.Warnf("[manager] stream-%d is already stopping now", id)
+		m.Unlock()
+		return nil
 	}
-
-	if err := m.createStreamDir(stream); err != nil {
-		return err
-	}
-
-	if err := m.cleanStreamDir(stream); err != nil {
-		log.Warn("failed to clear streaming directories:", err)
-	}
+	stream.Status = Starting
+	m.Unlock()
 
 	go func() {
-		if err := stream.start(); err != nil {
+		if err := m.createStreamDir(stream); err != nil {
+			log.Error(err)
+			stream.Status = Failed
+			return
+		}
+
+		if err := m.cleanStreamDir(stream); err != nil {
+			log.Warn("failed to clean streaming directories:", err)
+			stream.Status = Failed
+			return
+		}
+
+		count, err := stream.start()
+		if err != nil {
 			log.WithFields(log.Fields{
 				"id": id,
 			}).Errorf("[manager] failed to start stream-%d: %s", id, err)
+			m.RLock()
+			stream.Status = Failed
+			m.Unlock()
 			return
 		}
 		log.WithFields(log.Fields{
-			"id":  id,
-			"url": stream.Uri,
-			"pid": GetStreamPid(stream),
-		}).Infof("stream-%d has been started", id)
+			"id":        id,
+			"url":       stream.Uri,
+			"waitCount": count,
+			"pid":       GetStreamPid(stream),
+		}).Infof("[manager] stream-%d has been started", id)
+		stream.Status = Started
 	}()
 
 	return nil
 }
 
 func (m *Manager) stopStreaming(id int64) error {
-	stream := m.getStreamById(id)
+	log.WithFields(log.Fields{}).Infof("[manager] received to stop stream-%d", id)
+
+	m.Lock()
+	defer m.Unlock()
+
+	stream := m.streams[id]
 	if stream == nil {
 		return ErrorStreamNotFound
 	}
+	if stream.Status == Stopped {
+		log.Warnf("[manager] stream-%d has been already stopped", id)
+		return nil
+	}
+	if stream.Status == Stopping {
+		log.Warnf("[manager] stream-%d is already stopping now", id)
+		return nil
+	}
+	if stream.Status == Starting {
+		log.Warnf("[manager] stream-%d is already starting now", id)
+		return nil
+	}
+	stream.Status = Stopping
 	stream.stop()
+
 	return nil
 }
 
@@ -346,7 +349,7 @@ func (m *Manager) checkStreams() {
 		}
 
 		log.WithFields(log.Fields{}).Errorf("[watcher] since stream-%d is not running, start it", id)
-		if err := m.startStreaming(id, FromWatcher); err != nil {
+		if err := m.startStreaming(id, "watcher"); err != nil {
 			log.Error(err)
 		}
 	}

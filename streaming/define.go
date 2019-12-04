@@ -24,10 +24,6 @@ const (
 	ContentTypeTs   = "video/mp2t"
 	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
 
-	// Streaming requester
-	FromClient  = 1
-	FromWatcher = 2
-
 	LiveBucketDbName = "live"
 
 	VideoFilePrefix     = "media"
@@ -104,9 +100,9 @@ func NewTransmissionResult(streamId int64, seq int, size int64, hash []byte, dat
 }
 
 type ProtocolInfo struct {
-	MetaFileName    string
-	LiveFilePrefix  string
-	VideoFilePrefix string
+	MetaFileName    string `json:"metaFileName"`
+	LiveFilePrefix  string `json:"liveFilePrefix"`
+	VideoFilePrefix string `json:"videoFilePrefix"`
 }
 
 func NewProtocolInfo(protocol int) *ProtocolInfo {
