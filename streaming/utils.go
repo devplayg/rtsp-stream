@@ -4,13 +4,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/minio/highwayhash"
 	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -224,6 +227,35 @@ func GetVideoFileSeq(name string) (int, error) {
 	}
 
 	return mediaFileSeq, nil
+}
+
+func parseAndGetStream(body io.Reader) (*Stream, error) {
+	stream := NewStream()
+	data, err := ioutil.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(data, stream); err != nil {
+		return nil, err
+	}
+
+	stream.Uri = strings.TrimSpace(stream.Uri)
+	if _, err := url.Parse(stream.Uri); err != nil {
+		return nil, ErrorInvalidUri
+	}
+
+	return stream, nil
+}
+
+func parseAndGetStreamId(r *http.Request) (int64, error) {
+	vars := mux.Vars(r)
+	if len(vars["id"]) < 1 {
+		return 0, errors.New("empty stream id")
+	}
+
+	streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+	return streamId, nil
 }
 
 //

@@ -8,24 +8,19 @@ import (
 	"github.com/devplayg/rtsp-stream/ui"
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"html/template"
-	"io"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 )
 
 type Controller struct {
+	router    *mux.Router
 	server    *Server
 	manager   *Manager
 	staticDir string
-	router    *mux.Router
 }
 
 func (c *Controller) init() {
@@ -55,39 +50,6 @@ func (c *Controller) init() {
 	http.Handle("/", r)
 
 	c.router = r
-}
-
-func formatAsDollars(valueInCents int) (string, error) {
-	dollars := valueInCents / 100
-	cents := valueInCents % 100
-	return fmt.Sprintf("$%d.%2d", dollars, cents), nil
-}
-
-func formatAsDate(t time.Time) string {
-	year, month, day := t.Date()
-	return fmt.Sprintf("%d/%d/%d", day, month, year)
-}
-
-func urgentNote(acc ui.Account) string {
-	return fmt.Sprintf("You have earned 100 VIP points that can be used for purchases")
-}
-
-func serveTemplate2(w http.ResponseWriter, r *http.Request) {
-	fmap := template.FuncMap{
-		"formatAsDollars": formatAsDollars,
-		"formatAsDate":    formatAsDate,
-		"urgentNote":      urgentNote,
-	}
-
-	// Create a new template and parse the letter into it.
-	str := "hello"
-
-	//t := template.Must(template.New("email.tmpl").Funcs(fmap).Parse(ui.Layout(str)))
-	t := template.Must(template.New("streams").Funcs(fmap).Parse(ui.Layout(str)))
-	err := t.Execute(w, ui.CreateMockStatement())
-	if err != nil {
-		log.Println("executing template:", err)
-	}
 }
 
 func NewController(server *Server) *Controller {
@@ -126,46 +88,10 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 		Response(w, err, http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
-}
-
-func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
-	streamId, err := parseAndGetStreamId(r)
-	if err != nil {
-		Response(w, err, http.StatusBadRequest)
-		return
-	}
-	stream := c.manager.getStreamById(streamId)
-	data, err := json.MarshalIndent(stream, "", "  ")
-	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", ContentTypeJson)
-	w.Write(data)
-}
-
-func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
-	streamId, err := parseAndGetStreamId(r)
-	if err != nil {
-		Response(w, err, http.StatusBadRequest)
-		return
-	}
-	tags, err := c.manager.getM3u8(streamId)
-	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	//list := c.manager.getStreams()
-	//data, err := json.MarshalIndent(list, "", "  ")
-	//if err != nil {
-	//	Response(w, err, http.StatusInternalServerError)
-	//	return
-	//}
-	w.Header().Set("Content-Type", ContentTypeJson)
-	w.Write([]byte(tags))
 }
 
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
@@ -180,26 +106,8 @@ func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 		Response(w, err, http.StatusBadRequest)
 		return
 	}
+
 	Response(w, nil, http.StatusOK)
-}
-
-func parseAndGetStream(body io.Reader) (*Stream, error) {
-	stream := NewStream()
-	data, err := ioutil.ReadAll(body)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = json.Unmarshal(data, stream); err != nil {
-		return nil, err
-	}
-
-	stream.Uri = strings.TrimSpace(stream.Uri)
-	if _, err := url.Parse(stream.Uri); err != nil {
-		return nil, ErrorInvalidUri
-	}
-
-	return stream, nil
 }
 
 /*
@@ -211,15 +119,16 @@ func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 		Response(w, err, http.StatusBadRequest)
 		return
 	}
+
 	err = c.manager.deleteStream(streamId)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
-// For test
 func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
@@ -232,44 +141,61 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 		Response(w, err, http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
-
-	//streamId, err := parseAndGetStreamId(r)
-	//if err != nil {
-	//	Response(w, err, http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//c.manager.startStream(streamId)
-	//if err != nil {
-	//	Response(w, err, http.StatusInternalServerError)
-	//	return
-	//}
-	//w.WriteHeader(http.StatusOK)
 }
 
-func parseAndGetStreamId(r *http.Request) (int64, error) {
-	vars := mux.Vars(r)
-	if len(vars["id"]) < 1 {
-		return 0, errors.New("empty stream id")
-	}
-
-	streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
-	return streamId, nil
-}
-
-func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	if len(vars["id"]) < 1 {
-		Response(w, errors.New("empty stream key"), http.StatusBadRequest)
+func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
 		return
 	}
-	id, _ := strconv.ParseInt(vars["id"], 10, 16)
-	err := c.manager.stopStreaming(id)
+
+	stream := c.manager.getStreamById(streamId)
+	data, err := json.MarshalIndent(stream, "", "  ")
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.Write(data)
+}
+
+func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+
+	tags, err := c.manager.getM3u8(streamId, "")
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
+	w.Write([]byte(tags))
+}
+
+func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
+	streamId, err := parseAndGetStreamId(r)
+	if err != nil {
+		Response(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = c.manager.stopStreaming(streamId)
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", ContentTypeJson)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -277,13 +203,10 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 	_ = DB.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte(StreamBucket))
-
 		c := b.Cursor()
-
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			log.Debugf("[%s] %s", string(k), string(v))
 		}
-
 		return nil
 	})
 }
@@ -618,3 +541,38 @@ func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
 //    output.Header("Pragma", "public")
 //    http.ServeFile(output.Context.ResponseWriter, output.Context.Request, file)
 //}
+
+//
+
+func formatAsDollars(valueInCents int) (string, error) {
+	dollars := valueInCents / 100
+	cents := valueInCents % 100
+	return fmt.Sprintf("$%d.%2d", dollars, cents), nil
+}
+
+func formatAsDate(t time.Time) string {
+	year, month, day := t.Date()
+	return fmt.Sprintf("%d/%d/%d", day, month, year)
+}
+
+func urgentNote(acc ui.Account) string {
+	return fmt.Sprintf("You have earned 100 VIP points that can be used for purchases")
+}
+
+func serveTemplate2(w http.ResponseWriter, r *http.Request) {
+	fmap := template.FuncMap{
+		"formatAsDollars": formatAsDollars,
+		"formatAsDate":    formatAsDate,
+		"urgentNote":      urgentNote,
+	}
+
+	// Create a new template and parse the letter into it.
+	str := "hello"
+
+	//t := template.Must(template.New("email.tmpl").Funcs(fmap).Parse(ui.Layout(str)))
+	t := template.Must(template.New("streams").Funcs(fmap).Parse(ui.Layout(str)))
+	err := t.Execute(w, ui.CreateMockStatement())
+	if err != nil {
+		log.Println("executing template:", err)
+	}
+}

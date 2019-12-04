@@ -40,7 +40,32 @@ func (m *Manager) start() error {
 	if err := m.loadStreamsFromDatabase(); err != nil {
 		return err
 	}
-	m.startStreamWatcher()
+
+	if err := m.cleanStreamMetaFile(); err != nil {
+		return err
+	}
+
+	go m.startStreamWatcher()
+
+	return nil
+}
+
+func (m *Manager) cleanStreamMetaFile() error {
+	m.Lock()
+	defer m.Unlock()
+
+	dir := filepath.Join(m.server.liveDir)
+
+	for id, stream := range m.streams {
+		path := filepath.ToSlash(filepath.Join(dir, strconv.FormatInt(stream.Id, 10), stream.ProtocolInfo.MetaFileName))
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			err := os.Remove(path)
+			log.WithFields(log.Fields{
+				"err":  err,
+				"file": filepath.Base(path),
+			}).Debugf("[manager] cleaned meta file of stream-%d", id)
+		}
+	}
 
 	return nil
 }
@@ -84,32 +109,31 @@ func (m *Manager) getStreams() []*Stream {
 
 func (m *Manager) getStreamById(id int64) *Stream {
 	m.Lock()
+	defer m.Unlock()
+
 	stream := m.streams[id]
 	if stream.cmd != nil && stream.cmd.Process != nil {
 		stream.Pid = stream.cmd.Process.Pid
 	}
-	m.Unlock()
+
 	return stream
 }
 
 func (m *Manager) addStream(stream *Stream) error {
-	// Check if the stream is valid
 	if err := m.isValidStream(stream); err != nil {
 		return err
 	}
 
-	err := m.issueStream(stream)
-	if err != nil {
+	if err := m.issueStream(stream); err != nil {
 		return err
 	}
 
 	log.WithFields(log.Fields{
 		"stream_id": stream.Id,
 		"uri":       stream.Uri,
-		"err":       err,
-	}).Debugf("issue new stream")
+	}).Debugf("issued new stream")
 
-	return err
+	return nil
 }
 
 func (m *Manager) isValidStream(stream *Stream) error {
@@ -127,8 +151,10 @@ func (m *Manager) isValidStream(stream *Stream) error {
 }
 
 func (m *Manager) issueStream(input *Stream) error {
-	var maxStreamId int64
 	m.Lock()
+	defer m.Unlock()
+
+	var maxStreamId int64
 	for id, stream := range m.streams {
 		if input.UrlHash == stream.UrlHash {
 			return errors.New("duplicated stream uri:" + input.Uri)
@@ -140,7 +166,6 @@ func (m *Manager) issueStream(input *Stream) error {
 	maxStreamId++ // issue new stream ID
 	input.Id = maxStreamId
 	m.streams[maxStreamId] = input
-	m.Unlock()
 	return SaveStream(input)
 }
 
@@ -165,8 +190,6 @@ func (m *Manager) deleteStream(id int64) error {
 }
 
 func (m *Manager) cleanStreamDir(stream *Stream) error {
-	// Remove all files but created today in live directory
-
 	files, err := ioutil.ReadDir(stream.liveDir)
 	if err != nil {
 		return err
@@ -202,59 +225,56 @@ func (m *Manager) createStreamDir(stream *Stream) error {
 	return nil
 }
 
+func (m *Manager) changeStreamStatusToStart(id int64) (*Stream, error) {
+	// Check stream status
+	m.Lock()
+	defer m.Unlock()
+
+	stream := m.streams[id]
+	if stream == nil {
+		return nil, ErrorStreamNotFound
+	}
+	if stream.Status == Started {
+		return nil, errors.New(fmt.Sprintf("[manager] stream-%d has been already started", id))
+	}
+	if stream.Status == Starting {
+		return nil, errors.New(fmt.Sprintf("[manager] stream-%d is already starting now", id))
+	}
+	if stream.Status == Stopping {
+		return nil, errors.New(fmt.Sprintf("[manager] stream-%d is already stopping now", id))
+	}
+	stream.Status = Starting
+	return stream, nil
+}
+
 func (m *Manager) startStreaming(id int64, from string) error {
 	// Who sent?
 	log.WithFields(log.Fields{
 		"from": from,
 	}).Infof("[manager] received to start stream-%d", id)
 
-	// Check stream status
-	m.Lock()
-	stream := m.streams[id]
-	if stream == nil {
-		m.Unlock()
-		return ErrorStreamNotFound
+	stream, err := m.changeStreamStatusToStart(id)
+	if err != nil {
+		return err
 	}
 
-	if stream.Status == Started {
-		log.Warnf("[manager] stream-%d has been already started", id)
-		m.Unlock()
-		return nil
+	if err := m.createStreamDir(stream); err != nil {
+		stream.Status = Failed
+		return err
 	}
-	if stream.Status == Starting {
-		log.Warnf("[manager] stream-%d is already starting now", id)
-		m.Unlock()
-		return nil
+
+	if err := m.cleanStreamDir(stream); err != nil {
+		stream.Status = Failed
+		return err
 	}
-	if stream.Status == Stopping {
-		log.Warnf("[manager] stream-%d is already stopping now", id)
-		m.Unlock()
-		return nil
-	}
-	stream.Status = Starting
-	m.Unlock()
 
 	go func() {
-		if err := m.createStreamDir(stream); err != nil {
-			log.Error(err)
-			stream.Status = Failed
-			return
-		}
-
-		if err := m.cleanStreamDir(stream); err != nil {
-			log.Warn("failed to clean streaming directories:", err)
-			stream.Status = Failed
-			return
-		}
-
 		count, err := stream.start()
 		if err != nil {
 			log.WithFields(log.Fields{
 				"id": id,
 			}).Errorf("[manager] failed to start stream-%d: %s", id, err)
-			m.RLock()
 			stream.Status = Failed
-			m.Unlock()
 			return
 		}
 		log.WithFields(log.Fields{
@@ -299,59 +319,61 @@ func (m *Manager) stopStreaming(id int64) error {
 
 func (m *Manager) Stop() error {
 	m.cancel()
-	for _, stream := range m.streams {
-		//if stream.IsActive() {
-		stream.stop()
-		//}
+	for id, _ := range m.streams {
+		m.stopStreaming(id)
 	}
 	log.Debug("[manager] all streams have been stopped")
 
 	return nil
 }
 func (m *Manager) startStreamWatcher() {
-	go func() {
-		log.WithFields(log.Fields{
-			"interval": fmt.Sprintf("%3.1fsec", m.watcherCheckInterval.Seconds()),
-		}).Debug("[manager] stream watcher hash been started")
-		for {
-			m.checkStreams()
+	log.WithFields(log.Fields{
+		"interval": fmt.Sprintf("%3.1fsec", m.watcherCheckInterval.Seconds()),
+	}).Debug("[manager] watcher has been started")
+	for {
+		for id, stream := range m.streams {
+			if !stream.Enabled {
+				continue
+			}
 
-			select {
-			case <-time.After(m.watcherCheckInterval):
-			case <-m.ctx.Done():
-				log.Debug("[manager] stream watcher has been stopped")
-				return
+			// just in case
+			if stream.Status == Started && !stream.IsActive() {
+				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", stream.Id)
+				stream.stop()
+			}
+			if stream.Status != Started && stream.IsActive() {
+				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", stream.Id)
+			}
+
+			if stream.IsActive() {
+				continue
+			}
+
+			log.WithFields(log.Fields{}).Infof("[watcher] since stream-%d is not running, start it", id)
+			if err := m.startStreaming(id, "watcher"); err != nil {
+				log.Error(err)
+				continue
 			}
 		}
-	}()
+
+		select {
+		case <-time.After(m.watcherCheckInterval):
+		case <-m.ctx.Done():
+			log.Debug("[manager] stream watcher has been stopped")
+			return
+		}
+	}
 }
 
-func (m *Manager) getM3u8(id int64) (string, error) {
+func (m *Manager) getM3u8(id int64, date string) (string, error) {
 	stream := m.getStreamById(id)
 	if stream == nil {
 		return "", ErrorStreamNotFound
 	}
 
-	segs := stream.getM3u8Segments("")
+	segs := stream.getM3u8Segments(date)
 	tags := stream.makeM3u8Tags(segs)
 
 	return tags, nil
-
-}
-
-func (m *Manager) checkStreams() {
-	for id, stream := range m.streams {
-		if !stream.Enabled {
-			continue
-		}
-		if stream.IsActive() {
-			continue
-		}
-
-		log.WithFields(log.Fields{}).Errorf("[watcher] since stream-%d is not running, start it", id)
-		if err := m.startStreaming(id, "watcher"); err != nil {
-			log.Error(err)
-		}
-	}
 
 }

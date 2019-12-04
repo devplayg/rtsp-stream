@@ -94,18 +94,16 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Co
 }
 
 func (s *Stream) start() (int, error) {
-
-	// Start process
 	s.cmd = GetHlsStreamingCommand(s)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
-		//s.Status = Starting
-		//defer s.stop()
 		defer func() {
 			if s.assistant != nil {
 				s.assistant.stop()
 			}
 			s.cancel()
+			metaFilePath := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
+			os.Remove(metaFilePath)
 			s.Status = Stopped
 		}()
 		err := s.cmd.Run()
@@ -128,7 +126,7 @@ func (s *Stream) start() (int, error) {
 		//s.Status = Started
 		return count, nil
 	case <-s.ctx.Done():
-		//s.stop()
+		s.stop()
 		//s.Status = Failed
 		return 0, errors.New("failed or canceled")
 	}

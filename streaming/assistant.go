@@ -42,14 +42,7 @@ func (s *Assistant) init() error {
 }
 
 func (s *Assistant) start() error {
-	//if err := s.init(); err != nil {
-	//	return nil
-	//}
-
-	go s.startCheckingStreamStatus()
-
 	go s.startCapturingLiveM3u8(3)
-
 	//go s.startMergingVideoFiles()
 	log.WithFields(log.Fields{}).Debugf("    [assistant-%d] has been started", s.stream.Id)
 
@@ -58,7 +51,6 @@ func (s *Assistant) start() error {
 
 func (s *Assistant) startCapturingLiveM3u8(size int) {
 	for {
-
 		if s.stream.Status == Started {
 			if err := s.captureLiveM3u8(size); err != nil {
 				log.Error(err)
@@ -160,28 +152,27 @@ func (s *Assistant) readLiveM3u8(size int) (*m3u8.MediaPlaylist, error) {
 
 func (s *Assistant) stop() error {
 	s.cancel()
-	// log.WithFields(log.Fields{}).Debugf("    [assistant-%d] has been stopped", s.stream.Id)
 	return nil
 }
 
-func (s *Assistant) startCheckingStreamStatus() error {
-	for {
-		// just in case
-		if s.stream.Status == Started && !s.stream.IsActive() {
-			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", s.stream.Id)
-			s.stream.stop()
-		}
-
-		if s.stream.Status != Started && s.stream.IsActive() {
-			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", s.stream.Id)
-			s.stream.stop()
-		}
-
-		select {
-		case <-time.After(s.healthCheckInterval):
-		case <-s.ctx.Done():
-			log.WithFields(log.Fields{}).Debugf("    [assistant-%d] health check has been stopped", s.stream.Id)
-			return nil
-		}
-	}
-}
+//func (s *Assistant) startCheckingStreamStatus() error {
+//	for {
+//		// just in case
+//		if s.stream.Status == Started && !s.stream.IsActive() {
+//			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", s.stream.Id)
+//			s.stream.stop()
+//		}
+//
+//		if s.stream.Status != Started && s.stream.IsActive() {
+//			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", s.stream.Id)
+//			s.stream.stop()
+//		}
+//
+//		select {
+//		case <-time.After(s.healthCheckInterval):
+//		case <-s.ctx.Done():
+//			log.WithFields(log.Fields{}).Debugf("    [assistant-%d] health check has been stopped", s.stream.Id)
+//			return nil
+//		}
+//	}
+//}
