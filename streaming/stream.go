@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/devplayg/rtsp-stream/common"
 	"github.com/grafov/m3u8"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -16,20 +17,20 @@ import (
 )
 
 type Stream struct {
-	Id                 int64         `json:"id"`           // Stream unique ID
-	Uri                string        `json:"uri"`          // Stream URL
-	Username           string        `json:"username"`     // Stream username
-	Password           string        `json:"password"`     // Stream password
-	Recording          bool          `json:"recording"`    // Is recording
-	Enabled            bool          `json:"enabled"`      // Enabled
-	Protocol           int           `json:"protocol"`     // Protocol (HLS, WebM)s
-	ProtocolInfo       *ProtocolInfo `json:"protocolInfo"` // Protocol info
-	UrlHash            string        `json:"urlHash"`      // URL Hash
-	cmd                *exec.Cmd     `json:"-"`            // Command
-	liveDir            string        `json:"-"`            // Live video directory
-	Status             int           `json:"status"`       // Stream status
-	DataRetentionHours int           `json:"dataRetentionHours"`
-	Pid                int           `json:"pid"`
+	Id                 int64                `json:"id"`           // Stream unique ID
+	Uri                string               `json:"uri"`          // Stream URL
+	Username           string               `json:"username"`     // Stream username
+	Password           string               `json:"password"`     // Stream password
+	Recording          bool                 `json:"recording"`    // Is recording
+	Enabled            bool                 `json:"enabled"`      // Enabled
+	Protocol           int                  `json:"protocol"`     // Protocol (HLS, WebM)s
+	ProtocolInfo       *common.ProtocolInfo `json:"protocolInfo"` // Protocol info
+	UrlHash            string               `json:"urlHash"`      // URL Hash
+	cmd                *exec.Cmd            `json:"-"`            // Command
+	liveDir            string               `json:"-"`            // Live video directory
+	Status             int                  `json:"status"`       // Stream status
+	DataRetentionHours int                  `json:"dataRetentionHours"`
+	Pid                int                  `json:"pid"`
 	assistant          *Assistant
 	ctx                context.Context
 	cancel             context.CancelFunc
@@ -104,7 +105,7 @@ func (s *Stream) start() (int, error) {
 			s.cancel()
 			metaFilePath := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
 			os.Remove(metaFilePath)
-			s.Status = Stopped
+			s.Status = common.Stopped
 		}()
 		err := s.cmd.Run()
 		log.WithFields(log.Fields{
@@ -143,7 +144,7 @@ func (s *Stream) stop() {
 	}).Debugf("    [stream-%d] process has been stopped", s.Id)
 }
 
-func (s *Stream) makeM3u8Tags(segments []*Segment) string {
+func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 	size := uint(len(segments))
 	playlist, _ := m3u8.NewMediaPlaylist(size, size)
 	defer playlist.Close()
@@ -158,13 +159,13 @@ func (s *Stream) makeM3u8Tags(segments []*Segment) string {
 	return playlist.Encode().String()
 }
 
-func (s *Stream) getM3u8Segments(date string) []*Segment {
-	segments := make([]*Segment, 0)
-	_ = DB.View(func(tx *bolt.Tx) error {
+func (s *Stream) getM3u8Segments(date string) []*common.Segment {
+	segments := make([]*common.Segment, 0)
+	_ = common.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(GetStreamBucketName(s.Id, date))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var seg Segment
+			var seg common.Segment
 			err := json.Unmarshal(v, &seg)
 			if err != nil {
 				log.Error(err)

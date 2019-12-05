@@ -2,17 +2,13 @@ package streaming
 
 import (
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
-	"github.com/minio/minio-go"
+	"github.com/devplayg/rtsp-stream/common"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"os"
 	"time"
-)
-
-var (
-	DB          *bolt.DB
-	Loc         *time.Location
-	MinioClient *minio.Client
 )
 
 type Server struct {
@@ -20,16 +16,17 @@ type Server struct {
 	controller *Controller
 	manager    *Manager
 	addr       string
-	liveDir    string
-	recDir     string
-	config     *Config
+	//liveDir    string
+	//recDir     string
+	config *common.Config
 }
 
-func NewServer(config *Config) *Server {
+func NewServer(config *common.Config) *Server {
+	spew.Dump(config)
 	server := &Server{
-		config:  config,
-		addr:    config.BindAddress,
-		liveDir: config.Storage.Live,
+		config: config,
+		addr:   config.BindAddress,
+		//liveDir: config.Storage.LiveDir,
 	}
 
 	return server
@@ -62,7 +59,7 @@ func (s *Server) Stop() error {
 		log.Error(err)
 	}
 
-	if err := DB.Close(); err != nil {
+	if err := common.DB.Close(); err != nil {
 		log.Error(err)
 	}
 
@@ -75,20 +72,21 @@ func (s *Server) SetEngine(e *hippo.Engine) {
 
 func (s *Server) init() error {
 
-	// Init timezone
-	loc, err := time.LoadLocation(s.config.Timezone)
-	if err != nil {
+	if err := s.initTimezone(); err != nil {
 		return err
 	}
-	Loc = loc
 
 	if err := s.initDatabase(); err != nil {
 		return err
 	}
 
-	if err := s.initStorage(); err != nil {
+	if err := s.initDirectories(); err != nil {
 		return err
 	}
+
+	//if err := s.initStorage(); err != nil {
+	//	return err
+	//}
 
 	// Set manager
 	s.manager = NewManager(s)
@@ -102,6 +100,35 @@ func (s *Server) init() error {
 	return nil
 }
 
+func (s *Server) initDirectories() error {
+
+	if err := hippo.EnsureDir(s.config.Storage.LiveDir); err != nil {
+		return err
+	}
+
+	if !s.config.Storage.Remote {
+		if err := hippo.EnsureDir(s.config.Storage.RecordDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) initTimezone() error {
+	if len(s.config.Timezone) < 1 {
+		common.Loc = time.Local
+		return nil
+	}
+
+	loc, err := time.LoadLocation(s.config.Timezone)
+	if err != nil {
+		return err
+	}
+	common.Loc = loc
+	return nil
+}
+
 func (s *Server) initDatabase() error {
 	dbName := s.engine.Config.Name + ".db"
 	db, err := bolt.Open(dbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
@@ -109,7 +136,7 @@ func (s *Server) initDatabase() error {
 		return err
 	}
 
-	defaultBuckets := [][]byte{StreamBucket, TransmissionBucket, ConfigBucket}
+	defaultBuckets := [][]byte{common.StreamBucket, common.TransmissionBucket, common.ConfigBucket}
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err
@@ -125,7 +152,7 @@ func (s *Server) initDatabase() error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	DB = db
+	common.DB = db
 	log.WithFields(log.Fields{
 		"db": dbName,
 	}).Debug("[server] BoltDB has been loaded")
@@ -134,7 +161,7 @@ func (s *Server) initDatabase() error {
 
 func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
 	var data []byte
-	err := DB.View(func(tx *bolt.Tx) error {
+	err := common.DB.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucket)
 		data = bucket.Get(key)
 		return nil
@@ -142,19 +169,23 @@ func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
 	return data, err
 }
 
-func (s *Server) initStorage() error {
-	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"address":   s.config.Storage.Address,
-			"accessKey": s.config.Storage.AccessKey,
-		}).Error("failed to connect to object storage")
-		return err
-	}
-	MinioClient = client
+//func (s *Server) initStorage() error {
+//	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
+//	if err != nil {
+//		log.WithFields(log.Fields{
+//			"address":   s.config.Storage.Address,
+//			"accessKey": s.config.Storage.AccessKey,
+//		}).Error("failed to connect to object storage")
+//		return err
+//	}
+//	common.MinioClient = client
+//
+//	if len(s.config.Storage.Bucket) > 0 {
+//		common.VideoRecordBucket = s.config.Storage.Bucket
+//	}
+//	return nil
+//}
 
-	if len(s.config.Storage.Bucket) > 0 {
-		VideoRecordBucket = s.config.Storage.Bucket
-	}
-	return nil
+func CreateVideoFileList(name string, files []os.FileInfo, dir string) {
+
 }

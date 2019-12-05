@@ -9,6 +9,25 @@
 * Highwayhash
 * Hippo
 
+### Processes
+
+Server
+
+실시간 영상 스트리밍
+오늘 영상 스트리밍
+[X] 영상 수신
+[X] 영상 압축 저장
+[X] 영상 시작/재시작
+영상 프로세스 관리
+
+Librarian
+
+영상 저장
+
+UI
+
+
+
 
 ### Structure
 

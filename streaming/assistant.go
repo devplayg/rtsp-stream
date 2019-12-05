@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/boltdb/bolt"
-	"github.com/devplayg/rtsp-stream/utils"
+	"github.com/devplayg/rtsp-stream/common"
 	"github.com/grafov/m3u8"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -51,7 +51,7 @@ func (s *Assistant) start() error {
 
 func (s *Assistant) startCapturingLiveM3u8(size int) {
 	for {
-		if s.stream.Status == Started {
+		if s.stream.Status == common.Started {
 			if err := s.captureLiveM3u8(size); err != nil {
 				log.Error(err)
 			}
@@ -98,11 +98,11 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 }
 
 func (s *Assistant) saveSegments(segments map[int64][]byte, date string) error {
-	return DB.Update(func(tx *bolt.Tx) error {
+	return common.DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(GetStreamBucketName(s.stream.Id, date))
 
 		for seqId, seg := range segments {
-			err := b.Put(utils.Int64ToBytes(seqId), seg)
+			err := b.Put(common.Int64ToBytes(seqId), seg)
 			if err != nil {
 				return err
 			}
@@ -133,9 +133,9 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]
 			maxSeqId = seg.SeqId
 		}
 
-		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, "media"), ".ts")
+		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, common.VideoFilePrefix), common.VideoFileExt)
 		seqId, _ := strconv.ParseInt(str, 10, 16)
-		b, _ := json.Marshal(NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
+		b, _ := json.Marshal(common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
 		m[seqId] = b
 	}
 	return m, int64(maxSeqId)

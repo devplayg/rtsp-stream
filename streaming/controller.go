@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/devplayg/rtsp-stream/common"
 	"github.com/devplayg/rtsp-stream/ui"
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go"
@@ -102,7 +103,7 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Type", common.ContentTypeJson)
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
 }
@@ -172,7 +173,7 @@ func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Type", common.ContentTypeJson)
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
 }
@@ -190,7 +191,7 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Type", common.ContentTypeJson)
 	w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
 	w.Write([]byte(tags))
 }
@@ -202,7 +203,7 @@ func (c *Controller) GetLiveM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := filepath.Join(c.server.liveDir, strconv.FormatInt(streamId, 10), LiveM3u8FileName)
+	path := filepath.Join(c.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10), common.LiveM3u8FileName)
 	http.ServeFile(w, r, path)
 
 	//file, err := os.Open(path)
@@ -225,7 +226,7 @@ func (c *Controller) GetLiveM3u8(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) GetLiveVideo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	path := filepath.ToSlash(filepath.Join(c.server.liveDir, vars["id"], vars["media"]+".ts"))
+	path := filepath.ToSlash(filepath.Join(c.server.config.Storage.LiveDir, vars["id"], vars["media"]+".ts"))
 
 	//streamId, err := parseAndGetStreamId(r)
 	//if err != nil {
@@ -250,14 +251,14 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", ContentTypeJson)
+	w.Header().Set("Content-Type", common.ContentTypeJson)
 	w.WriteHeader(http.StatusOK)
 }
 
 func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
-	_ = DB.View(func(tx *bolt.Tx) error {
+	_ = common.DB.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
-		b := tx.Bucket([]byte(StreamBucket))
+		b := tx.Bucket([]byte(common.StreamBucket))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			log.Debugf("[%s] %s", string(k), string(v))
@@ -268,7 +269,7 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	path := filepath.ToSlash(filepath.Join(c.server.liveDir, vars["id"], vars["media"]+".ts"))
+	path := filepath.ToSlash(filepath.Join(c.server.config.Storage.LiveDir, vars["id"], vars["media"]+".ts"))
 	file, err := os.Open(path)
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
@@ -282,7 +283,7 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Accept-Range", "bytes")
-	w.Header().Set("Content-Type", ContentTypeTs)
+	w.Header().Set("Content-Type", common.ContentTypeTs)
 	w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	if _, err = io.Copy(w, file); err != nil {
 		Response(w, err, http.StatusInternalServerError)
@@ -350,7 +351,7 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	objectName := filepath.ToSlash(filepath.Join(vars["id"], vars["date"], vars["media"]+".ts"))
-	object, err := MinioClient.GetObject(VideoRecordBucket, objectName, minio.GetObjectOptions{})
+	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
@@ -362,7 +363,7 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 	//info, _ := object.Stat()
 
 	w.Header().Set("Accept-Range", "bytes")
-	w.Header().Set("Content-Type", ContentTypeTs)
+	w.Header().Set("Content-Type", common.ContentTypeTs)
 
 	//if _, err = io.Copy(w, object); err != nil{
 	//    Response(w, err, http.StatusInternalServerError)
@@ -475,10 +476,10 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], "xxxx")
-	object, err := MinioClient.GetObject(VideoRecordBucket, objectName, minio.GetObjectOptions{})
+	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
 		log.WithFields(log.Fields{
-			"bucket": VideoRecordBucket,
+			"bucket": common.VideoRecordBucket,
 			"object": objectName,
 		}).Debugf("failed to get object from Minio")
 		Response(w, err, http.StatusInternalServerError)

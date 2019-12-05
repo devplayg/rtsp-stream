@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/devplayg/rtsp-stream/common"
 	"github.com/gorilla/mux"
 	"github.com/minio/highwayhash"
 	"github.com/minio/minio-go"
@@ -35,8 +36,8 @@ func Response(w http.ResponseWriter, err error, statusCode int) {
 		log.Error(err)
 	}
 
-	w.Header().Add("Content-Type", ContentTypeJson)
-	b, _ := json.Marshal(NewResult(err))
+	w.Header().Add("Content-Type", common.ContentTypeJson)
+	b, _ := json.Marshal(common.NewResult(err))
 	w.WriteHeader(statusCode)
 	w.Write(b)
 }
@@ -66,7 +67,7 @@ func GetHashFromFile(path string) ([]byte, error) {
 }
 
 func GetStreamingCommand(stream *Stream) *exec.Cmd {
-	if stream.Protocol == HLS {
+	if stream.Protocol == common.HLS {
 		return GetHlsStreamingCommand(stream)
 	}
 
@@ -124,41 +125,41 @@ func GetStreamPid(stream *Stream) int {
 //	return files, err
 //}
 
-func MergeLiveVideoFiles(inputFilePath, outputFilePath string) error {
-	if err := os.Chdir(filepath.Dir(inputFilePath)); err != nil {
-		return nil
-	}
-	cmd := exec.Command(
-		"ffmpeg",
-		"-y",
-		"-f",
-		"concat",
-		"-safe",
-		"0",
-		"-i",
-		filepath.Base(inputFilePath),
-		"-c",
-		"copy",
-		"-f",
-		"ssegment",
-		"-segment_list",
-		filepath.Base(outputFilePath),
-		"-segment_list_flags",
-		"+live",
-		"-segment_time",
-		"10",
-		VideoFilePrefix+"%d.ts",
-	)
-	//output, err := cmd.CombinedOutput()
-	//if err != nil {
-	//    log.Error(string(output))
-	//    return err
-	//}
-	return cmd.Run()
-}
+//func MergeLiveVideoFiles(inputFilePath, outputFilePath string) error {
+//	if err := os.Chdir(filepath.Dir(inputFilePath)); err != nil {
+//		return nil
+//	}
+//	cmd := exec.Command(
+//		"ffmpeg",
+//		"-y",
+//		"-f",
+//		"concat",
+//		"-safe",
+//		"0",
+//		"-i",
+//		filepath.Base(inputFilePath),
+//		"-c",
+//		"copy",
+//		"-f",
+//		"ssegment",
+//		"-segment_list",
+//		filepath.Base(outputFilePath),
+//		"-segment_list_flags",
+//		"+live",
+//		"-segment_time",
+//		"10",
+//		common.VideoFilePrefix+"%d.ts",
+//	)
+//	//output, err := cmd.CombinedOutput()
+//	//if err != nil {
+//	//    log.Error(string(output))
+//	//    return err
+//	//}
+//	return cmd.Run()
+//}
 
-func GetVideoFilesInDir(dir string, prefix string) ([]*VideoFile, error) {
-	videoFiles := make([]*VideoFile, 0)
+func GetVideoFilesInDir(dir string, prefix string) ([]*common.VideoFile, error) {
+	videoFiles := make([]*common.VideoFile, 0)
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -173,7 +174,7 @@ func GetVideoFilesInDir(dir string, prefix string) ([]*VideoFile, error) {
 		}
 
 		ext := filepath.Ext(f.Name())
-		if ext != VideoFileExt {
+		if ext != common.VideoFileExt {
 			continue
 		}
 
@@ -181,7 +182,7 @@ func GetVideoFilesInDir(dir string, prefix string) ([]*VideoFile, error) {
 			continue
 		}
 
-		videoFiles = append(videoFiles, NewVideoFile(f, dir))
+		videoFiles = append(videoFiles, common.NewVideoFile(f, dir))
 	}
 	sort.SliceStable(videoFiles, func(i, j int) bool {
 		return videoFiles[i].File.ModTime().Before(videoFiles[j].File.ModTime())
@@ -205,7 +206,7 @@ func SendToStorage(bucketName, objectName, path, contentType string) error {
 	if len(contentType) < 1 {
 		contentType = "application/octet-stream"
 	}
-	if _, err = MinioClient.PutObject(bucketName, objectName, file, fileStat.Size(), minio.PutObjectOptions{ContentType: contentType}); err != nil {
+	if _, err = common.MinioClient.PutObject(bucketName, objectName, file, fileStat.Size(), minio.PutObjectOptions{ContentType: contentType}); err != nil {
 		return err
 	}
 	return nil
@@ -213,14 +214,14 @@ func SendToStorage(bucketName, objectName, path, contentType string) error {
 
 func GetStreamBucketName(streamId int64, date string) []byte {
 	if len(date) < 1 {
-		date = LiveBucketDbName
+		date = common.LiveBucketDbName
 	}
 	return []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
 }
 
 func GetVideoFileSeq(name string) (int, error) {
-	str := strings.TrimPrefix(filepath.Base(name), VideoFilePrefix)
-	str = strings.TrimSuffix(str, VideoFileExt)
+	str := strings.TrimPrefix(filepath.Base(name), common.VideoFilePrefix)
+	str = strings.TrimSuffix(str, common.VideoFileExt)
 	mediaFileSeq, err := strconv.Atoi(str)
 	if err != nil {
 		return 0, err
@@ -242,7 +243,7 @@ func parseAndGetStream(body io.Reader) (*Stream, error) {
 
 	stream.Uri = strings.TrimSpace(stream.Uri)
 	if _, err := url.Parse(stream.Uri); err != nil {
-		return nil, ErrorInvalidUri
+		return nil, common.ErrorInvalidUri
 	}
 
 	return stream, nil

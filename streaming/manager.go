@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
+	"github.com/devplayg/rtsp-stream/common"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -54,7 +55,7 @@ func (m *Manager) cleanStreamMetaFile() error {
 	m.Lock()
 	defer m.Unlock()
 
-	dir := filepath.Join(m.server.liveDir)
+	dir := filepath.Join(m.server.config.Storage.LiveDir)
 
 	for id, stream := range m.streams {
 		path := filepath.ToSlash(filepath.Join(dir, strconv.FormatInt(stream.Id, 10), stream.ProtocolInfo.MetaFileName))
@@ -73,8 +74,8 @@ func (m *Manager) cleanStreamMetaFile() error {
 func (m *Manager) loadStreamsFromDatabase() error {
 	m.Lock()
 	defer m.Unlock()
-	return DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(StreamBucket)
+	return common.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(common.StreamBucket)
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			var stream Stream
@@ -83,7 +84,7 @@ func (m *Manager) loadStreamsFromDatabase() error {
 				log.Error(err)
 				continue
 			}
-			stream.Status = Stopped
+			stream.Status = common.Stopped
 			m.streams[stream.Id] = &stream
 		}
 		return nil
@@ -142,10 +143,10 @@ func (m *Manager) isValidStream(stream *Stream) error {
 	}
 	stream.UrlHash = GetHashString(stream.Uri)
 
-	if !(stream.Protocol == HLS || stream.Protocol == WEBM) {
+	if !(stream.Protocol == common.HLS || stream.Protocol == common.WEBM) {
 		return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
 	}
-	stream.ProtocolInfo = NewProtocolInfo(stream.Protocol)
+	stream.ProtocolInfo = common.NewProtocolInfo(stream.Protocol)
 
 	return nil
 }
@@ -194,9 +195,9 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 	if err != nil {
 		return err
 	}
-	t := time.Now().In(Loc)
+	t := time.Now().In(common.Loc)
 	for _, f := range files {
-		if f.ModTime().In(Loc).Format(DateFormat) == t.Format(DateFormat) {
+		if f.ModTime().In(common.Loc).Format(common.DateFormat) == t.Format(common.DateFormat) {
 			continue
 		}
 		if err := os.Remove(filepath.Join(stream.liveDir, f.Name())); err != nil {
@@ -217,7 +218,7 @@ func (m *Manager) removeStreamDir(stream *Stream) error {
 }
 
 func (m *Manager) createStreamDir(stream *Stream) error {
-	stream.liveDir = filepath.ToSlash(filepath.Join(m.server.liveDir, strconv.FormatInt(stream.Id, 10)))
+	stream.liveDir = filepath.ToSlash(filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(stream.Id, 10)))
 	if err := hippo.EnsureDir(stream.liveDir); err != nil {
 		return err
 	}
@@ -232,18 +233,18 @@ func (m *Manager) changeStreamStatusToStart(id int64) (*Stream, error) {
 
 	stream := m.streams[id]
 	if stream == nil {
-		return nil, ErrorStreamNotFound
+		return nil, common.ErrorStreamNotFound
 	}
-	if stream.Status == Started {
+	if stream.Status == common.Started {
 		return nil, errors.New(fmt.Sprintf("[manager] stream-%d has been already started", id))
 	}
-	if stream.Status == Starting {
+	if stream.Status == common.Starting {
 		return nil, errors.New(fmt.Sprintf("[manager] stream-%d is already starting now", id))
 	}
-	if stream.Status == Stopping {
+	if stream.Status == common.Stopping {
 		return nil, errors.New(fmt.Sprintf("[manager] stream-%d is already stopping now", id))
 	}
-	stream.Status = Starting
+	stream.Status = common.Starting
 	return stream, nil
 }
 
@@ -259,12 +260,12 @@ func (m *Manager) startStreaming(id int64, from string) error {
 	}
 
 	if err := m.createStreamDir(stream); err != nil {
-		stream.Status = Failed
+		stream.Status = common.Failed
 		return err
 	}
 
 	if err := m.cleanStreamDir(stream); err != nil {
-		stream.Status = Failed
+		stream.Status = common.Failed
 		return err
 	}
 
@@ -274,7 +275,7 @@ func (m *Manager) startStreaming(id int64, from string) error {
 			log.WithFields(log.Fields{
 				"id": id,
 			}).Errorf("[manager] failed to start stream-%d: %s", id, err)
-			stream.Status = Failed
+			stream.Status = common.Failed
 			return
 		}
 		log.WithFields(log.Fields{
@@ -283,7 +284,7 @@ func (m *Manager) startStreaming(id int64, from string) error {
 			"waitCount": count,
 			"pid":       GetStreamPid(stream),
 		}).Infof("[manager] stream-%d has been started", id)
-		stream.Status = Started
+		stream.Status = common.Started
 	}()
 
 	return nil
@@ -297,21 +298,21 @@ func (m *Manager) stopStreaming(id int64) error {
 
 	stream := m.streams[id]
 	if stream == nil {
-		return ErrorStreamNotFound
+		return common.ErrorStreamNotFound
 	}
-	if stream.Status == Stopped {
+	if stream.Status == common.Stopped {
 		log.Warnf("[manager] stream-%d has been already stopped", id)
 		return nil
 	}
-	if stream.Status == Stopping {
+	if stream.Status == common.Stopping {
 		log.Warnf("[manager] stream-%d is already stopping now", id)
 		return nil
 	}
-	if stream.Status == Starting {
+	if stream.Status == common.Starting {
 		log.Warnf("[manager] stream-%d is already starting now", id)
 		return nil
 	}
-	stream.Status = Stopping
+	stream.Status = common.Stopping
 	stream.stop()
 
 	return nil
@@ -337,11 +338,11 @@ func (m *Manager) startStreamWatcher() {
 			}
 
 			// just in case
-			if stream.Status == Started && !stream.IsActive() {
+			if stream.Status == common.Started && !stream.IsActive() {
 				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", stream.Id)
 				stream.stop()
 			}
-			if stream.Status != Started && stream.IsActive() {
+			if stream.Status != common.Started && stream.IsActive() {
 				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", stream.Id)
 			}
 
@@ -368,7 +369,7 @@ func (m *Manager) startStreamWatcher() {
 func (m *Manager) getM3u8(id int64, date string) (string, error) {
 	stream := m.getStreamById(id)
 	if stream == nil {
-		return "", ErrorStreamNotFound
+		return "", common.ErrorStreamNotFound
 	}
 
 	segs := stream.getM3u8Segments(date)

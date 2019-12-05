@@ -33,7 +33,7 @@ func GetHlsStreamingCommand(stream *Stream) *exec.Cmd {
 		//"-hls_time",
 		//"60",
 		"-hls_segment_filename",
-		stream.liveDir+"/"+stream.ProtocolInfo.VideoFilePrefix+"%d.ts",
+		stream.liveDir+"/"+stream.ProtocolInfo.LiveFilePrefix+"%d.ts",
 		stream.liveDir+"/"+stream.ProtocolInfo.MetaFileName,
 	)
 	//output, err := cmd.CombinedOutput()

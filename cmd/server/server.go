@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/devplayg/hippo"
+	"github.com/devplayg/rtsp-stream/common"
 	"github.com/devplayg/rtsp-stream/streaming"
 	log "github.com/sirupsen/logrus"
 )
@@ -23,15 +24,8 @@ func main() {
 		Debug:       true,
 		Verbose:     true,
 	}
-
-	configPath := "config.yaml"
-	appConfig, err := streaming.ReadConfig(configPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	hippo.InitLogger("", appName, config.Debug, config.Verbose)
-	server := streaming.NewServer(appConfig)
+	server := streaming.NewServer(common.ReadConfig("config.yaml"))
 	engine := hippo.NewEngine(server, config)
 	if err := engine.Start(); err != nil {
 		log.Fatal(err)

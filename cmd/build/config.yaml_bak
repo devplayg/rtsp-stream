@@ -1,0 +1,12 @@
+bind-address: 12.0.0.0:8000
+timezone: Asia/Seoul
+storage:
+  remote: false
+  address: 127.0.0.1:9000
+  accessKey: unisem
+  secretKey: Uniiot12!@
+  bucket: record
+  liveDir: c:/temp/live
+  recordDir: d:/data
+static:
+  dir: d:/dev/static
