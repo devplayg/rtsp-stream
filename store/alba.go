@@ -198,7 +198,9 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 
 func RemoveLiveFiles(dir string, files []os.FileInfo) error {
 	for _, f := range files {
-		os.Remove(filepath.Join(dir, f.Name()))
+		if err := os.Remove(filepath.Join(dir, f.Name())); err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
@@ -207,9 +209,16 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
 	inputFile, _ := filepath.Abs(listFilePath)
 	outputFile := filepath.Base(metaFilePath)
 
+	originDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
 	if err := os.Chdir(filepath.Dir(listFilePath)); err != nil {
 		return err
 	}
+
+	defer os.Chdir(originDir)
 
 	cmd := exec.Command(
 		"ffmpeg",
@@ -237,7 +246,7 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
 	//   log.Error(string(output))
 	//   return []byte{}, err
 	//}
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		log.Error(cmd.Args)
 	}
