@@ -185,7 +185,7 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags, err := c.manager.getM3u8(streamId, "")
+	tags, err := c.manager.getM3u8(streamId, time.Now().In(common.Loc).Format(common.DateFormat))
 	if err != nil {
 		Response(w, err, http.StatusInternalServerError)
 		return
@@ -257,13 +257,11 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 	_ = common.DB.View(func(tx *bolt.Tx) error {
-		// Assume bucket exists and has keys
-		b := tx.Bucket([]byte(common.StreamBucket))
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			log.Debugf("[%s] %s", string(k), string(v))
-		}
-		return nil
+		b := tx.Bucket(common.StreamBucket)
+		return b.ForEach(func(k, v []byte) error {
+			log.Debugf("[%s] %s", k, v)
+			return nil
+		})
 	})
 }
 

@@ -33,12 +33,12 @@ UI
 
 ```
 +-------------------------------------------------+
-|                     |  stream | stream | stream |          +-----------+
-|                     |  assist | assist | assist |          |           |
-|-------------------------------------------------|          |   Minio   |
-|  db  |  controller  |           manager         |          |           |
-|-------------------------------------------------|          +-----------+
-|               server                            |
+|                     |  stream | stream | stream |          +----------------+
+|                     |  assist | assist | assist |          |                |
+|-------------------------------------------------|          |     Minio      |
+|  db  |  controller  |           manager         |          | 127.0.0.1:9000 |
+|-------------------------------------------------|          |                |
+|               server                            |          +----------------+
 +-------------------------------------------------+
 ```
 
@@ -80,8 +80,15 @@ helps stream. He is like a slave.
 
 ### Database
 
+rtsp-server.db
+
 |Bucket|Key|Value|
 |---|---|---|
 |streams|Stream ID (int64)|Stream information (Stream)|
-|stream-{id}-{YYYYMMDD}|media file name (string)|Media information (Media)|
-|transmission|Stream ID|TransmissionResult|
+
+
+stream-{id}.db
+
+|Bucket|Key|Value|
+|---|---|---|
+|{YYYYMMDD}|media file name (string)|Media information (Media)|

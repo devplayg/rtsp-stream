@@ -85,7 +85,8 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 		return err
 	}
 
-	if err := s.saveSegments(segments, ""); err != nil {
+	//spew.Dump(segments)
+	if err := s.saveSegments(segments); err != nil {
 		return nil
 	}
 
@@ -97,22 +98,36 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 	return nil
 }
 
-func (s *Assistant) saveSegments(segments map[int64][]byte, date string) error {
-	return common.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(GetStreamBucketName(s.stream.Id, date))
+func (s *Assistant) saveSegments(segments map[int64]*common.Segment) error {
 
+	return s.stream.db.Update(func(tx *bolt.Tx) error {
 		for seqId, seg := range segments {
-			err := b.Put(common.Int64ToBytes(seqId), seg)
+			bucketName := []byte(time.Unix(seg.UnixTime, 0).In(common.Loc).Format(common.DateFormat))
+			bucket, err := tx.CreateBucketIfNotExists(bucketName)
 			if err != nil {
+				return err
+			}
+			if err = bucket.Put(common.Int64ToBytes(seqId), seg.Data); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+	//return common.DB.Update(func(tx *bolt.Tx) error {
+	//	b := tx.Bucket(GetStreamBucketName(s.stream.Id, date))
+	//
+	//	for seqId, seg := range segments {
+	//		err := b.Put(common.Int64ToBytes(seqId), seg)
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//	return nil
+	//})
 }
 
-func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]byte, int64) {
-	m := make(map[int64][]byte)
+func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64]*common.Segment, int64) {
+	m := make(map[int64]*common.Segment)
 	var maxSeqId uint64
 	for _, seg := range playlist.Segments {
 		if seg == nil {
@@ -125,7 +140,7 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]
 			continue
 		}
 		if file.Size() < 1 {
-			log.Warnf("    [stream-%d] file size is zero: ", s.stream.Id, file.Name())
+			log.Warnf("    [stream-%d] file size is zero: %s", s.stream.Id, file.Name())
 			continue
 		}
 
@@ -133,10 +148,12 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64][]
 			maxSeqId = seg.SeqId
 		}
 
-		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, common.VideoFilePrefix), common.VideoFileExt)
+		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, common.LiveVideoFilePrefix), common.VideoFileExt)
 		seqId, _ := strconv.ParseInt(str, 10, 16)
-		b, _ := json.Marshal(common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
-		m[seqId] = b
+		segment := common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix())
+		data, _ := json.Marshal(common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
+		segment.Data = data
+		m[seqId] = segment
 	}
 	return m, int64(maxSeqId)
 }

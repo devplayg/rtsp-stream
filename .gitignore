@@ -2,3 +2,5 @@
 *.exe
 *.db
 *.lock
+.ts
+.m3u8

@@ -130,6 +130,7 @@ type Segment struct {
 	Duration float64 `json:"d"`
 	URI      string  `json:"uri"`
 	UnixTime int64   `json:"t"`
+	Data     []byte  `json:"-"`
 }
 
 func NewSegment(seqId int64, duration float64, uri string, unixTime int64) *Segment {

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -34,6 +35,7 @@ type Stream struct {
 	assistant          *Assistant
 	ctx                context.Context
 	cancel             context.CancelFunc
+	db                 *bolt.DB
 }
 
 func NewStream() *Stream {
@@ -103,8 +105,8 @@ func (s *Stream) start() (int, error) {
 				s.assistant.stop()
 			}
 			s.cancel()
-			metaFilePath := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
-			os.Remove(metaFilePath)
+			//metaFilePath := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
+			//os.Remove(metaFilePath)
 			s.Status = common.Stopped
 		}()
 		err := s.cmd.Run()
@@ -159,21 +161,25 @@ func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 	return playlist.Encode().String()
 }
 
-func (s *Stream) getM3u8Segments(date string) []*common.Segment {
+func (s *Stream) getM3u8Segments(date string) ([]*common.Segment, error) {
 	segments := make([]*common.Segment, 0)
-	_ = common.DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(GetStreamBucketName(s.Id, date))
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(date))
+		if b == nil {
+			return nil
+		}
+		return b.ForEach(func(k, v []byte) error {
 			var seg common.Segment
-			err := json.Unmarshal(v, &seg)
-			if err != nil {
-				log.Error(err)
-				continue
+			if err := json.Unmarshal(v, &seg); err != nil {
+				return err
 			}
 			segments = append(segments, &seg)
-		}
-		return nil
+			return nil
+		})
 	})
-	return segments
+	return segments, err
+}
+
+func (s *Stream) getDbFileName() string {
+	return "stream-" + strconv.FormatInt(s.Id, 10) + ".db"
 }

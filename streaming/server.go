@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -16,17 +17,16 @@ type Server struct {
 	controller *Controller
 	manager    *Manager
 	addr       string
-	//liveDir    string
-	//recDir     string
-	config *common.Config
+	dbDir      string
+	config     *common.Config
 }
 
 func NewServer(config *common.Config) *Server {
 	spew.Dump(config)
 	server := &Server{
+		dbDir:  "db",
 		config: config,
 		addr:   config.BindAddress,
-		//liveDir: config.Storage.LiveDir,
 	}
 
 	return server
@@ -84,10 +84,6 @@ func (s *Server) init() error {
 		return err
 	}
 
-	//if err := s.initStorage(); err != nil {
-	//	return err
-	//}
-
 	// Set manager
 	s.manager = NewManager(s)
 	if err := s.manager.start(); err != nil {
@@ -101,7 +97,6 @@ func (s *Server) init() error {
 }
 
 func (s *Server) initDirectories() error {
-
 	if err := hippo.EnsureDir(s.config.Storage.LiveDir); err != nil {
 		return err
 	}
@@ -130,13 +125,17 @@ func (s *Server) initTimezone() error {
 }
 
 func (s *Server) initDatabase() error {
-	dbName := s.engine.Config.Name + ".db"
+	if err := hippo.EnsureDir(s.dbDir); err != nil {
+		return err
+	}
+
+	dbName := filepath.Join(s.dbDir, s.engine.Config.Name+".db")
 	db, err := bolt.Open(dbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
 
-	defaultBuckets := [][]byte{common.StreamBucket, common.TransmissionBucket, common.ConfigBucket}
+	defaultBuckets := [][]byte{common.StreamBucket}
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err

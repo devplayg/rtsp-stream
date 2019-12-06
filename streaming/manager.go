@@ -18,8 +18,9 @@ import (
 )
 
 type Manager struct {
-	server               *Server
-	streams              map[int64]*Stream // Stream pool
+	server  *Server
+	streams map[int64]*Stream // Stream pool
+	//streamDB             map[int64]*bolt.DB
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	watcherCheckInterval time.Duration
@@ -29,20 +30,44 @@ type Manager struct {
 func NewManager(server *Server) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		server:               server,
-		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
+		server:  server,
+		streams: make(map[int64]*Stream), /* key: id(int64), value: &stream */
+		//streamDB:             make(map[int64]*bolt.DB),
 		ctx:                  ctx,
 		cancel:               cancel,
 		watcherCheckInterval: 20 * time.Second,
 	}
 }
 
-func (m *Manager) start() error {
+func (m *Manager) init() error {
 	if err := m.loadStreamsFromDatabase(); err != nil {
 		return err
 	}
 
+	if err := m.initStreamDatabases(); err != nil {
+		return err
+	}
+
 	if err := m.cleanStreamMetaFile(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Manager) initStreamDatabases() error {
+	for id, _ := range m.streams {
+		db, err := m.openStreamDB(id)
+		if err != nil {
+			return err
+		}
+		m.streams[id].db = db
+	}
+	return nil
+}
+
+func (m *Manager) start() error {
+	if err := m.init(); err != nil {
 		return err
 	}
 
@@ -56,11 +81,10 @@ func (m *Manager) cleanStreamMetaFile() error {
 	defer m.Unlock()
 
 	dir := filepath.Join(m.server.config.Storage.LiveDir)
-
 	for id, stream := range m.streams {
 		path := filepath.ToSlash(filepath.Join(dir, strconv.FormatInt(stream.Id, 10), stream.ProtocolInfo.MetaFileName))
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			err := os.Remove(path)
+			//err := os.Remove(path)
 			log.WithFields(log.Fields{
 				"err":  err,
 				"file": filepath.Base(path),
@@ -76,18 +100,17 @@ func (m *Manager) loadStreamsFromDatabase() error {
 	defer m.Unlock()
 	return common.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(common.StreamBucket)
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+		return b.ForEach(func(k, v []byte) error {
 			var stream Stream
 			err := json.Unmarshal(v, &stream)
 			if err != nil {
 				log.Error(err)
-				continue
+				return nil
 			}
 			stream.Status = common.Stopped
 			m.streams[stream.Id] = &stream
-		}
-		return nil
+			return nil
+		})
 	})
 
 	// wondory
@@ -112,6 +135,9 @@ func (m *Manager) getStreamById(id int64) *Stream {
 	m.Lock()
 	defer m.Unlock()
 
+	if _, ok := m.streams[id]; !ok {
+		return nil
+	}
 	stream := m.streams[id]
 	if stream.cmd != nil && stream.cmd.Process != nil {
 		stream.Pid = stream.cmd.Process.Pid
@@ -129,10 +155,15 @@ func (m *Manager) addStream(stream *Stream) error {
 		return err
 	}
 
+	db, err := m.openStreamDB(stream.Id)
+	if err != nil {
+		return err
+	}
+	stream.db = db
 	log.WithFields(log.Fields{
 		"stream_id": stream.Id,
 		"uri":       stream.Uri,
-	}).Debugf("issued new stream")
+	}).Debugf("[manager] issued new stream")
 
 	return nil
 }
@@ -152,22 +183,14 @@ func (m *Manager) isValidStream(stream *Stream) error {
 }
 
 func (m *Manager) issueStream(input *Stream) error {
-	m.Lock()
-	defer m.Unlock()
-
-	var maxStreamId int64
-	for id, stream := range m.streams {
-		if input.UrlHash == stream.UrlHash {
-			return errors.New("duplicated stream uri:" + input.Uri)
-		}
-		if maxStreamId < id {
-			maxStreamId = id
-		}
+	id, err := IssueStreamId()
+	if err != nil {
+		return err
 	}
-	maxStreamId++ // issue new stream ID
-	input.Id = maxStreamId
-	m.streams[maxStreamId] = input
-	return SaveStream(input)
+	input.Id = id
+	m.streams[input.Id] = input
+
+	return SaveStreamInDB(input)
 }
 
 func (m *Manager) updateStream(stream *Stream) error {
@@ -179,15 +202,29 @@ func (m *Manager) updateStream(stream *Stream) error {
 	m.streams[stream.Id] = stream
 	m.Unlock()
 
-	return SaveStream(stream)
+	return SaveStreamInDB(stream)
 }
 
 func (m *Manager) deleteStream(id int64) error {
+	if err := m.stopStreaming(id); err != nil {
+		return err
+	}
+	if err := m.closeStreamDB(id); err != nil {
+		return err
+	}
+
+	if err := os.Remove(filepath.Join(m.server.dbDir, m.streams[id].getDbFileName())); err != nil {
+		return err
+	}
+
 	m.Lock()
 	delete(m.streams, id)
 	m.Unlock()
 
-	return DeleteStream(id)
+	err := DeleteStreamInDB(id)
+	log.WithFields(log.Fields{}).Infof("[manager] deleted stream-%d", id)
+
+	return err
 }
 
 func (m *Manager) cleanStreamDir(stream *Stream) error {
@@ -301,16 +338,14 @@ func (m *Manager) stopStreaming(id int64) error {
 		return common.ErrorStreamNotFound
 	}
 	if stream.Status == common.Stopped {
-		log.Warnf("[manager] stream-%d has been already stopped", id)
 		return nil
 	}
+
 	if stream.Status == common.Stopping {
-		log.Warnf("[manager] stream-%d is already stopping now", id)
-		return nil
+		return errors.New(fmt.Sprintf("[manager] stream-%d is already stopping now", id))
 	}
 	if stream.Status == common.Starting {
-		log.Warnf("[manager] stream-%d is already starting now", id)
-		return nil
+		return errors.New(fmt.Sprintf("[manager] stream-%d is already starting now", id))
 	}
 	stream.Status = common.Stopping
 	stream.stop()
@@ -322,6 +357,9 @@ func (m *Manager) Stop() error {
 	m.cancel()
 	for id, _ := range m.streams {
 		m.stopStreaming(id)
+		if err := m.streams[id].db.Close(); err != nil {
+			log.Error(err)
+		}
 	}
 	log.Debug("[manager] all streams have been stopped")
 
@@ -340,7 +378,10 @@ func (m *Manager) startStreamWatcher() {
 			// just in case
 			if stream.Status == common.Started && !stream.IsActive() {
 				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", stream.Id)
-				stream.stop()
+				// stream.stop()
+				if err := m.stopStreaming(id); err != nil {
+					log.Error(err)
+				}
 			}
 			if stream.Status != common.Started && stream.IsActive() {
 				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", stream.Id)
@@ -372,9 +413,23 @@ func (m *Manager) getM3u8(id int64, date string) (string, error) {
 		return "", common.ErrorStreamNotFound
 	}
 
-	segs := stream.getM3u8Segments(date)
-	tags := stream.makeM3u8Tags(segs)
-
+	segments, err := stream.getM3u8Segments(date)
+	if err != nil {
+		return "", err
+	}
+	tags := stream.makeM3u8Tags(segments)
 	return tags, nil
+}
 
+func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
+	path := filepath.Join(m.server.dbDir, "stream-"+strconv.FormatInt(id, 10)+".db")
+	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func (m *Manager) closeStreamDB(id int64) error {
+	return m.streams[id].db.Close()
 }

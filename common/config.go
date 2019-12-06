@@ -27,14 +27,14 @@ type Config struct {
 func ReadConfig(path string) *Config {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Error(err)
+		log.Warn(err)
 		return &DefaultConfig
 	}
 
 	config := &DefaultConfig
 	err = yaml.Unmarshal(b, config)
 	if err != nil {
-		log.Error(err)
+		log.Warn(err)
 		return &DefaultConfig
 	}
 

@@ -26,7 +26,18 @@ func GetStream(id int64) (*Stream, error) {
 	return stream, err
 }
 
-func SaveStream(stream *Stream) error {
+func IssueStreamId() (int64, error) {
+	var streamId int64
+	err := common.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(common.StreamBucket)
+		id, _ := b.NextSequence()
+		streamId = int64(id)
+		return b.Put(common.Int64ToBytes(streamId), nil)
+	})
+	return streamId, err
+}
+
+func SaveStreamInDB(stream *Stream) error {
 	return common.DB.Update(func(tx *bolt.Tx) error {
 		if _, err := tx.CreateBucketIfNotExists(GetStreamBucketName(stream.Id, "")); err != nil {
 			return err
@@ -41,7 +52,7 @@ func SaveStream(stream *Stream) error {
 	})
 }
 
-func DeleteStream(id int64) error {
+func DeleteStreamInDB(id int64) error {
 	return common.DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(common.StreamBucket)
 		return b.Delete(common.Int64ToBytes(id))
