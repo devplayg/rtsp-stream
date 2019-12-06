@@ -1,0 +1,4 @@
+storage:
+  recordDir: d:/data
+hlsOptions:
+  segmentTime: 20

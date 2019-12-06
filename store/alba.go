@@ -34,11 +34,11 @@ func (a *Alba) Start() error {
 		return err
 	}
 
-	date := "20191204"
+	date := os.Args[1]
+	spew.Dump(date)
 	if err := a.startArchive(date); err != nil {
-		log.Error(err)
+		return err
 	}
-	log.Debug("")
 
 	return nil
 }
@@ -106,8 +106,12 @@ func (a *Alba) startArchive(date string) error {
 			continue
 		}
 
-		dir := filepath.ToSlash(filepath.Join(a.config.Storage.LiveDir, d.Name())) // live/1/
-		if err := a.archive(dir, date, d.Name()); err != nil {
+		log.WithFields(log.Fields{
+			"id": d.Name(),
+		}).Debugf("found live directory ")
+
+		liveDir := filepath.ToSlash(filepath.Join(a.config.Storage.LiveDir, d.Name())) // live/1/
+		if err := a.archive(liveDir, date, d.Name()); err != nil {
 			log.Error(err)
 			continue
 		}
@@ -116,11 +120,11 @@ func (a *Alba) startArchive(date string) error {
 	return nil
 }
 
-func (a *Alba) writeLiveFileListToText(dir string, files []os.FileInfo, tempDir string) (string, error) {
+func (a *Alba) writeLiveFileListToText(liveDir string, files []os.FileInfo, tempDir string) (string, error) {
 	var text string
 	for _, f := range files {
 		//files = append(files, f)
-		path := filepath.ToSlash(filepath.Join(dir, f.Name()))
+		path, _ := filepath.Abs(filepath.ToSlash(filepath.Join(liveDir, f.Name())))
 		text += fmt.Sprintf("file '%s'\n", path)
 	}
 
@@ -145,14 +149,13 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 	}
 
 	if len(liveFiles) < 1 {
-		// nothing to do
+		log.WithFields(log.Fields{
+			"date":     date,
+			"dir":      liveDir,
+			"streamId": streamId,
+		}).Debug("no video files")
 		return nil
 	}
-
-	//tempDir, err := ioutil.TempDir("c:/temp", "video_"+date+"_")
-	//if err != nil {
-	//    return err
-	//}
 
 	sort.SliceStable(liveFiles, func(i, j int) bool {
 		return liveFiles[i].ModTime().Before(liveFiles[j].ModTime())
@@ -166,37 +169,48 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 	if err != nil {
 		return err
 	}
-	//
-	//
-	//t := time.Now()
-	//err = MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName))
-	//
-	//log.WithFields(log.Fields{
-	//    "duration": time.Since(t).Seconds(),
-	//    "err": err,
-	//}).Debug("merged")
-	//
-	//if err != nil {
-	//    return err
-	//}
 
-	//spew.Dump(f.Name())
+	t := time.Now()
+	log.WithFields(log.Fields{
+		"date":     date,
+		"dir":      liveDir,
+		"streamId": streamId,
+	}).Debugf("found %d available video files; merging video files..", len(liveFiles))
+	err = MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName))
+	if err != nil {
+		return err
+	}
+	log.WithFields(log.Fields{
+		"date":     date,
+		"dir":      liveDir,
+		"streamId": streamId,
+		"count":    len(liveFiles),
+		"duration": time.Since(t).Seconds(),
+	}).Debug("completed merging video files")
+	spew.Dump(a.config.HlsOptions.SegmentTime)
 
-	//listFilePath := filepath.Join(tempDir, Meta)
-	//MergeLiveVideoFiles()
+	if err := RemoveLiveFiles(liveDir, liveFiles); err != nil {
+		return err
+	}
 
-	//if err := common.CreateVideoFileList("list.txt", files, dir, tempDir); err != nil {
-	//    return err
-	//}
-	spew.Dump(listFilePath)
+	return err
+}
 
+func RemoveLiveFiles(dir string, files []os.FileInfo) error {
+	for _, f := range files {
+		os.Remove(filepath.Join(dir, f.Name()))
+	}
 	return nil
 }
 
 func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
+	inputFile, _ := filepath.Abs(listFilePath)
+	outputFile := filepath.Base(metaFilePath)
+
 	if err := os.Chdir(filepath.Dir(listFilePath)); err != nil {
-		return nil
+		return err
 	}
+
 	cmd := exec.Command(
 		"ffmpeg",
 		"-y",
@@ -205,13 +219,13 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
 		"-safe",
 		"0",
 		"-i",
-		listFilePath,
+		inputFile,
 		"-c",
 		"copy",
 		"-f",
 		"ssegment",
 		"-segment_list",
-		metaFilePath,
+		outputFile,
 		"-segment_list_flags",
 		"+live",
 		"-segment_time",
@@ -220,8 +234,13 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
 	)
 	//output, err := cmd.CombinedOutput()
 	//if err != nil {
-	//    log.Error(string(output))
-	//    return err
+	//   log.Error(string(output))
+	//   return []byte{}, err
 	//}
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		log.Error(cmd.Args)
+	}
+
+	return err
 }

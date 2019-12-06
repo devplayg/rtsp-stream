@@ -20,18 +20,13 @@ func main() {
 		DisplayName: appDisplayName,
 		Description: appDescription,
 		Version:     appVersion,
-		IsService:   true,
+		IsService:   false,
 		Debug:       true,
 		Verbose:     true,
 	}
 
-	appConfig, err := common.ReadConfig("config.yaml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	hippo.InitLogger("", appName, config.Debug, config.Verbose)
-	alba := store.NewAlba(appConfig)
+	alba := store.NewAlba(common.ReadConfig("config.yaml"))
 	engine := hippo.NewEngine(alba, config)
 	if err := engine.Start(); err != nil {
 		log.Fatal(err)

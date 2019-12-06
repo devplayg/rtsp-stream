@@ -22,6 +22,9 @@ type Config struct {
 	Static      struct {
 		Dir string
 	}
+	HlsOptions struct {
+		SegmentTime int
+	}
 }
 
 func ReadConfig(path string) *Config {
@@ -59,13 +62,17 @@ var DefaultConfig = Config{
 		Bucket:    "record",
 		UseSSL:    false,
 		LiveDir:   "live",
-		RecordDir: "record",
+		RecordDir: "storage",
 	},
 	BindAddress: "0.0.0.0:8000",
-	//Timezone:    "",
 	Static: struct {
 		Dir string
 	}{Dir: "static"},
+	HlsOptions: HlsOption{SegmentTime: 30},
+}
+
+type HlsOption struct {
+	SegmentTime int
 }
 
 // wondory
