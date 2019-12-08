@@ -85,7 +85,6 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 		return err
 	}
 
-	//spew.Dump(segments)
 	if err := s.saveSegments(segments); err != nil {
 		return nil
 	}
@@ -113,17 +112,6 @@ func (s *Assistant) saveSegments(segments map[int64]*common.Segment) error {
 		}
 		return nil
 	})
-	//return common.DB.Update(func(tx *bolt.Tx) error {
-	//	b := tx.Bucket(GetStreamBucketName(s.stream.Id, date))
-	//
-	//	for seqId, seg := range segments {
-	//		err := b.Put(common.Int64ToBytes(seqId), seg)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//	return nil
-	//})
 }
 
 func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64]*common.Segment, int64) {

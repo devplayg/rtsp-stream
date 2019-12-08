@@ -142,6 +142,10 @@ func NewSegment(seqId int64, duration float64, uri string, unixTime int64) *Segm
 	}
 }
 
+type Record struct {
+	Id int64
+}
+
 //
 //type VideoRecord struct {
 //    Seq      int64   `json:"seq"`

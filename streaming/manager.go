@@ -433,3 +433,41 @@ func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
 func (m *Manager) closeStreamDB(id int64) error {
 	return m.streams[id].db.Close()
 }
+
+func (m *Manager) getVideos() []*common.Record {
+	records := make([]*common.Record, 0)
+	for _, s := range m.streams {
+		r := m.getRecordInfo(s)
+		records = append(records, r)
+	}
+
+	return records
+
+	//1 [date]
+	//
+	//m.streams
+	//today:
+	//	20191207
+	//streams:
+	//	1:
+	//		live:
+	//		20191201
+	//		20191201
+	//		20191201c
+	//	2:
+	//		live: true
+	//
+	//
+	//12/1 t,f,t,t,t,
+	//12/2 t,f,ft
+	//12/3
+}
+
+func (m *Manager) getRecordInfo(stream *Stream) *common.Record {
+
+	record := common.Record{}
+	if stream.IsActive() {
+		record.Live = true
+	}
+	return nil
+}

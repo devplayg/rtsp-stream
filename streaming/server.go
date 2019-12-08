@@ -2,7 +2,6 @@ package streaming
 
 import (
 	"github.com/boltdb/bolt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
 	log "github.com/sirupsen/logrus"
@@ -22,7 +21,6 @@ type Server struct {
 }
 
 func NewServer(config *common.Config) *Server {
-	spew.Dump(config)
 	server := &Server{
 		dbDir:  "db",
 		config: config,
@@ -44,9 +42,7 @@ func (s *Server) Start() error {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	log.WithFields(log.Fields{
-		"address": s.addr,
-	}).Info("[server] listen")
+	log.WithFields(log.Fields{}).Infof("[server] listening on %s", s.addr)
 	go func() {
 		log.Fatal(srv.ListenAndServe())
 	}()

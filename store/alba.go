@@ -3,22 +3,22 @@ package store
 import (
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
 	"github.com/minio/minio-go"
+	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"time"
 )
 
 type Alba struct {
-	engine *hippo.Engine
-	config *common.Config
+	engine    *hippo.Engine
+	config    *common.Config
+	scheduler *cron.Cron
 }
 
 func NewAlba(config *common.Config) *Alba {
@@ -35,7 +35,6 @@ func (a *Alba) Start() error {
 	}
 
 	date := os.Args[1]
-	spew.Dump(date)
 	if err := a.startArchive(date); err != nil {
 		return err
 	}
@@ -176,7 +175,7 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 		"dir":      liveDir,
 		"streamId": streamId,
 	}).Debugf("found %d available video files; merging video files..", len(liveFiles))
-	err = MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName))
+	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName))
 	if err != nil {
 		return err
 	}
@@ -187,69 +186,18 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 		"count":    len(liveFiles),
 		"duration": time.Since(t).Seconds(),
 	}).Debug("completed merging video files")
-	spew.Dump(a.config.HlsOptions.SegmentTime)
-
-	if err := RemoveLiveFiles(liveDir, liveFiles); err != nil {
-		return err
-	}
-
+	common.RemoveLiveFiles(liveDir, liveFiles)
 	return err
 }
 
-func RemoveLiveFiles(dir string, files []os.FileInfo) error {
-	for _, f := range files {
-		if err := os.Remove(filepath.Join(dir, f.Name())); err != nil {
+func (a *Alba) startScheduler() error {
+	a.scheduler.Entries()
+	_, err := a.scheduler.AddFunc("10 0 * * *", func() {
+		yesterday := time.Now().In(common.Loc).Format(common.DateFormat)
+
+		if err := a.startArchive(yesterday); err != nil {
 			log.Error(err)
 		}
-	}
-	return nil
-}
-
-func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
-	inputFile, _ := filepath.Abs(listFilePath)
-	outputFile := filepath.Base(metaFilePath)
-
-	originDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if err := os.Chdir(filepath.Dir(listFilePath)); err != nil {
-		return err
-	}
-
-	defer os.Chdir(originDir)
-
-	cmd := exec.Command(
-		"ffmpeg",
-		"-y",
-		"-f",
-		"concat",
-		"-safe",
-		"0",
-		"-i",
-		inputFile,
-		"-c",
-		"copy",
-		"-f",
-		"ssegment",
-		"-segment_list",
-		outputFile,
-		"-segment_list_flags",
-		"+live",
-		"-segment_time",
-		"30",
-		common.VideoFilePrefix+"%d.ts",
-	)
-	//output, err := cmd.CombinedOutput()
-	//if err != nil {
-	//   log.Error(string(output))
-	//   return []byte{}, err
-	//}
-	err = cmd.Run()
-	if err != nil {
-		log.Error(cmd.Args)
-	}
-
+	})
 	return err
 }

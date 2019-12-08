@@ -39,21 +39,23 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
 
-	// Today
-	// http://127.0.0.1:8000/videos/1/today/m3u8
+	// Video summary
+	r.HandleFunc("/videos", c.GetVideos).Methods("GET")
+
+	// Today M3u8: http://127.0.0.1:8000/videos/1/today/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/today/m3u8", c.GetTodayM3u8).Methods("GET")
-	// http://127.0.0.1:8000/videos/1/today/media0.ts
+	// Today videos: http://127.0.0.1:8000/videos/1/today/media0.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/today/{media}.ts", c.GetTodayVideo).Methods("GET")
 
-	// Live
-	// http://127.0.0.1:8000/videos/1/live/m3u8
+	// Live M3u8: http://127.0.0.1:8000/videos/1/live/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/live/m3u8", c.GetLiveM3u8).Methods("GET")
-	//  http://127.0.0.1:8000/videos/1/live/media0.ts
+	// Live videos: http://127.0.0.1:8000/videos/1/live/media0.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/live/{media}.ts", c.GetLiveVideo).Methods("GET")
 
+	// Old M3u8: http://127.0.0.1:8000/videos/1/date/20191126/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetDailyM3u8).Methods("GET")
+	// Old videos: http://127.0.0.1:8000/videos/1/date/20191126/1.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/{media}.ts", c.GetDailyVideo).Methods("GET")
-	//http://127.0.0.1:8000/videos/1/date/20191126/1.ts
 
 	r.
 		PathPrefix("/static").
@@ -79,6 +81,23 @@ func NewController(server *Server) *Controller {
 /*
 	curl -i -X POST -d '{"uri":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"xxxx"}' http://192.168.0.14:9000/streams
 */
+func (c *Controller) GetVideos(w http.ResponseWriter, r *http.Request) {
+	videos := c.manager.getVideos()
+	//if err != nil {
+	//	Response(w, err, http.StatusBadRequest)
+	//	return
+	//}
+
+	data, err := json.MarshalIndent(videos, "", "  ")
+	if err != nil {
+		Response(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", common.ContentTypeJson)
+	w.Write(data)
+}
+
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 	stream, err := parseAndGetStream(r.Body)
 	if err != nil {
@@ -104,7 +123,7 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", common.ContentTypeJson)
-	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	//w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
 }
 
