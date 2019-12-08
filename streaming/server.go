@@ -4,9 +4,9 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
+	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 )
@@ -80,6 +80,10 @@ func (s *Server) init() error {
 		return err
 	}
 
+	if err := s.initStorage(); err != nil {
+		return err
+	}
+
 	// Set manager
 	s.manager = NewManager(s)
 	if err := s.manager.start(); err != nil {
@@ -125,7 +129,7 @@ func (s *Server) initDatabase() error {
 		return err
 	}
 
-	dbName := filepath.Join(s.dbDir, s.engine.Config.Name+".db")
+	dbName := filepath.Join(s.dbDir, "stream.db")
 	db, err := bolt.Open(dbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
@@ -154,33 +158,35 @@ func (s *Server) initDatabase() error {
 	return nil
 }
 
-func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
-	var data []byte
-	err := common.DB.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bucket)
-		data = bucket.Get(key)
-		return nil
-	})
-	return data, err
-}
-
-//func (s *Server) initStorage() error {
-//	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
-//	if err != nil {
-//		log.WithFields(log.Fields{
-//			"address":   s.config.Storage.Address,
-//			"accessKey": s.config.Storage.AccessKey,
-//		}).Error("failed to connect to object storage")
-//		return err
-//	}
-//	common.MinioClient = client
 //
-//	if len(s.config.Storage.Bucket) > 0 {
-//		common.VideoRecordBucket = s.config.Storage.Bucket
-//	}
-//	return nil
+//func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
+//	var data []byte
+//	err := common.DB.View(func(tx *bolt.Tx) error {
+//		bucket := tx.Bucket(bucket)
+//		data = bucket.Get(key)
+//		return nil
+//	})
+//	return data, err
 //}
 
-func CreateVideoFileList(name string, files []os.FileInfo, dir string) {
+func (s *Server) initStorage() error {
+	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"address":   s.config.Storage.Address,
+			"accessKey": s.config.Storage.AccessKey,
+		}).Error("failed to connect to object storage")
+		return err
+	}
+	common.MinioClient = client
 
+	if len(s.config.Storage.Bucket) > 0 {
+		common.VideoRecordBucket = s.config.Storage.Bucket
+	}
+	return nil
 }
+
+//
+//func CreateVideoFileList(name string, files []os.FileInfo, dir string) {
+//
+//}

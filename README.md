@@ -86,6 +86,8 @@ rtsp-server.db
 |---|---|---|
 |streams|Stream ID (int64)|Stream information (Stream)|
 
+videos.db
+|videos|Stream ID (int64)|YYYYMMDD (string)|
 
 stream-{id}.db
 

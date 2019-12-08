@@ -464,10 +464,5 @@ func (m *Manager) getVideos() []*common.Record {
 }
 
 func (m *Manager) getRecordInfo(stream *Stream) *common.Record {
-
-	record := common.Record{}
-	if stream.IsActive() {
-		record.Live = true
-	}
 	return nil
 }
