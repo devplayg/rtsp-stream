@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
 	"github.com/devplayg/rtsp-stream/store"
@@ -33,8 +34,12 @@ func main() {
 		Version:     appVersion,
 		Debug:       *debug,
 		Verbose:     *verbose,
-		IsService:   true,
+		IsService:   false,
 	}
+	if len(fs.Args()) < 1 {
+		config.IsService = true
+	}
+	spew.Dump(fs.Args())
 	alba := store.NewAlba(common.ReadConfig("config.yaml"))
 	engine := hippo.NewEngine(alba, config)
 	if err := engine.Start(); err != nil {

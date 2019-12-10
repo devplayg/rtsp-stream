@@ -33,8 +33,11 @@ func (a *Alba) Start() error {
 	if err := a.init(); err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{
+		"loc": common.Loc,
+	}).Debug()
 
-	date := os.Args[1]
+	date := "20191204"
 	if err := a.startArchive(date); err != nil {
 		return err
 	}
@@ -105,9 +108,9 @@ func (a *Alba) startArchive(date string) error {
 			continue
 		}
 
-		log.WithFields(log.Fields{
-			"id": d.Name(),
-		}).Debugf("found live directory ")
+		//log.WithFields(log.Fields{
+		//	"id": d.Name(),
+		//}).Debugf("found live directory ")
 
 		liveDir := filepath.ToSlash(filepath.Join(a.config.Storage.LiveDir, d.Name())) // live/1/
 		if err := a.archive(liveDir, date, d.Name()); err != nil {
@@ -174,7 +177,7 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 		"date":     date,
 		"dir":      liveDir,
 		"streamId": streamId,
-	}).Debugf("found %d available video files; merging video files..", len(liveFiles))
+	}).Debugf("found %d video files; merging video files..", len(liveFiles))
 	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName))
 	if err != nil {
 		return err
@@ -186,7 +189,7 @@ func (a *Alba) archive(liveDir, date, streamId string) error {
 		"count":    len(liveFiles),
 		"duration": time.Since(t).Seconds(),
 	}).Debug("completed merging video files")
-	common.RemoveLiveFiles(liveDir, liveFiles)
+	//common.RemoveLiveFiles(liveDir, liveFiles)
 	return err
 }
 
