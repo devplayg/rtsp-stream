@@ -52,9 +52,9 @@ func (c *Controller) init() {
 	// (O) Live videos: http://127.0.0.1:8000/videos/1/live/media0.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/live/{media}.ts", c.GetLiveVideo).Methods("GET")
 
-	// Old M3u8: http://127.0.0.1:8000/videos/1/date/20191126/m3u8
+	// Old M3u8: http://127.0.0.1:8000/videos/1/date/20191211/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetDailyM3u8).Methods("GET")
-	// Old videos: http://127.0.0.1:8000/videos/1/date/20191126/1.ts
+	// Old videos: http://127.0.0.1:8000/videos/1/date/20191211/media0.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/{media}.ts", c.GetDailyVideo).Methods("GET")
 
 	r.
@@ -347,7 +347,7 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 //
 //}
 
-func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) GetDailyVideoOld(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	objectName := filepath.ToSlash(filepath.Join(vars["id"], vars["date"], vars["media"]+".ts"))
 	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
@@ -480,15 +480,29 @@ func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
+	buf := new(bytes.Buffer)
+	n, err := buf.ReadFrom(object)
+	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
+	w.WriteHeader(http.StatusOK)
+	w.Write(buf.Bytes())
+}
 
-	//w.Header().Set("Accept-Range", "bytes")
-	//w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
-	//w.Header().Set("Content-Type", ContentTypeM3u8)
+func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	objectName := filepath.ToSlash(filepath.Join(vars["id"], vars["date"], vars["media"]+".ts"))
+	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	//w.Header().Set("Content-Type", common.ContentTypeTs)
+	w.Header().Set("Accept-Range", "bytes")
+	w.Header().Set("Content-Type", common.ContentTypeTs)
 
-	//if _, err = io.Copy(w, object); err != nil{
-	//    Response(w, r,err, http.StatusInternalServerError)
-	//    return
-	//}
 	buf := new(bytes.Buffer)
 	n, err := buf.ReadFrom(object)
 	if err != nil {
@@ -502,37 +516,37 @@ func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 }
 
 // Good example
-func (c *Controller) GetDailyM3u8_old(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], "xxxx")
-	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
-	if err != nil {
-		log.WithFields(log.Fields{
-			"bucket": common.VideoRecordBucket,
-			"object": objectName,
-		}).Debugf("failed to get object from Minio")
-		Response(w, r, err, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Accept-Range", "bytes")
-	//w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
-	//w.Header().Set("Content-Type", ContentTypeM3u8)
-
-	//if _, err = io.Copy(w, object); err != nil{
-	//    Response(w, r,err, http.StatusInternalServerError)
-	//    return
-	//}
-	buf := new(bytes.Buffer)
-	n, err := buf.ReadFrom(object)
-	if err != nil {
-		Response(w, r, err, http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
-	w.WriteHeader(http.StatusOK)
-	w.Write(buf.Bytes())
-}
+//func (c *Controller) GetDailyM3u8_old(w http.ResponseWriter, r *http.Request) {
+//	vars := mux.Vars(r)
+//	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], "xxxx")
+//	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
+//	if err != nil {
+//		log.WithFields(log.Fields{
+//			"bucket": common.VideoRecordBucket,
+//			"object": objectName,
+//		}).Debugf("failed to get object from Minio")
+//		Response(w, r, err, http.StatusInternalServerError)
+//		return
+//	}
+//
+//	w.Header().Set("Accept-Range", "bytes")
+//	//w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
+//	//w.Header().Set("Content-Type", ContentTypeM3u8)
+//
+//	//if _, err = io.Copy(w, object); err != nil{
+//	//    Response(w, r,err, http.StatusInternalServerError)
+//	//    return
+//	//}
+//	buf := new(bytes.Buffer)
+//	n, err := buf.ReadFrom(object)
+//	if err != nil {
+//		Response(w, r, err, http.StatusInternalServerError)
+//		return
+//	}
+//	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
+//	w.WriteHeader(http.StatusOK)
+//	w.Write(buf.Bytes())
+//}
 
 //func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
 //	vars := mux.Vars(r)
