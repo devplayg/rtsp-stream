@@ -56,7 +56,8 @@ function streamsRecordingFormatter(recording, row, idx) {
 
 function videosCanPlayFormatter(val, row, idx, field) {
     if (val === "1") {
-        return '<a href="#" class="play" data-toggle="modal" data-target="#modal-video" data-video="' + field + '">a</a>';
+        let id = field.replace("video-", "");
+        return '<a href="#" class="play" data-name="won" data-id="' + id + '">a</a>';
     }
 }
 

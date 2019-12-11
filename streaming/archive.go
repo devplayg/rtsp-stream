@@ -18,37 +18,37 @@ import (
 func (m *Manager) startScheduler() error {
 	m.scheduler = cron.New()
 
-	// common.DB.Update(func(tx *bolt.Tx) error {
-	//    bucket, err := tx.CreateBucketIfNotExists([]byte("video-1"))
-	//    if err != nil {
-	//        return err
-	//    }
-	//    bucket.Put([]byte("20191201"), []byte{})
-	//    bucket.Put([]byte("20191202"), []byte{})
-	//    bucket.Put([]byte("20191203"), []byte{})
-	//    bucket.Put([]byte("20191211"), []byte{})
-	//    return nil
+	//common.DB.Update(func(tx *bolt.Tx) error {
+	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-1"))
+	//   if err != nil {
+	//       return err
+	//   }
+	//   //bucket.Put([]byte("20191201"), []byte{})
+	//   //bucket.Put([]byte("20191202"), []byte{})
+	//   bucket.Put([]byte("20191204"), []byte{})
+	//   //bucket.Put([]byte("20191211"), []byte{})
+	//   return nil
 	//})
 	//
-	// common.DB.Update(func(tx *bolt.Tx) error {
-	//    bucket, err := tx.CreateBucketIfNotExists([]byte("video-2"))
-	//    if err != nil {
-	//        return err
-	//    }
-	//    bucket.Put([]byte("20191206"), []byte{})
-	//    return nil
+	//common.DB.Update(func(tx *bolt.Tx) error {
+	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-2"))
+	//   if err != nil {
+	//       return err
+	//   }
+	//   bucket.Put([]byte("20191204"), []byte{})
+	//   return nil
 	//})
 	//
 	//
-	// common.DB.Update(func(tx *bolt.Tx) error {
-	//    bucket, err := tx.CreateBucketIfNotExists([]byte("video-3"))
-	//    if err != nil {
-	//        return err
-	//    }
-	//    bucket.Put([]byte("20191203"), []byte{})
-	//    bucket.Put([]byte("20191204"), []byte{})
-	//    bucket.Put([]byte("20191205"), []byte{})
-	//    return nil
+	//common.DB.Update(func(tx *bolt.Tx) error {
+	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-3"))
+	//   if err != nil {
+	//       return err
+	//   }
+	//   bucket.Put([]byte("20191203"), []byte{})
+	//   bucket.Put([]byte("20191204"), []byte{})
+	//   bucket.Put([]byte("20191205"), []byte{})
+	//   return nil
 	//})
 
 	_, err := m.scheduler.AddFunc("10 0 * * *", func() {

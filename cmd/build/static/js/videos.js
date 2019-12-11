@@ -1,3 +1,4 @@
+// https://docs.videojs.com/docs/api/player.html
 
 $(function() {
 
@@ -5,19 +6,10 @@ $(function() {
     let player = videojs('example-video', {
         playbackRates: [0.5, 1, 1.5, 2, 4, 8]
     });
-    videojs.options.autoplay = true
+    videojs.options.autoplay = true;
 
 
-    player.play();
-
-    console.log(1);
-    (function(window, videojs) {
-        var player = window.player = videojs('videojs-playbackrate-adjuster-player', {
-            playbackRates: [0.5, 1, 1.5, 2, 4]
-        });
-
-    }(window, window.videojs));
-
+    // player.play();
 
     let cameras = [
         "video-1",
@@ -27,8 +19,25 @@ $(function() {
 
 
     window.videosPlayEvents = {
-        'click .play': function (e, value, row, index) {
+        'click .play': function (e, val, row, idx) {
             playVideo(row);
+
+            let id = $(e.currentTarget).data("id"),
+                url = "/videos/" + id + "/date/" + row.date + "/m3u8";
+
+            player.src({
+                "type": "application/x-mpegURL",
+                "src": url
+                //"techOrder": ['youtube'],
+                //"youtube": { "iv_load_policy": 3 }
+            });
+            // if (poster) vgsPlayer.poster(poster);
+            player.play();
+            // console.log(url);
+            // console.log(id);
+            // /videos/1/date/20191204/m3u8
+            // console.log(e.data("name"));
+
         },
     }
 
@@ -40,14 +49,12 @@ $(function() {
 
     $.each(cameras, function(i, c) {
         console.log(c);
-        columns.push(
-            {
+        columns.push({
                 title: c,
                 field: c,
                 formatter: videosCanPlayFormatter,
                 events: videosPlayEvents,
-            }
-        );
+        });
     });
 
 
@@ -66,4 +73,16 @@ $(function() {
     function playVideo(video) {
         console.log(video);
     }
+
+    $(".btn-test").click(function(e) {
+        player.src({
+            "type": "application/x-mpegURL",
+            "src": "/videos/1/date/20191204/m3u8"
+            //"techOrder": ['youtube'],
+            //"youtube": { "iv_load_policy": 3 }
+        });
+        // if (poster) vgsPlayer.poster(poster);
+        player.play();
+
+    });
 });
