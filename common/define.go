@@ -44,10 +44,12 @@ const (
 
 var (
 	// BoltDB buckets
-	StreamBucket       = []byte("stream")
-	TransmissionBucket = []byte("transmission")
-	ConfigBucket       = []byte("config")
+	StreamBucket      = []byte("stream")
+	VideoBucketPrefix = "video-"
+	//TransmissionBucket = []byte("transmission")
+	//ConfigBucket       = []byte("config")
 
+	// MinIO buckets
 	VideoRecordBucket = "record"
 	//IndexM3u8         = "index.m3u8"
 )
@@ -75,8 +77,7 @@ func NewResult(err error) *Result {
 
 type VideoFile struct {
 	File os.FileInfo
-	//Ext  string
-	dir string
+	dir  string
 }
 
 func NewVideoFile(f os.FileInfo, dir string) *VideoFile {
@@ -146,7 +147,8 @@ type Record struct {
 	Id int64
 }
 
-//
+type DayRecordMap map[string]map[string]string
+
 //type VideoRecord struct {
 //    Seq      int64   `json:"seq"`
 //    Name     string  `json:"nm"`

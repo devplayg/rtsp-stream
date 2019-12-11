@@ -8,6 +8,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
+	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -18,9 +19,9 @@ import (
 )
 
 type Manager struct {
-	server  *Server
-	streams map[int64]*Stream // Stream pool
-	//streamDB             map[int64]*bolt.DB
+	server               *Server
+	streams              map[int64]*Stream // Stream pool
+	scheduler            *cron.Cron
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	watcherCheckInterval time.Duration
@@ -30,9 +31,8 @@ type Manager struct {
 func NewManager(server *Server) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		server:  server,
-		streams: make(map[int64]*Stream), /* key: id(int64), value: &stream */
-		//streamDB:             make(map[int64]*bolt.DB),
+		server:               server,
+		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
 		ctx:                  ctx,
 		cancel:               cancel,
 		watcherCheckInterval: 20 * time.Second,
@@ -49,6 +49,10 @@ func (m *Manager) init() error {
 	}
 
 	if err := m.cleanStreamMetaFile(); err != nil {
+		return err
+	}
+
+	if err := m.startScheduler(); err != nil {
 		return err
 	}
 
@@ -434,35 +438,27 @@ func (m *Manager) closeStreamDB(id int64) error {
 	return m.streams[id].db.Close()
 }
 
-func (m *Manager) getVideos() []*common.Record {
-	records := make([]*common.Record, 0)
-	for _, s := range m.streams {
-		r := m.getRecordInfo(s)
-		records = append(records, r)
+func (m *Manager) getVideoRecords() ([]map[string]string, error) {
+	bucketNames, err := common.GetDbBucketList(common.DB, common.VideoBucketPrefix)
+	if err != nil {
+		return nil, err
 	}
+	dayRecordMap := make(common.DayRecordMap)
+	err = common.DB.View(func(tx *bolt.Tx) error {
+		for _, name := range bucketNames {
+			b := tx.Bucket([]byte(name))
+			b.ForEach(func(key, _ []byte) error {
+				date := string(key)
+				if _, ok := dayRecordMap[date]; !ok {
+					dayRecordMap[date] = common.CreateDefaultDayRecord(date, bucketNames)
+				}
+				dayRecordMap[date][name] = "1"
+				return nil
+			})
+		}
 
-	return records
+		return nil
+	})
 
-	//1 [date]
-	//
-	//m.streams
-	//today:
-	//	20191207
-	//streams:
-	//	1:
-	//		live:
-	//		20191201
-	//		20191201
-	//		20191201c
-	//	2:
-	//		live: true
-	//
-	//
-	//12/1 t,f,t,t,t,
-	//12/2 t,f,ft
-	//12/3
-}
-
-func (m *Manager) getRecordInfo(stream *Stream) *common.Record {
-	return nil
+	return common.SortDayRecord(dayRecordMap), err
 }

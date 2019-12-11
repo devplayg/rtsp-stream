@@ -35,7 +35,6 @@ func main() {
 		Verbose:     *verbose,
 		IsService:   true,
 	}
-
 	server := streaming.NewServer(common.ReadConfig(*configPath))
 	engine := hippo.NewEngine(server, config)
 	if err := engine.Start(); err != nil {

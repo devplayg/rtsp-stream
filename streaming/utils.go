@@ -31,9 +31,14 @@ func init() {
 	HashKey = sum[:]
 }
 
-func Response(w http.ResponseWriter, err error, statusCode int) {
+func Response(w http.ResponseWriter, r *http.Request, err error, statusCode int) {
 	if statusCode != http.StatusOK {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"ip":     r.RemoteAddr,
+			"uri":    r.RequestURI,
+			"method": r.Method,
+			"length": r.ContentLength,
+		}).Error(err)
 	}
 
 	w.Header().Add("Content-Type", common.ContentTypeJson)

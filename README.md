@@ -80,17 +80,14 @@ helps stream. He is like a slave.
 
 ### Database
 
-rtsp-server.db
+server.db
 
 |Bucket|Key|Value|
 |---|---|---|
 |streams|Stream ID (int64)|Stream information (Stream)|
+|video-{id}|YYYYMMDD|Video|
 
-videos.db
-|videos|Stream ID (int64)|YYYYMMDD (string)|
-
-stream-{id}.db
-
+stream-{id}-live.db
 |Bucket|Key|Value|
 |---|---|---|
 |{YYYYMMDD}|media file name (string)|Media information (Media)|

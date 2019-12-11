@@ -2,11 +2,13 @@ package common
 
 import (
 	"encoding/binary"
+	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -118,4 +120,48 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
 	}
 
 	return err
+}
+
+func GetDbBucketList(db *bolt.DB, prefix string) ([]string, error) {
+	bucketNames := make([]string, 0)
+	err := db.View(func(tx *bolt.Tx) error {
+		err := tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			if len(prefix) > 0 {
+				if strings.HasPrefix(string(name), prefix) {
+					bucketNames = append(bucketNames, string(name))
+					return nil
+				}
+				return nil
+			}
+			bucketNames = append(bucketNames, string(name))
+			return nil
+		})
+		return err
+	})
+	return bucketNames, err
+}
+
+func CreateDefaultDayRecord(date string, bucketNames []string) map[string]string {
+	m := make(map[string]string)
+	m["date"] = date
+	for _, name := range bucketNames {
+		m[name] = ""
+	}
+
+	return m
+}
+
+func SortDayRecord(dayRecordMap DayRecordMap) []map[string]string {
+	keys := make([]string, 0)
+	for date, _ := range dayRecordMap {
+		keys = append(keys, date)
+	}
+
+	sort.Strings(keys)
+	values := make([]map[string]string, 0)
+	for _, k := range keys {
+		values = append(values, dayRecordMap[k])
+	}
+
+	return values
 }

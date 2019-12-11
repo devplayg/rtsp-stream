@@ -16,7 +16,6 @@ $(function() {
         let data = $form.serializeObject();
         data.protocol =  parseInt(data.protocol, 10);
 
-console.log( $form.serializeObject() );
 
         $.ajax({
             url: url,

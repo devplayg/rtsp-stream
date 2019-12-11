@@ -39,17 +39,17 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
 
-	// Video summary
-	r.HandleFunc("/videos", c.GetVideos).Methods("GET")
+	// Video records
+	r.HandleFunc("/videos", c.GetVideoRecords).Methods("GET")
 
 	// Today M3u8: http://127.0.0.1:8000/videos/1/today/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/today/m3u8", c.GetTodayM3u8).Methods("GET")
 	// Today videos: http://127.0.0.1:8000/videos/1/today/media0.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/today/{media}.ts", c.GetTodayVideo).Methods("GET")
 
-	// Live M3u8: http://127.0.0.1:8000/videos/1/live/m3u8
+	// (O) Live M3u8: http://127.0.0.1:8000/videos/1/live/m3u8
 	r.HandleFunc("/videos/{id:[0-9]+}/live/m3u8", c.GetLiveM3u8).Methods("GET")
-	// Live videos: http://127.0.0.1:8000/videos/1/live/media0.ts
+	// (O) Live videos: http://127.0.0.1:8000/videos/1/live/media0.ts
 	r.HandleFunc("/videos/{id:[0-9]+}/live/{media}.ts", c.GetLiveVideo).Methods("GET")
 
 	// Old M3u8: http://127.0.0.1:8000/videos/1/date/20191126/m3u8
@@ -81,16 +81,16 @@ func NewController(server *Server) *Controller {
 /*
 	curl -i -X POST -d '{"uri":"rtsp://127.0.0.1:30101/Streaming/Channels/101/","username":"admin","password":"xxxx"}' http://192.168.0.14:9000/streams
 */
-func (c *Controller) GetVideos(w http.ResponseWriter, r *http.Request) {
-	videos := c.manager.getVideos()
-	//if err != nil {
-	//	Response(w, err, http.StatusBadRequest)
-	//	return
-	//}
+func (c *Controller) GetVideoRecords(w http.ResponseWriter, r *http.Request) {
+	videos, err := c.manager.getVideoRecords()
+	if err != nil {
+		Response(w, r, err, http.StatusBadRequest)
+		return
+	}
 
 	data, err := json.MarshalIndent(videos, "", "  ")
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -101,24 +101,24 @@ func (c *Controller) GetVideos(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 	stream, err := parseAndGetStream(r.Body)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	err = c.manager.addStream(stream)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
-	Response(w, nil, http.StatusOK)
+	Response(w, r, nil, http.StatusOK)
 }
 
 func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 	list := c.manager.getStreams()
 	data, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -130,17 +130,17 @@ func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 	stream, err := parseAndGetStream(r.Body)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	err = c.manager.updateStream(stream)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
-	Response(w, nil, http.StatusOK)
+	Response(w, r, nil, http.StatusOK)
 }
 
 /*
@@ -149,13 +149,13 @@ func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	err = c.manager.deleteStream(streamId)
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -165,13 +165,13 @@ func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	err = c.manager.startStreaming(streamId, "request from "+r.RemoteAddr)
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -181,14 +181,14 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	stream := c.manager.getStreamById(streamId)
 	data, err := json.MarshalIndent(stream, "", "  ")
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -200,13 +200,13 @@ func (c *Controller) GetStreamById(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	tags, err := c.manager.getM3u8(streamId, time.Now().In(common.Loc).Format(common.DateFormat))
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -218,29 +218,11 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetLiveM3u8(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
-
 	path := filepath.Join(c.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10), common.LiveM3u8FileName)
 	http.ServeFile(w, r, path)
-
-	//file, err := os.Open(path)
-	//if err != nil {
-	//	Response(w, err, http.StatusBadRequest)
-	//	return
-	//}
-	//stat, err := file.Stat()
-	//if err != nil {
-	//	Response(w, err, http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	//w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
-	//if _, err = io.Copy(w, file); err != nil{
-	//	Response(w, err, http.StatusInternalServerError)
-	//	return
-	//}
 }
 
 func (c *Controller) GetLiveVideo(w http.ResponseWriter, r *http.Request) {
@@ -249,7 +231,7 @@ func (c *Controller) GetLiveVideo(w http.ResponseWriter, r *http.Request) {
 
 	//streamId, err := parseAndGetStreamId(r)
 	//if err != nil {
-	//	Response(w, err, http.StatusBadRequest)
+	//	Response(w, r,err, http.StatusBadRequest)
 	//	return
 	//}
 	//
@@ -260,13 +242,13 @@ func (c *Controller) GetLiveVideo(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 	streamId, err := parseAndGetStreamId(r)
 	if err != nil {
-		Response(w, err, http.StatusBadRequest)
+		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
 
 	err = c.manager.stopStreaming(streamId)
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -289,13 +271,13 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 	path := filepath.ToSlash(filepath.Join(c.server.config.Storage.LiveDir, vars["id"], vars["media"]+".ts"))
 	file, err := os.Open(path)
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
 	stat, err := file.Stat()
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -303,7 +285,7 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", common.ContentTypeTs)
 	w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
 	if _, err = io.Copy(w, file); err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 }
@@ -315,7 +297,7 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 //
 //	object, err := MinioClient.GetObject(bucketName, objectName, minio.GetObjectOptions{})
 //	if err != nil {
-//		Response(w, err, http.StatusInternalServerError)
+//		Response(w, r,err, http.StatusInternalServerError)
 //		return
 //	}
 //
@@ -328,14 +310,14 @@ func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 //	w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
 //
 //	//if _, err = io.Copy(w, object); err != nil{
-//	//    Response(w, err, http.StatusInternalServerError)
+//	//    Response(w, r,err, http.StatusInternalServerError)
 //	//    return
 //	//}
 //
 //	buf := new(bytes.Buffer)
 //	n, err := buf.ReadFrom(object)
 //	if err != nil {
-//		Response(w, err, http.StatusInternalServerError)
+//		Response(w, r,err, http.StatusInternalServerError)
 //		return
 //	}
 //	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
@@ -370,7 +352,7 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 	objectName := filepath.ToSlash(filepath.Join(vars["id"], vars["date"], vars["media"]+".ts"))
 	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -383,14 +365,14 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", common.ContentTypeTs)
 
 	//if _, err = io.Copy(w, object); err != nil{
-	//    Response(w, err, http.StatusInternalServerError)
+	//    Response(w, r,err, http.StatusInternalServerError)
 	//    return
 	//}
 
 	buf := new(bytes.Buffer)
 	n, err := buf.ReadFrom(object)
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
@@ -465,24 +447,24 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 //	})
 //
 //	if data == nil {
-//		Response(w, errors.New("no data"), http.StatusBadRequest)
+//		Response(w, r,errors.New("no data"), http.StatusBadRequest)
 //		return
 //	}
 //	spew.Dump(data)
 //	var videoRecord VideoRecord
 //	err = json.Unmarshal(data, &videoRecord)
 //	if err != nil {
-//		Response(w, err, http.StatusInternalServerError)
+//		Response(w, r,err, http.StatusInternalServerError)
 //		return
 //	}
 //
 //	if err != nil {
-//		Response(w, err, http.StatusInternalServerError)
+//		Response(w, r,err, http.StatusInternalServerError)
 //		return
 //	}
 //
 //	if len(videoRecord.Url) < 1 {
-//		Response(w, errors.New("no data"), http.StatusBadRequest)
+//		Response(w, r,errors.New("no data"), http.StatusBadRequest)
 //		return
 //	}
 //
@@ -492,6 +474,36 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], common.LiveM3u8FileName)
+	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
+	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+		return
+	}
+
+	//w.Header().Set("Accept-Range", "bytes")
+	//w.Header().Set("Content-Type", "video/vnd.dlna.mpeg-tts")
+	//w.Header().Set("Content-Type", ContentTypeM3u8)
+
+	//if _, err = io.Copy(w, object); err != nil{
+	//    Response(w, r,err, http.StatusInternalServerError)
+	//    return
+	//}
+	buf := new(bytes.Buffer)
+	n, err := buf.ReadFrom(object)
+	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
+	w.WriteHeader(http.StatusOK)
+	w.Write(buf.Bytes())
+
+}
+
+// Good example
+func (c *Controller) GetDailyM3u8_old(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 	objectName := fmt.Sprintf("%s/%s/%s", vars["id"], vars["date"], "xxxx")
 	object, err := common.MinioClient.GetObject(common.VideoRecordBucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
@@ -499,7 +511,7 @@ func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 			"bucket": common.VideoRecordBucket,
 			"object": objectName,
 		}).Debugf("failed to get object from Minio")
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -508,13 +520,13 @@ func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 	//w.Header().Set("Content-Type", ContentTypeM3u8)
 
 	//if _, err = io.Copy(w, object); err != nil{
-	//    Response(w, err, http.StatusInternalServerError)
+	//    Response(w, r,err, http.StatusInternalServerError)
 	//    return
 	//}
 	buf := new(bytes.Buffer)
 	n, err := buf.ReadFrom(object)
 	if err != nil {
-		Response(w, err, http.StatusInternalServerError)
+		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
@@ -566,7 +578,7 @@ func (c *Controller) GetDailyM3u8(w http.ResponseWriter, r *http.Request) {
 //		return nil
 //	})
 //	if err != nil {
-//		Response(w, err, http.StatusInternalServerError)
+//		Response(w, r,err, http.StatusInternalServerError)
 //		return
 //	}
 //	//sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })

@@ -37,7 +37,7 @@ func (a *Alba) Start() error {
 		"loc": common.Loc,
 	}).Debug()
 
-	date := "20191204"
+	date := "20191211"
 	if err := a.startArchive(date); err != nil {
 		return err
 	}
@@ -54,7 +54,6 @@ func (a *Alba) SetEngine(e *hippo.Engine) {
 }
 
 func (a *Alba) init() error {
-
 	if err := a.initTimezone(); err != nil {
 		return err
 	}

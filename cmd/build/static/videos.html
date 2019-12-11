@@ -88,7 +88,7 @@
         <div class="page-wrapper">
             <div class="page-inner">
                 <!-- BEGIN Left Aside -->
-                <aside class="page-sidebar">
+                <aside class="page-sidebar invisible">
                     <div class="page-logo">
                         <a href="#" class="page-logo-link press-scale-down d-flex align-items-center position-relative" data-toggle="modal" data-target="#modal-shortcut">
                             <img src="img/logo.png" alt="SmartAdmin WebApp" aria-roledescription="logo" class="rounded" style="height: 30px;">
@@ -163,130 +163,24 @@
                                         data-pagination="true"
                                         data-side-pagination="client"
                                         data-show-refresh="true"
-                                        data-sort-name="uri"
+                                        data-sort-name="date"
                                         data-sort-order="asc">
                                     <thead>
+                                    <!--
                                     <tr>
-                                        <th data-formatter="streamsActionFormatter" data-visible="false">Action</th>
-                                        <th data-field="id">ID</th>
-                                        <th data-field="status">status</th>
-                                        <th data-formatter="streamsControlFormatter" data-events="streamsActiveEvents">Control</th>
-                                        <th data-field="uri">URI</th>
-                                        <th data-field="enabled">Enabled</th>
-                                        <th data-field="recording" data-formatter="streamsRecordingFormatter">Recording</th>
-                                    </tr>
-                                    </thead>
+                                        <th data-field="date">Date</th>
+                                        <th data-field="video-1" data-formatter="videosCanPlayFormatter">V1</th>
+                                        <th data-field="video-2" data-formatter="videosCanPlayFormatter">V2</th>
+                                        <th data-field="video-3" data-formatter="videosCanPlayFormatter">V3</th>
+                                        -->
                                 </table>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="panel">
-                                    <div class="panel-container show">
-                                        <div class="panel-content">
-                                            <form id="form-streams-add">
-                                                <input type="hidden" name="protocol" value="1">
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">URI</label>
-                                                    <input type="text" name="uri" class="form-control" value="rtsp://10.0.75.1:8801/MainCam" />
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">Username</label>
-                                                    <input type="text" name="username" class="form-control" value="admin"/>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">Password</label>
-                                                    <input type="password" name="password" class="form-control" value="1234"/>
-                                                </div>
-
-                                                <div class="alert alert-success" role="alert">
-                                                    <strong>Error!</strong> <span class="msg"></span>
-                                                </div>
-
-                                                <div class="custom-control custom-switch">
-                                                    <input type="checkbox" name="recording" class="custom-control-input" id="customSwitch1">
-                                                    <label class="custom-control-label" for="customSwitch1">Recording</label>
-                                                </div>
-
-                                                <div class="custom-control custom-switch">
-                                                    <input type="checkbox" name="enabled" class="custom-control-input" id="customSwitch2">
-                                                    <label class="custom-control-label" for="customSwitch2">Enabled</label>
-                                                </div>
-
-                                                <button type="button" class="btn btn-default btn-streams-add">Add</button>
-                                                <!--
-                                                <button type="button" class="btn btn-default btn-streams-list">List</button>
-                                                <button type="button" class="btn btn-default btn-streams-start">Start</button>
-                                                <button type="button" class="btn btn-default btn-streams-stop">Stop</button>
-                                                <button type="button" class="btn btn-default btn-streams-delete">Delete</button>
-                                                -->
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="panel">
-                                    <div class="panel-container show">
-                                        <div class="panel-content">
-                                            <form id="form-streams-edit">
-                                                <input type="hidden" name="protocol" value="1">
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">ID</label>
-                                                    <input type="text" name="id" class="form-control">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">URI</label>
-                                                    <input type="text" name="uri" class="form-control" value="" />
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">Username</label>
-                                                    <input type="text" name="username" class="form-control" value="admin"/>
-                                                </div>
-
-                                                <div class="form-group">
-                                                    <label class="form-label" for="">Password</label>
-                                                    <input type="password" name="password" class="form-control" value="1234"/>
-                                                </div>
-
-                                                <div class="custom-control custom-switch">
-                                                    <input type="checkbox" name="recording" class="custom-control-input" id="customSwitch3">
-                                                    <label class="custom-control-label" for="customSwitch3">Recording</label>
-                                                </div>
-
-                                                <div class="custom-control custom-switch">
-                                                    <input type="checkbox" name="enabled" class="custom-control-input" id="customSwitch4">
-                                                    <label class="custom-control-label" for="customSwitch4">Enabled</label>
-                                                </div>
-
-                                                <div class="alert alert-danger" role="alert">
-                                                    <strong>Error</strong> <span class="msg"></span>
-                                                </div>
-
-                                                <button type="button" class="btn btn-default btn-streams-update">Update</button>
-                                                <!--
-                                                <button type="button" class="btn btn-default btn-streams-list">List</button>
-                                                <button type="button" class="btn btn-default btn-streams-start">Start</button>
-                                                <button type="button" class="btn btn-default btn-streams-stop">Stop</button>
-                                                <button type="button" class="btn btn-default btn-streams-delete">Delete</button>
-                                                -->
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
                         <div>
-                            <!--
-                            <video-js id=example-video width=960 height=540 class="vjs-default-skin" controls>
-                                <source src="/videos/3/today/m3u8" type="application/x-mpegURL">
+                            <video-js id="example-video" width=960 height=540 class="vjs-default-skin" controls>
+                                <source src="/videos/1/20191211/m3u8" type="application/x-mpegURL">
                             </video-js>
-                            -->
                         </div>
                     </main>
                     <!-- this overlay is activated only when mobile menu is triggered -->
@@ -315,11 +209,8 @@
         <script src="assets/js/vendors.bundle.js"></script>
         <script src="assets/js/app.bundle.js"></script>
         <script src="js/custom.js"></script>
-
         <script>
             $(document).ready(function () {
-
-
             });
         </script>
         <!-- Module -->
@@ -327,20 +218,11 @@
         <script src="plugins/videojs/video.min.js"></script>
         <script src="plugins/videojs/videojs-http-streaming.min.js"></script>
 
-        <script src="js/streams.js"></script>
-        <script src="js/formatter.js"></script>
-        <script>
-            let player = videojs('example-video', {
-                playbackRates: [0.5, 1, 1.5, 2, 4, 8]
-            });
-            player.play();
 
-            // (function(window, videojs) {
-            //     var player = window.player = videojs('videojs-playbackrate-adjuster-player', {
-            //         playbackRates: [0.5, 1, 1.5, 2, 4]
-            //     });
-            //
-            // }(window, window.videojs));
+        <script>
+
         </script>
+        <script src="js/formatter.js"></script>
+        <script src="js/videos.js"></script>
     </body>
 </html>

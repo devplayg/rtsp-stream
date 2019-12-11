@@ -53,3 +53,10 @@ function streamsRecordingFormatter(recording, row, idx) {
         '</button>'
     ].join("");
 }
+
+function videosCanPlayFormatter(val, row, idx, field) {
+    if (val === "1") {
+        return '<a href="#" class="play" data-toggle="modal" data-target="#modal-video" data-video="' + field + '">a</a>';
+    }
+}
+
