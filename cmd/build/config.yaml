@@ -1,5 +1,5 @@
 storage:
-  liveDir: c:/temp/live
-  recordDir: d:/data
+  liveDir:
+  recordDir: 
   accessKey: unisem
   secretKey: Uniiot12!@

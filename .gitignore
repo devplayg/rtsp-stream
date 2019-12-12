@@ -2,8 +2,8 @@
 *.exe
 *.db
 *.lock
-**/.ts
-.m3u8
-.yaml
-.yml
-.log
+*.ts
+*.m3u8
+*.yaml
+*.yml
+*.log
