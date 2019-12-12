@@ -449,14 +449,29 @@ func (m *Manager) closeStreamDB(id int64) error {
 	return m.streams[id].db.Close()
 }
 
-func (m *Manager) getVideoRecords() ([]map[string]string, error) {
-	bucketNames, err := common.GetDbBucketList(common.DB, common.VideoBucketPrefix)
+func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
+	streams := m.getStreams()
+	if len(streams) < 1 {
+		return nil, nil
+	}
+	result := map[string]interface{}{
+		"streams": streams,
+		"videos":  nil,
+	}
+
+	var bucketNames []string
+	for _, s := range streams {
+		bucketName := common.VideoBucketPrefix + strconv.FormatInt(s.Id, 10)
+		bucketNames = append(bucketNames, bucketName)
+	}
+	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
 	if err != nil {
 		return nil, err
 	}
-	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
 	dayRecordMap[common.LiveBucketName] = m.getLiveVideoStatus(bucketNames)
-	return common.SortDayRecord(dayRecordMap), err
+	result["videos"] = common.SortDayRecord(dayRecordMap)
+
+	return result, err
 }
 
 func (m *Manager) getLiveVideoStatus(bucketNames []string) map[string]string {
