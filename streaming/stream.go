@@ -208,6 +208,18 @@ func (s *Stream) getM3u8Segments(date string) ([]*common.Segment, error) {
 	return segments, err
 }
 
+func (s *Stream) m3u8BucketExists(date string) bool {
+	exist := false
+	_ = s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(date))
+		if b != nil {
+			exist = true
+		}
+		return nil
+	})
+	return exist
+}
+
 func (s *Stream) getDbFileName() string {
 	return "stream-" + strconv.FormatInt(s.Id, 10) + ".db"
 }

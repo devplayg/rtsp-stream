@@ -60,18 +60,30 @@ $(function() {
     //
     window.videosPlayEvents = {
         'click .play': function (e, val, row, idx) {
-            playVideo(row);
-
             let id = $(e.currentTarget).data("id"),
                 url = "/videos/" + id + "/date/" + row.date + "/m3u8";
-
             player.src({
                 "type": "application/x-mpegURL",
                 "src": url
-                //"techOrder": ['youtube'],
-                //"youtube": { "iv_load_policy": 3 }
             });
-            // if (poster) vgsPlayer.poster(poster);
+            player.play();
+        },
+        'click .live': function (e, val, row, idx) {
+            let id = $(e.currentTarget).data("id"),
+                url = "/videos/" + id + "/live/m3u8";
+            player.src({
+                "type": "application/x-mpegURL",
+                "src": url
+            });
+            player.play();
+        },
+        'click .today': function (e, val, row, idx) {
+            let id = $(e.currentTarget).data("id"),
+                url = "/videos/" + id + "/today/m3u8";
+            player.src({
+                "type": "application/x-mpegURL",
+                "src": url
+            });
             player.play();
         },
     };

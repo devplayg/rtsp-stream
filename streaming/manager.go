@@ -454,27 +454,23 @@ func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
 	if len(streams) < 1 {
 		return nil, nil
 	}
+	t := time.Now().In(common.Loc)
 	result := map[string]interface{}{
+		"date":    t.Format(common.DateFormat),
 		"streams": streams,
 		"videos":  nil,
 	}
-
-	var bucketNames []string
-	for _, s := range streams {
-		bucketName := common.VideoBucketPrefix + strconv.FormatInt(s.Id, 10)
-		bucketNames = append(bucketNames, bucketName)
-	}
+	bucketNames := m.convertStreamsToBucketNames(streams)
 	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
 	if err != nil {
 		return nil, err
 	}
-	dayRecordMap[common.LiveBucketName] = m.getLiveVideoStatus(bucketNames)
+	dayRecordMap[common.LiveBucketName] = m.getLiveVideoStatus(bucketNames, t.Format(common.DateFormat))
 	result["videos"] = common.SortDayRecord(dayRecordMap)
-
 	return result, err
 }
 
-func (m *Manager) getLiveVideoStatus(bucketNames []string) map[string]string {
+func (m *Manager) getLiveVideoStatus(bucketNames []string, date string) map[string]string {
 	liveMap := common.CreateDefaultDayRecord("live", bucketNames)
 	for _, bn := range bucketNames {
 		streamId, err := strconv.ParseInt(strings.TrimPrefix(bn, common.VideoBucketPrefix), 10, 16)
@@ -494,7 +490,10 @@ func (m *Manager) getLiveVideoStatus(bucketNames []string) map[string]string {
 			continue
 		}
 
-		liveMap[bn] = "active"
+		liveMap[bn] = "1"
+		if stream.m3u8BucketExists(date) {
+			liveMap[bn] += ",1"
+		}
 	}
 
 	return liveMap
@@ -517,4 +516,16 @@ func (m *Manager) getPrevVideoRecords(bucketNames []string) (common.DayRecordMap
 		return nil
 	})
 	return dayRecordMap, err
+}
+
+func (m *Manager) convertStreamsToBucketNames(streams []*Stream) []string {
+	if len(streams) < 1 {
+		return nil
+	}
+	bucketNames := make([]string, 0)
+	for _, s := range streams {
+		bucketName := common.VideoBucketPrefix + strconv.FormatInt(s.Id, 10)
+		bucketNames = append(bucketNames, bucketName)
+	}
+	return bucketNames
 }
