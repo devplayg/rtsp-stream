@@ -219,7 +219,7 @@ func SendToStorage(bucketName, objectName, path, contentType string) error {
 
 func GetStreamBucketName(streamId int64, date string) []byte {
 	if len(date) < 1 {
-		date = common.LiveBucketDbName
+		date = common.LiveBucketName
 	}
 	return []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
 }

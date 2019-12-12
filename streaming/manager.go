@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -443,22 +444,52 @@ func (m *Manager) getVideoRecords() ([]map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
+	dayRecordMap[common.LiveBucketName] = m.getLiveVideoStatus(bucketNames)
+	return common.SortDayRecord(dayRecordMap), err
+}
+
+func (m *Manager) getLiveVideoStatus(bucketNames []string) map[string]string {
+	liveMap := common.CreateDefaultDayRecord("live", bucketNames)
+	for _, bn := range bucketNames {
+		streamId, err := strconv.ParseInt(strings.TrimPrefix(bn, common.VideoBucketPrefix), 10, 16)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"bucketName": bn,
+			}).Error(err)
+			continue
+		}
+
+		stream := m.getStreamById(streamId)
+		if stream == nil {
+			continue
+		}
+
+		if !stream.IsActive() {
+			continue
+		}
+
+		liveMap[bn] = "active"
+	}
+
+	return liveMap
+}
+
+func (m *Manager) getPrevVideoRecords(bucketNames []string) (common.DayRecordMap, error) {
 	dayRecordMap := make(common.DayRecordMap)
-	err = common.DB.View(func(tx *bolt.Tx) error {
-		for _, name := range bucketNames {
-			b := tx.Bucket([]byte(name))
+	err := common.DB.View(func(tx *bolt.Tx) error {
+		for _, bn := range bucketNames {
+			b := tx.Bucket([]byte(bn))
 			b.ForEach(func(key, _ []byte) error {
 				date := string(key)
 				if _, ok := dayRecordMap[date]; !ok {
 					dayRecordMap[date] = common.CreateDefaultDayRecord(date, bucketNames)
 				}
-				dayRecordMap[date][name] = "1"
+				dayRecordMap[date][bn] = "1"
 				return nil
 			})
 		}
-
 		return nil
 	})
-
-	return common.SortDayRecord(dayRecordMap), err
+	return dayRecordMap, err
 }

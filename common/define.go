@@ -33,7 +33,7 @@ const (
 	ContentTypeTs   = "video/mp2t"
 	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
 
-	LiveBucketDbName = "live"
+	LiveBucketName = "live"
 
 	VideoFilePrefix     = "media"
 	LiveVideoFilePrefix = "live"

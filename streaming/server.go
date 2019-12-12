@@ -42,10 +42,12 @@ func (s *Server) Start() error {
 		ReadTimeout:  15 * time.Second,
 	}
 
+	absLiveDir, _ := filepath.Abs(s.config.Storage.LiveDir)
+	absRecordDir, _ := filepath.Abs(s.config.Storage.RecordDir)
 	log.WithFields(log.Fields{
-		"liveDir":   s.config.Storage.LiveDir,
-		"recordDir": s.config.Storage.RecordDir,
-		"bucket":    s.config.Storage.Bucket,
+		"liveDir":   absLiveDir,
+		"recordDir": absRecordDir,
+		"bucket":    absRecordDir,
 	}).Infof("[server] listening on %s", s.addr)
 	go func() {
 		log.Fatal(srv.ListenAndServe())
