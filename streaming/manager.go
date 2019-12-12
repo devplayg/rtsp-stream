@@ -36,7 +36,7 @@ func NewManager(server *Server) *Manager {
 		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
 		ctx:                  ctx,
 		cancel:               cancel,
-		watcherCheckInterval: 20 * time.Second,
+		watcherCheckInterval: 5 * time.Second,
 	}
 }
 
@@ -210,8 +210,8 @@ func (m *Manager) updateStream(stream *Stream) error {
 	return SaveStreamInDB(stream)
 }
 
-func (m *Manager) deleteStream(id int64) error {
-	if err := m.stopStreaming(id); err != nil {
+func (m *Manager) deleteStream(id int64, from string) error {
+	if err := m.stopStreaming(id, from); err != nil {
 		return err
 	}
 	if err := m.closeStreamDB(id); err != nil {
@@ -317,7 +317,7 @@ func (m *Manager) startStreaming(id int64, from string) error {
 			log.WithFields(log.Fields{
 				"id": id,
 			}).Errorf("[manager] failed to start stream-%d: %s", id, err)
-			stream.Status = common.Failed
+			//stream.Status = common.Failed
 			return
 		}
 		log.WithFields(log.Fields{
@@ -326,14 +326,16 @@ func (m *Manager) startStreaming(id int64, from string) error {
 			"waitCount": count,
 			"pid":       GetStreamPid(stream),
 		}).Infof("[manager] stream-%d has been started", id)
-		stream.Status = common.Started
+		//stream.Status = common.Started
 	}()
 
 	return nil
 }
 
-func (m *Manager) stopStreaming(id int64) error {
-	log.WithFields(log.Fields{}).Infof("[manager] received to stop stream-%d", id)
+func (m *Manager) stopStreaming(id int64, from string) error {
+	log.WithFields(log.Fields{
+		"from": from,
+	}).Infof("[manager] received to stop stream-%d", id)
 
 	m.Lock()
 	defer m.Unlock()
@@ -361,7 +363,7 @@ func (m *Manager) stopStreaming(id int64) error {
 func (m *Manager) Stop() error {
 	m.cancel()
 	for id, _ := range m.streams {
-		m.stopStreaming(id)
+		m.stopStreaming(id, "manager")
 		if err := m.streams[id].db.Close(); err != nil {
 			log.Error(err)
 		}
@@ -376,23 +378,31 @@ func (m *Manager) startStreamWatcher() {
 	}).Debug("[manager] watcher has been started")
 	for {
 		for id, stream := range m.streams {
+			active, lastStreamUpdated := stream.getStatus()
+			stream.LastStreamUpdated = lastStreamUpdated
 			if !stream.Enabled {
 				continue
 			}
 
-			// just in case
-			if stream.Status == common.Started && !stream.IsActive() {
+			// just in case (if you restart immediately after stopping)
+			if !active && stream.Status == common.Started {
 				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", stream.Id)
-				// stream.stop()
-				if err := m.stopStreaming(id); err != nil {
+				if err := m.stopStreaming(id, "watcher"); err != nil {
 					log.Error(err)
 				}
 			}
-			if stream.Status != common.Started && stream.IsActive() {
-				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", stream.Id)
+			// just in case
+			if active && stream.Status != common.Started {
+				log.WithFields(log.Fields{
+					"status": stream.Status,
+				}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", stream.Id)
 			}
 
-			if stream.IsActive() {
+			if active {
+				continue
+			}
+
+			if time.Since(stream.lastAttemptTime) < 10*time.Second {
 				continue
 			}
 

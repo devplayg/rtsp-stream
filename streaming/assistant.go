@@ -81,9 +81,7 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 	}
 
 	segments, maxSeqId := s.generateSegments(playlist)
-	if err != nil {
-		return err
-	}
+	s.stream.MaxStreamSeqId = maxSeqId
 
 	if err := s.saveSegments(segments); err != nil {
 		return nil
@@ -163,25 +161,3 @@ func (s *Assistant) stop() error {
 	s.cancel()
 	return nil
 }
-
-//func (s *Assistant) startCheckingStreamStatus() error {
-//	for {
-//		// just in case
-//		if s.stream.Status == Started && !s.stream.IsActive() {
-//			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", s.stream.Id)
-//			s.stream.stop()
-//		}
-//
-//		if s.stream.Status != Started && s.stream.IsActive() {
-//			log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is not 'started' but it's alive!!!", s.stream.Id)
-//			s.stream.stop()
-//		}
-//
-//		select {
-//		case <-time.After(s.healthCheckInterval):
-//		case <-s.ctx.Done():
-//			log.WithFields(log.Fields{}).Debugf("    [assistant-%d] health check has been stopped", s.stream.Id)
-//			return nil
-//		}
-//	}
-//}

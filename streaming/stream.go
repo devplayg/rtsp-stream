@@ -32,39 +32,66 @@ type Stream struct {
 	Status             int                  `json:"status"`       // Stream status
 	DataRetentionHours int                  `json:"dataRetentionHours"`
 	Pid                int                  `json:"pid"`
+	LastStreamUpdated  time.Time            `json:"lastStreamUpdated"`
+	MaxStreamSeqId     int64                `json:"maxStreamSeqId"`
+	lastAttemptTime    time.Time
 	assistant          *Assistant
 	ctx                context.Context
 	cancel             context.CancelFunc
 	db                 *bolt.DB
+	// waitTimeUntilStreamStarts time.Duration
 }
 
 func NewStream() *Stream {
 	return &Stream{}
 }
 
-func (s *Stream) IsActive() bool {
-	if s.cmd == nil || s.cmd.Process == nil {
-		return false
-	}
+func (s *Stream) getStatus() (bool, time.Time) {
+	active := false
+	lastStreamUpdated := time.Time{}
 
-	// Check if index file exists
-	path := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
-	file, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
+	if s.cmd == nil || s.cmd.Process == nil {
+		return active, lastStreamUpdated
 	}
 
 	// Check if "index.m3u8" has been updated within the last 8 seconds
-	since := time.Now().Sub(file.ModTime()).Seconds()
-	//log.Debugf("    [stream-%d] is active? %3.1f", s.Id, since)
-	if since > 8.0 {
-		return false
+	path := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
+	file, err := os.Stat(path)
+	if !os.IsNotExist(err) {
+		lastStreamUpdated = file.ModTime()
+		if time.Now().Sub(file.ModTime()).Seconds() <= 8.0 {
+			active = true
+		}
 	}
 
-	// Check if the .ts file is created continuously
-	// wondory
+	return active, lastStreamUpdated
+}
 
-	return true
+func (s *Stream) IsActive() bool {
+	active, _ := s.getStatus()
+	return active
+	//if s.cmd == nil || s.cmd.Process == nil {
+	//    return false
+	//}
+	//
+	//// Check if index file exists
+	//path := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
+	//file, err := os.Stat(path)
+	//if os.IsNotExist(err) {
+	//    return false
+	//}
+	//
+	//// Check if "index.m3u8" has been updated within the last 8 seconds
+	//since := time.Now().Sub(file.ModTime()).Seconds()
+	////log.Debugf("    [stream-%d] is active? %3.1f", s.Id, since)
+	//if since > 8.0 {
+	//    return false
+	//}
+	//
+	//// Check if the .ts file is created continuously
+	//// wondory
+	//
+	//return true
 }
 
 func (s *Stream) StreamUri() string {
@@ -97,6 +124,7 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Co
 }
 
 func (s *Stream) start() (int, error) {
+	s.lastAttemptTime = time.Now().In(common.Loc)
 	s.cmd = GetHlsStreamingCommand(s)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
@@ -126,11 +154,11 @@ func (s *Stream) start() (int, error) {
 	// Wait signals
 	select {
 	case count := <-startedChan:
-		//s.Status = Started
+		s.Status = common.Started
 		return count, nil
 	case <-s.ctx.Done():
 		s.stop()
-		//s.Status = Failed
+		s.Status = common.Failed
 		return 0, errors.New("failed or canceled")
 	}
 }

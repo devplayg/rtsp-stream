@@ -153,7 +153,7 @@ func (c *Controller) DeleteStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.manager.deleteStream(streamId)
+	err = c.manager.deleteStream(streamId, r.RemoteAddr)
 	if err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
@@ -169,7 +169,7 @@ func (c *Controller) StartStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.manager.startStreaming(streamId, "request from "+r.RemoteAddr)
+	err = c.manager.startStreaming(streamId, r.RemoteAddr)
 	if err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
@@ -246,7 +246,7 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.manager.stopStreaming(streamId)
+	err = c.manager.stopStreaming(streamId, r.RemoteAddr)
 	if err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 		return

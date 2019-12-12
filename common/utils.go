@@ -65,6 +65,37 @@ func ReadVideoFilesInDirOnDate(dir, date, ext string) ([]os.FileInfo, error) {
 	return files, nil
 }
 
+func ReadVideoFilesInDirNotOnDate(dir, date, ext string) ([]os.FileInfo, error) {
+	list, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	//var text string
+	files := make([]os.FileInfo, 0)
+	for _, f := range list {
+		if f.IsDir() {
+			continue
+		}
+
+		if !f.Mode().IsRegular() {
+			continue
+		}
+
+		if !strings.HasSuffix(f.Name(), ext) {
+			continue
+		}
+
+		if f.ModTime().In(Loc).Format("20060102") == date {
+			continue
+		}
+
+		files = append(files, f)
+	}
+
+	return files, nil
+}
+
 func RemoveLiveFiles(dir string, files []os.FileInfo) {
 	for _, f := range files {
 		if err := os.Remove(filepath.Join(dir, f.Name())); err != nil {
