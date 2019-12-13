@@ -19,10 +19,8 @@ type Config struct {
 	} `json:"storage"`
 	BindAddress string `json:"bind-address"`
 	Timezone    string
-	Static      struct {
-		Dir string
-	}
-	HlsOptions struct {
+	StaticDir   string
+	HlsOptions  struct {
 		SegmentTime int
 	}
 }
@@ -65,10 +63,8 @@ var DefaultConfig = Config{
 		RecordDir: "storage",
 	},
 	BindAddress: "0.0.0.0:8000",
-	Static: struct {
-		Dir string
-	}{Dir: "static"},
-	HlsOptions: HlsOption{SegmentTime: 30},
+	StaticDir:   "static",
+	HlsOptions:  HlsOption{SegmentTime: 30},
 }
 
 type HlsOption struct {

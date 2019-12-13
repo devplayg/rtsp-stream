@@ -1,5 +1,6 @@
 bind-address: 0.0.0.0:8000
 timezone: Asia/Seoul
+staticDir:
 storage:
   remote: false
   address: 127.0.0.1:9000
@@ -8,5 +9,3 @@ storage:
   bucket: record
   liveDir:
   recordDir: /data
-static:
-  dir: d:/dev/static

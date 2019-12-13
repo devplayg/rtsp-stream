@@ -86,6 +86,7 @@ server.db
 |---|---|---|
 |streams|Stream ID (int64)|Stream information (Stream)|
 |video-{id}|YYYYMMDD|Video|
+|config|string|string|
 
 stream-{id}-live.db
 |Bucket|Key|Value|

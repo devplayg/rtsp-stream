@@ -45,6 +45,7 @@ const (
 var (
 	// BoltDB buckets
 	StreamBucket      = []byte("stream")
+	ConfigBucket      = []byte("config")
 	VideoBucketPrefix = "video-"
 	//TransmissionBucket = []byte("transmission")
 	//ConfigBucket       = []byte("config")
@@ -52,6 +53,7 @@ var (
 	// MinIO buckets
 	VideoRecordBucket = "record"
 	//IndexM3u8         = "index.m3u8"
+	LastArchivingDateKey = []byte("lastRecordingDate")
 )
 
 var (

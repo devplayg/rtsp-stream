@@ -96,12 +96,16 @@ func ReadVideoFilesInDirNotOnDate(dir, date, ext string) ([]os.FileInfo, error) 
 	return files, nil
 }
 
-func RemoveLiveFiles(dir string, files []os.FileInfo) {
+func RemoveLiveFiles(dir string, files []os.FileInfo) int {
+	count := 0
 	for _, f := range files {
 		if err := os.Remove(filepath.Join(dir, f.Name())); err != nil {
 			log.Error(err)
+			continue
 		}
+		count++
 	}
+	return count
 }
 
 func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {

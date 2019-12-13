@@ -81,8 +81,10 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 	}
 
 	segments, maxSeqId := s.generateSegments(playlist)
+	if len(segments) < 1 {
+		return nil
+	}
 	s.stream.MaxStreamSeqId = maxSeqId
-
 	if err := s.saveSegments(segments); err != nil {
 		return nil
 	}

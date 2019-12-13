@@ -16,57 +16,34 @@ import (
 	"time"
 )
 
+func (m *Manager) canArchive() bool {
+	m.RLock()
+	defer m.RUnlock()
+	if m.onArchiving {
+		return false
+	}
+	m.onArchiving = true
+	return true
+}
+
 func (m *Manager) startScheduler() error {
-
-	//common.DB.Update(func(tx *bolt.Tx) error {
-	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-1"))
-	//   if err != nil {
-	//       return err
-	//   }
-	//   //bucket.Put([]byte("20191201"), []byte{})
-	//   //bucket.Put([]byte("20191202"), []byte{})
-	//   bucket.Put([]byte("20191204"), []byte{})
-	//   //bucket.Put([]byte("20191211"), []byte{})
-	//   return nil
-	//})
-	//
-	//common.DB.Update(func(tx *bolt.Tx) error {
-	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-2"))
-	//   if err != nil {
-	//       return err
-	//   }
-	//   bucket.Put([]byte("20191204"), []byte{})
-	//   return nil
-	//})
-	//
-	//
-	//common.DB.Update(func(tx *bolt.Tx) error {
-	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-3"))
-	//   if err != nil {
-	//       return err
-	//   }
-	//   bucket.Put([]byte("20191203"), []byte{})
-	//   bucket.Put([]byte("20191204"), []byte{})
-	//   bucket.Put([]byte("20191205"), []byte{})
-	//   return nil
-	//})
-
 	scheduler := cron.New(cron.WithLocation(common.Loc))
-	_, err := scheduler.AddFunc("0 12 * * *", func() {
-		t := time.Now().In(common.Loc)
-		yesterdayDate := t.Add(-24 * time.Hour).Format(common.DateFormat)
-		//log.Debug("daily scheduler started")
-		log.WithFields(log.Fields{
-			"targetDate": yesterdayDate,
-		}).Debug("[scheduler] archiving has been started")
-		listToArchive, listToDelete := m.getStreamIdListToArchive()
-
-		if err := m.startArchivingVideos(listToArchive, yesterdayDate); err != nil {
-			log.Error(err)
+	_, err := scheduler.AddFunc("3 14 * * *", func() {
+		if !m.canArchive() {
+			log.Debug("archiving is already running")
+			return
 		}
+		defer func() {
+			m.RLock()
+			m.onArchiving = false
+			m.RUnlock()
+		}()
 
-		if err := m.startDeletingVideos(listToDelete, t); err != nil {
+		// Yesterday
+		targetDate := time.Now().In(common.Loc).Add(-24 * time.Hour).Format(common.DateFormat)
+		if err := m.startToArchiveVideos(targetDate); err != nil {
 			log.Error(err)
+			return
 		}
 	})
 
@@ -76,39 +53,68 @@ func (m *Manager) startScheduler() error {
 	return err
 }
 
+func (m *Manager) startToArchiveVideos(targetDate string) error {
+	t := time.Now()
+	streamIdListToArchive, streamIdListNotToArchive := m.getStreamIdListToArchive()
+	log.WithFields(log.Fields{
+		"targetDate":          targetDate,
+		"streamsToArchive":    len(streamIdListToArchive),
+		"streamsNotToArchive": len(streamIdListNotToArchive),
+	}).Debug("[manager] archiving is about to start")
+	if len(streamIdListToArchive) > 0 {
+		if err := m.startToArchiveVideosOnDate(streamIdListToArchive, targetDate); err != nil {
+			return err
+		}
+	}
+	if err := m.startDeletingUnnecessaryVideos(streamIdListNotToArchive, targetDate); err != nil {
+		return err
+	}
+	log.WithFields(log.Fields{
+		"duration(sec)": time.Since(t).Seconds(),
+		"targetDate":    targetDate,
+	}).Debug("[manager] archiving has been finished")
+	return common.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(common.ConfigBucket)
+		return b.Put(common.LastArchivingDateKey, []byte(targetDate))
+	})
+}
+
 func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
-	var listToArchive []int64
-	var listToDelete []int64
+	var streamIdListToArchive []int64
+	var streamIdListNotToArchive []int64
 	m.RLock()
 	defer m.RUnlock()
 	for id, stream := range m.streams {
 		if stream.Recording {
-			listToArchive = append(listToArchive, id)
+			streamIdListToArchive = append(streamIdListToArchive, id)
 			continue
 		}
-		listToDelete = append(listToDelete, id)
+		streamIdListNotToArchive = append(streamIdListNotToArchive, id)
 	}
 
-	return listToArchive, listToDelete
+	return streamIdListToArchive, streamIdListNotToArchive
 }
 
-func (m *Manager) startArchivingVideos(streamIdList []int64, date string) error {
+func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) error {
 	if len(streamIdList) < 1 {
 		return nil
 	}
+	var result error
 	for _, streamId := range streamIdList {
 		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
 		if err := m.archive(streamId, liveDir, date); err != nil {
 			log.Error(err)
+			result = err
 			continue
 		}
 		if err := m.writeVideoArchivingHistory(streamId, date); err != nil {
 			log.Error(err)
+			result = err
 			continue
 		}
 	}
 
-	return nil
+	return result
 }
 
 func (m *Manager) archive(streamId int64, liveDir string, date string) error {
@@ -155,22 +161,29 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 		"count":    len(liveFiles),
 		"duration": time.Since(t).Seconds(),
 	}).Debug("completed merging video files")
-	common.RemoveLiveFiles(liveDir, liveFiles)
+
+	// common.RemoveLiveFiles(liveDir, liveFiles) // wondory
 	return err
 }
 
-func (m *Manager) startDeletingVideos(streamIdList []int64, t time.Time) error {
+func (m *Manager) startDeletingUnnecessaryVideos(streamIdList []int64, targetDate string) error {
 	if len(streamIdList) < 1 {
 		return nil
 	}
 	for _, streamId := range streamIdList {
 		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
-		filesToDelete, err := common.ReadVideoFilesInDirNotOnDate(liveDir, t.Format(common.DateFormat), common.VideoFileExt)
+		filesToDelete, err := common.ReadVideoFilesInDirOnDate(liveDir, targetDate, common.VideoFileExt)
 		if err != nil {
 			log.Error(err)
 			continue
 		}
-		common.RemoveLiveFiles(liveDir, filesToDelete)
+		deleted := common.RemoveLiveFiles(liveDir, filesToDelete)
+		log.WithFields(log.Fields{
+			"streamId":   streamId,
+			"targetDate": targetDate,
+			"dir":        liveDir,
+			"deleted":    deleted,
+		}).Debug("[manater] removed unnecessary video files")
 	}
 	return nil
 }
@@ -206,3 +219,36 @@ func (m *Manager) writeVideoArchivingHistory(streamId int64, date string) error 
 		return bucket.Put([]byte(date), []byte{})
 	})
 }
+
+//common.DB.Update(func(tx *bolt.Tx) error {
+//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-1"))
+//   if err != nil {
+//       return err
+//   }
+//   //bucket.Put([]byte("20191201"), []byte{})
+//   //bucket.Put([]byte("20191202"), []byte{})
+//   bucket.Put([]byte("20191204"), []byte{})
+//   //bucket.Put([]byte("20191211"), []byte{})
+//   return nil
+//})
+//
+//common.DB.Update(func(tx *bolt.Tx) error {
+//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-2"))
+//   if err != nil {
+//       return err
+//   }
+//   bucket.Put([]byte("20191204"), []byte{})
+//   return nil
+//})
+//
+//
+//common.DB.Update(func(tx *bolt.Tx) error {
+//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-3"))
+//   if err != nil {
+//       return err
+//   }
+//   bucket.Put([]byte("20191203"), []byte{})
+//   bucket.Put([]byte("20191204"), []byte{})
+//   bucket.Put([]byte("20191205"), []byte{})
+//   return nil
+//})

@@ -72,7 +72,7 @@ func NewController(server *Server) *Controller {
 	controller := Controller{
 		server:    server,
 		manager:   server.manager,
-		staticDir: server.config.Static.Dir,
+		staticDir: server.config.StaticDir,
 	}
 	controller.init()
 	return &controller

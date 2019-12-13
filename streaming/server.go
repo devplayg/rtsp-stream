@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"errors"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
@@ -81,6 +82,7 @@ func (s *Server) init() error {
 	if err := s.initDatabase(); err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{}).Debug("[server] database has been loaded")
 
 	if err := s.initDirectories(); err != nil {
 		return err
@@ -90,13 +92,11 @@ func (s *Server) init() error {
 		return err
 	}
 
-	// Set manager
 	s.manager = NewManager(s)
 	if err := s.manager.start(); err != nil {
 		return err
 	}
 
-	// Set controller
 	s.controller = NewController(s)
 
 	return nil
@@ -137,46 +137,46 @@ func (s *Server) initDatabase() error {
 	if err := hippo.EnsureDir(s.dbDir); err != nil {
 		return err
 	}
+	var err error
 
-	dbName := filepath.Join(s.dbDir, "stream.db")
-	db, err := bolt.Open(dbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	common.DB, err = bolt.Open(filepath.Join(s.dbDir, "stream.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
 
-	defaultBuckets := [][]byte{common.StreamBucket}
-	tx, err := db.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	for _, b := range defaultBuckets {
-		if _, err := tx.CreateBucketIfNotExists(b); err != nil {
-			return err
+	defaultBuckets := [][]byte{common.StreamBucket, common.ConfigBucket}
+	return common.DB.Update(func(tx *bolt.Tx) error {
+		for _, b := range defaultBuckets {
+			if _, err := tx.CreateBucketIfNotExists(b); err != nil {
+				return err
+			}
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	common.DB = db
-	log.WithFields(log.Fields{
-		"db": dbName,
-	}).Debug("[server] BoltDB has been loaded")
-	return nil
+		return nil
+	})
 }
 
-//
-//func (s *Server) GetDbValue(bucket, key []byte) ([]byte, error) {
-//	var data []byte
-//	err := common.DB.View(func(tx *bolt.Tx) error {
-//		bucket := tx.Bucket(bucket)
-//		data = bucket.Get(key)
-//		return nil
-//	})
-//	return data, err
-//}
+func (s *Server) GetValueFromDB(bucket, key []byte) ([]byte, error) {
+	var data []byte
+	err := common.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		if b == nil {
+			return errors.New("bucket not found: " + string(bucket))
+		}
+		data = b.Get(key)
+		return nil
+	})
+	return data, err
+}
+
+func (s *Server) PutDataInDB(bucket, key, value []byte) error {
+	return common.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		if b == nil {
+			return errors.New("bucket not found: " + string(bucket))
+		}
+		return b.Put(key, value)
+	})
+}
 
 func (s *Server) initStorage() error {
 	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)

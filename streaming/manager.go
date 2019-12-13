@@ -26,6 +26,7 @@ type Manager struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	watcherCheckInterval time.Duration
+	onArchiving          bool
 	sync.RWMutex
 }
 
@@ -49,13 +50,85 @@ func (m *Manager) init() error {
 		return err
 	}
 
-	if err := m.cleanStreamMetaFile(); err != nil {
-		return err
-	}
+	//if err := m.cleanStreamMetaFile(); err != nil {
+	//	return err
+	//}
 
 	if err := m.startScheduler(); err != nil {
 		return err
 	}
+
+	m.checkOldLiveVideoFiles()
+
+	return nil
+}
+
+func (m *Manager) getLastArchivingDate(t time.Time) (string, error) {
+	val, err := m.server.GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
+	if err != nil {
+		return "", err
+	}
+	if val == nil {
+		return t.Add(7 * -24 * time.Hour).Format(common.DateFormat), nil
+	}
+	return string(val), nil
+}
+
+func (m *Manager) checkOldLiveVideoFiles() error {
+	t := time.Now().In(common.Loc)
+	lastArchivingDate, err := m.getLastArchivingDate(t)
+	if err != nil {
+		return err
+	}
+	expectedDate := t.Add(-24 * time.Hour).Format(common.DateFormat)
+	log.WithFields(log.Fields{
+		"last":     lastArchivingDate,
+		"expected": expectedDate,
+	}).Debug("[manager] checking last archiving date")
+
+	if lastArchivingDate == expectedDate {
+		m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte("20191210"))
+		return nil
+	}
+
+	from, err := time.ParseInLocation(common.DateFormat, lastArchivingDate, common.Loc)
+	if err != nil {
+		return err
+	}
+	to, err := time.ParseInLocation(common.DateFormat, expectedDate, common.Loc)
+	if err != nil {
+		return err
+	}
+	if from.After(to) {
+		return errors.New("invalid system time on scheduler")
+	}
+
+	d := from
+	for d.Before(to) || d.Equal(to) {
+		log.WithFields(log.Fields{
+			"targetDate": d.Format(common.DateFormat),
+		}).Debug("[manager] handling missed archiving task")
+		if err := m.startToArchiveVideos(d.Format(common.DateFormat)); err != nil {
+			log.Error(err)
+		}
+		d = d.Add(24 * time.Hour)
+	}
+
+	m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
+
+	//err := common.DB.View(func(tx *bolt.Tx) error {
+	//    b := tx.Bucket(common.ConfigBucket)
+	//    value := b.Get(common.LastArchivingDateKey)
+	//    if value == nil {
+	//        lastArchivingDate = t.Add(7 * -24*time.Hour).Format(common.DateFormat)
+	//        return nil
+	//    }
+	//    lastArchivingDate = string(value)
+	//    return nil
+	//})
+	//if err != nil {
+	//    return err
+	//}
 
 	return nil
 }
@@ -89,7 +162,7 @@ func (m *Manager) cleanStreamMetaFile() error {
 	for id, stream := range m.streams {
 		path := filepath.ToSlash(filepath.Join(dir, strconv.FormatInt(stream.Id, 10), stream.ProtocolInfo.MetaFileName))
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			//err := os.Remove(path)
+			err := os.Remove(path)
 			log.WithFields(log.Fields{
 				"err":  err,
 				"file": filepath.Base(path),
@@ -103,9 +176,9 @@ func (m *Manager) cleanStreamMetaFile() error {
 func (m *Manager) loadStreamsFromDatabase() error {
 	m.Lock()
 	defer m.Unlock()
-	err := common.DB.View(func(tx *bolt.Tx) error {
+	return common.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(common.StreamBucket)
-		return b.ForEach(func(k, v []byte) error {
+		b.ForEach(func(k, v []byte) error {
 			var stream Stream
 			err := json.Unmarshal(v, &stream)
 			if err != nil {
@@ -114,14 +187,23 @@ func (m *Manager) loadStreamsFromDatabase() error {
 			}
 			stream.Status = common.Stopped
 			m.streams[stream.Id] = &stream
+			log.WithFields(log.Fields{
+				"url":       stream.Uri,
+				"recording": stream.Recording,
+				"enabled":   stream.Enabled,
+			}).Debugf("[manager] 'stream-%d' has been loaded", stream.Id)
 			return nil
 		})
+
+		//b = tx.Bucket(common.ConfigBucket)
+		//lastRecordingDate := b.Get(common.LastRecordingDateKey)
+		log.WithFields(log.Fields{
+			//"lastRecordingDate": string(lastRecordingDate),
+		}).Debugf("[manager] %d stream(s) has been loaded", len(m.streams))
+		return nil
 	})
 
-	log.WithFields(log.Fields{
-		"count": len(m.streams),
-	}).Debug("streams has been set")
-	return err
+	//return err
 
 	// wondory
 	// fetch and unmarshal
