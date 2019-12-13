@@ -52,7 +52,7 @@ func (m *Manager) startScheduler() error {
 	//})
 
 	scheduler := cron.New(cron.WithLocation(common.Loc))
-	_, err := scheduler.AddFunc("25 11 * * *", func() {
+	_, err := scheduler.AddFunc("0 12 * * *", func() {
 		t := time.Now().In(common.Loc)
 		yesterdayDate := t.Add(-24 * time.Hour).Format(common.DateFormat)
 		//log.Debug("daily scheduler started")

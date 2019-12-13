@@ -103,7 +103,7 @@ func (m *Manager) cleanStreamMetaFile() error {
 func (m *Manager) loadStreamsFromDatabase() error {
 	m.Lock()
 	defer m.Unlock()
-	return common.DB.View(func(tx *bolt.Tx) error {
+	err := common.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(common.StreamBucket)
 		return b.ForEach(func(k, v []byte) error {
 			var stream Stream
@@ -117,6 +117,11 @@ func (m *Manager) loadStreamsFromDatabase() error {
 			return nil
 		})
 	})
+
+	log.WithFields(log.Fields{
+		"count": len(m.streams),
+	}).Debug("streams has been set")
+	return err
 
 	// wondory
 	// fetch and unmarshal

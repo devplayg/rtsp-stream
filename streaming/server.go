@@ -127,6 +127,9 @@ func (s *Server) initTimezone() error {
 		return err
 	}
 	common.Loc = loc
+	log.WithFields(log.Fields{
+		"timezone": loc.String(),
+	}).Debug("timezone has been set")
 	return nil
 }
 
