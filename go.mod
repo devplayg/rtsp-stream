@@ -4,8 +4,7 @@ go 1.13
 
 require (
 	github.com/boltdb/bolt v1.3.1
-	github.com/davecgh/go-spew v1.1.1
-	github.com/devplayg/hippo v0.0.0-20191207075824-7c69e754d41a
+	github.com/devplayg/hippo v1.0.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ini/ini v1.51.0 // indirect
 	github.com/gorilla/mux v1.7.3

@@ -17,7 +17,6 @@ import (
 )
 
 func (m *Manager) startScheduler() error {
-	m.scheduler = cron.New()
 
 	//common.DB.Update(func(tx *bolt.Tx) error {
 	//   bucket, err := tx.CreateBucketIfNotExists([]byte("video-1"))
@@ -52,23 +51,28 @@ func (m *Manager) startScheduler() error {
 	//   return nil
 	//})
 
-	if err := m.startDelete([]int64{1}, time.Now().In(common.Loc).Add(24*time.Hour)); err != nil {
-		log.Error(err)
-	}
-
-	_, err := m.scheduler.AddFunc("10 0 * * *", func() {
+	scheduler := cron.New(cron.WithLocation(common.Loc))
+	_, err := scheduler.AddFunc("20 11 * * *", func() {
 		t := time.Now().In(common.Loc)
+		yesterdayDate := t.Add(-24 * time.Hour).Format(common.DateFormat)
+		//log.Debug("daily scheduler started")
+		log.WithFields(log.Fields{
+			"targetDate": yesterdayDate,
+		}).Debug("[scheduler] archiving has been started")
 		listToArchive, listToDelete := m.getStreamIdListToArchive()
 
-		yesterday := t.Format(common.DateFormat)
-		if err := m.startArchive(listToArchive, yesterday); err != nil {
+		if err := m.startArchivingVideos(listToArchive, yesterdayDate); err != nil {
 			log.Error(err)
 		}
 
-		if err := m.startDelete(listToDelete, t); err != nil {
+		if err := m.startDeletingVideos(listToDelete, t); err != nil {
 			log.Error(err)
 		}
 	})
+
+	scheduler.Start()
+	m.scheduler = scheduler
+
 	return err
 }
 
@@ -76,7 +80,7 @@ func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
 	var listToArchive []int64
 	var listToDelete []int64
 	m.RLock()
-	defer m.Unlock()
+	defer m.RUnlock()
 	for id, stream := range m.streams {
 		if stream.Recording {
 			listToArchive = append(listToArchive, id)
@@ -88,7 +92,7 @@ func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
 	return listToArchive, listToDelete
 }
 
-func (m *Manager) startArchive(streamIdList []int64, date string) error {
+func (m *Manager) startArchivingVideos(streamIdList []int64, date string) error {
 	if len(streamIdList) < 1 {
 		return nil
 	}
@@ -98,28 +102,12 @@ func (m *Manager) startArchive(streamIdList []int64, date string) error {
 			log.Error(err)
 			continue
 		}
-		if err := m.writeArchiveHistory(streamId, date); err != nil {
+		if err := m.writeVideoArchivingHistory(streamId, date); err != nil {
 			log.Error(err)
 			continue
 		}
 	}
 
-	return nil
-}
-
-func (m *Manager) startDelete(streamIdList []int64, t time.Time) error {
-	if len(streamIdList) < 1 {
-		return nil
-	}
-	for _, streamId := range streamIdList {
-		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
-		filesToDelete, err := common.ReadVideoFilesInDirNotOnDate(liveDir, t.Format(common.DateFormat), common.VideoFileExt)
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		common.RemoveLiveFiles(liveDir, filesToDelete)
-	}
 	return nil
 }
 
@@ -134,7 +122,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 			"date":     date,
 			"dir":      liveDir,
 			"streamId": streamId,
-		}).Debug("no video files")
+		}).Debug("no video files to archive")
 		return nil
 	}
 	sort.SliceStable(liveFiles, func(i, j int) bool {
@@ -171,6 +159,22 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 	return err
 }
 
+func (m *Manager) startDeletingVideos(streamIdList []int64, t time.Time) error {
+	if len(streamIdList) < 1 {
+		return nil
+	}
+	for _, streamId := range streamIdList {
+		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
+		filesToDelete, err := common.ReadVideoFilesInDirNotOnDate(liveDir, t.Format(common.DateFormat), common.VideoFileExt)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		common.RemoveLiveFiles(liveDir, filesToDelete)
+	}
+	return nil
+}
+
 func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, tempDir string) (string, error) {
 	var text string
 	for _, f := range files {
@@ -192,7 +196,7 @@ func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, t
 	return f.Name(), err
 }
 
-func (m *Manager) writeArchiveHistory(streamId int64, date string) error {
+func (m *Manager) writeVideoArchivingHistory(streamId int64, date string) error {
 	bucketName := []byte(common.VideoBucketPrefix + strconv.FormatInt(streamId, 10))
 	return common.DB.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketName)
