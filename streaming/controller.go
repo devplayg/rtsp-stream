@@ -210,8 +210,8 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", common.ContentTypeJson)
-	w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
+	//w.Header().Set("Content-Type", common.ContentTypeJson)
+	//w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
 	w.Write([]byte(tags))
 }
 
