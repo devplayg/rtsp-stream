@@ -134,14 +134,16 @@ type Segment struct {
 	URI      string  `json:"uri"`
 	UnixTime int64   `json:"t"`
 	Data     []byte  `json:"-"`
+	Date     string  `json:"date"`
 }
 
-func NewSegment(seqId int64, duration float64, uri string, unixTime int64) *Segment {
+func NewSegment(seqId int64, duration float64, uri string, modTime time.Time) *Segment {
 	return &Segment{
 		SeqId:    seqId,
 		Duration: duration,
 		URI:      uri,
-		UnixTime: unixTime,
+		UnixTime: modTime.Unix(),
+		Date:     modTime.Format(DateFormat),
 	}
 }
 

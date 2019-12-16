@@ -204,20 +204,20 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags, sz, err := c.manager.getM3u8(streamId, time.Now().In(common.Loc).Format(common.DateFormat))
+	tags, err := c.manager.getM3u8(streamId, time.Now().In(common.Loc).Format(common.DateFormat))
 	if err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
 
-	//w.Header().Set("Content-Type", "application/x-mpegURL")
-	//w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
-	//w.Header().Set("Accept-Range", "bytes")
-	//w.Write([]byte(tags))
-
 	w.Header().Set("Content-Type", "application/x-mpegURL")
-	size := strconv.FormatInt(sz, 10)
-	w.Header().Set("Content-Length", size)
+	w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
+	//w.Header().Set("Accept-Range", "bytes")
+	w.Write([]byte(tags))
+
+	//w.Header().Set("Content-Type", "application/x-mpegURL")
+	//size := strconv.FormatInt(sz, 10)
+	//w.Header().Set("Content-Length", size)
 
 	http.ServeFile(w, r, tags)
 }

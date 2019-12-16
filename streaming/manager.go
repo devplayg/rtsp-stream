@@ -511,26 +511,18 @@ func (m *Manager) startStreamWatcher() {
 	}
 }
 
-func (m *Manager) getM3u8(id int64, date string) (string, int64, error) {
+func (m *Manager) getM3u8(id int64, date string) (string, error) {
 	stream := m.getStreamById(id)
 	if stream == nil {
-		return "", 0, common.ErrorStreamNotFound
+		return "", common.ErrorStreamNotFound
 	}
 
 	segments, err := stream.getM3u8Segments(date)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 	tags := stream.makeM3u8Tags(segments)
-
-	f, err := ioutil.TempFile("", "m3u8")
-	f.WriteString(tags)
-	f.Close()
-	fa, _ := os.Stat(f.Name())
-
-	log.Debug(f.Name())
-	return f.Name(), fa.Size(), err
-	// return tags, nil
+	return tags, nil
 }
 
 func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
