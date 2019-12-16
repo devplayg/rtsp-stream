@@ -522,7 +522,11 @@ func (m *Manager) getM3u8(id int64, date string) (string, error) {
 		return "", err
 	}
 	tags := stream.makeM3u8Tags(segments)
-	return tags, nil
+
+	f, err := ioutil.TempFile("", tags)
+	defer f.Close()
+	return f.Name(), err
+	// return tags, nil
 }
 
 func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
