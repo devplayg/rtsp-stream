@@ -179,16 +179,19 @@ func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 	playlist, _ := m3u8.NewMediaPlaylist(size, size)
 	defer playlist.Close()
 
-	if len(segments) > 0 {
-		playlist.SeqNo = uint64(segments[0].SeqId)
-	}
-
 	for _, seg := range segments {
 		err := playlist.Append(seg.URI, seg.Duration, "")
 		if err != nil {
 			log.Error(err)
 		}
 	}
+	if len(segments) > 0 {
+		playlist.SeqNo = uint64(segments[0].SeqId)
+	}
+	log.WithFields(log.Fields{
+		"playSeqNo": playlist.SeqNo,
+		"len(seg)":  len(segments),
+	}).Debug("test1")
 	playlist.Close()
 	return playlist.Encode().String()
 }
