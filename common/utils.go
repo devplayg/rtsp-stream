@@ -22,7 +22,7 @@ func Int64ToBytes(i int64) []byte {
 	return buf
 }
 
-func ReadVideoFilesInDirOnDate(dir, date, ext string) ([]os.FileInfo, error) {
+func ReadVideoFilesOnDateInDir(dir, date, ext string) ([]os.FileInfo, error) {
 	list, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -40,9 +40,9 @@ func ReadVideoFilesInDirOnDate(dir, date, ext string) ([]os.FileInfo, error) {
 		}
 
 		if f.Size() < 1 {
-			if err := os.Remove(filepath.Join(dir, f.Name())); err != nil {
-				log.Error(err)
-			}
+			//if err := os.Remove(filepath.Join(dir, f.Name())); err != nil {
+			//	log.Error(err)
+			//}
 			continue
 		}
 
@@ -65,36 +65,36 @@ func ReadVideoFilesInDirOnDate(dir, date, ext string) ([]os.FileInfo, error) {
 	return files, nil
 }
 
-func ReadVideoFilesInDirNotOnDate(dir, date, ext string) ([]os.FileInfo, error) {
-	list, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	//var text string
-	files := make([]os.FileInfo, 0)
-	for _, f := range list {
-		if f.IsDir() {
-			continue
-		}
-
-		if !f.Mode().IsRegular() {
-			continue
-		}
-
-		if !strings.HasSuffix(f.Name(), ext) {
-			continue
-		}
-
-		if f.ModTime().In(Loc).Format("20060102") == date {
-			continue
-		}
-
-		files = append(files, f)
-	}
-
-	return files, nil
-}
+//func ReadVideoFilesInDirNotOnDate(dir, date, ext string) ([]os.FileInfo, error) {
+//	list, err := ioutil.ReadDir(dir)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	//var text string
+//	files := make([]os.FileInfo, 0)
+//	for _, f := range list {
+//		if f.IsDir() {
+//			continue
+//		}
+//
+//		if !f.Mode().IsRegular() {
+//			continue
+//		}
+//
+//		if !strings.HasSuffix(f.Name(), ext) {
+//			continue
+//		}
+//
+//		if f.ModTime().In(Loc).Format("20060102") == date {
+//			continue
+//		}
+//
+//		files = append(files, f)
+//	}
+//
+//	return files, nil
+//}
 
 func RemoveLiveFiles(dir string, files []os.FileInfo) int {
 	count := 0

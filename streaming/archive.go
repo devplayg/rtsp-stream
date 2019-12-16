@@ -28,7 +28,7 @@ func (m *Manager) canArchive() bool {
 
 func (m *Manager) startScheduler() error {
 	scheduler := cron.New(cron.WithLocation(common.Loc))
-	_, err := scheduler.AddFunc("3 14 * * *", func() {
+	_, err := scheduler.AddFunc("10 0 * * *", func() {
 		if !m.canArchive() {
 			log.Debug("archiving is already running")
 			return
@@ -118,7 +118,7 @@ func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) 
 }
 
 func (m *Manager) archive(streamId int64, liveDir string, date string) error {
-	liveFiles, err := common.ReadVideoFilesInDirOnDate(liveDir, date, common.VideoFileExt)
+	liveFiles, err := common.ReadVideoFilesOnDateInDir(liveDir, date, common.VideoFileExt)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 		"duration": time.Since(t).Seconds(),
 	}).Debug("completed merging video files")
 
-	// common.RemoveLiveFiles(liveDir, liveFiles) // wondory
+	common.RemoveLiveFiles(liveDir, liveFiles)
 	return err
 }
 
@@ -172,7 +172,7 @@ func (m *Manager) startDeletingUnnecessaryVideos(streamIdList []int64, targetDat
 	}
 	for _, streamId := range streamIdList {
 		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
-		filesToDelete, err := common.ReadVideoFilesInDirOnDate(liveDir, targetDate, common.VideoFileExt)
+		filesToDelete, err := common.ReadVideoFilesOnDateInDir(liveDir, targetDate, common.VideoFileExt)
 		if err != nil {
 			log.Error(err)
 			continue

@@ -178,6 +178,16 @@ func (s *Server) PutDataInDB(bucket, key, value []byte) error {
 	})
 }
 
+func (s *Server) DeleteDataInDB(bucket, key []byte) error {
+	return common.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		if b == nil {
+			return errors.New("bucket not found" + string(bucket))
+		}
+		return b.Delete(key)
+	})
+}
+
 func (s *Server) initStorage() error {
 	client, err := minio.New(s.config.Storage.Address, s.config.Storage.AccessKey, s.config.Storage.SecretKey, s.config.Storage.UseSSL)
 	if err != nil {

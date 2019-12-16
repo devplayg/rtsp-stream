@@ -80,14 +80,14 @@ func (m *Manager) checkOldLiveVideoFiles() error {
 	if err != nil {
 		return err
 	}
-	expectedDate := t.Add(-24 * time.Hour).Format(common.DateFormat)
+	expectedDate := t.Add(-24 * time.Hour).Format(common.DateFormat) // yesterday
 	log.WithFields(log.Fields{
 		"last":     lastArchivingDate,
 		"expected": expectedDate,
 	}).Debug("[manager] checking last archiving date")
 
 	if lastArchivingDate == expectedDate {
-		m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte("20191210"))
+		m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
 		return nil
 	}
 
@@ -154,24 +154,25 @@ func (m *Manager) start() error {
 	return nil
 }
 
-func (m *Manager) cleanStreamMetaFile() error {
-	m.Lock()
-	defer m.Unlock()
-
-	dir := filepath.Join(m.server.config.Storage.LiveDir)
-	for id, stream := range m.streams {
-		path := filepath.ToSlash(filepath.Join(dir, strconv.FormatInt(stream.Id, 10), stream.ProtocolInfo.MetaFileName))
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			err := os.Remove(path)
-			log.WithFields(log.Fields{
-				"err":  err,
-				"file": filepath.Base(path),
-			}).Debugf("[manager] cleaned meta file of stream-%d", id)
-		}
-	}
-
-	return nil
-}
+//
+//func (m *Manager) cleanStreamMetaFile() error {
+//	m.Lock()
+//	defer m.Unlock()
+//
+//	dir := filepath.Join(m.server.config.Storage.LiveDir)
+//	for id, stream := range m.streams {
+//		path := filepath.ToSlash(filepath.Join(dir, strconv.FormatInt(stream.Id, 10), stream.ProtocolInfo.MetaFileName))
+//		if _, err := os.Stat(path); !os.IsNotExist(err) {
+//			err := os.Remove(path)
+//			log.WithFields(log.Fields{
+//				"err":  err,
+//				"file": filepath.Base(path),
+//			}).Debugf("[manager] cleaned meta file of stream-%d", id)
+//		}
+//	}
+//
+//	return nil
+//}
 
 func (m *Manager) loadStreamsFromDatabase() error {
 	m.Lock()
@@ -338,13 +339,14 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 	return nil
 }
 
-func (m *Manager) removeStreamDir(stream *Stream) error {
-	err := os.RemoveAll(stream.liveDir)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+//
+//func (m *Manager) removeStreamDir(stream *Stream) error {
+//	err := os.RemoveAll(stream.liveDir)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 func (m *Manager) createStreamDir(stream *Stream) error {
 	stream.liveDir = filepath.ToSlash(filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(stream.Id, 10)))

@@ -98,7 +98,6 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 }
 
 func (s *Assistant) saveSegments(segments map[int64]*common.Segment) error {
-
 	return s.stream.db.Update(func(tx *bolt.Tx) error {
 		for seqId, seg := range segments {
 			bucketName := []byte(time.Unix(seg.UnixTime, 0).In(common.Loc).Format(common.DateFormat))

@@ -171,7 +171,7 @@ func (s *Stream) stop() {
 	log.WithFields(log.Fields{
 		"uri":    s.Uri,
 		"result": err,
-	}).Debugf("    [stream-%d] process has been stopped", s.Id)
+	}).Infof("    [stream-%d] process has been stopped", s.Id)
 }
 
 func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
