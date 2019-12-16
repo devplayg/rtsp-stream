@@ -39,12 +39,12 @@ func (m *Manager) startScheduler() error {
 			m.RUnlock()
 		}()
 
-		// Yesterday
-		targetDate := time.Now().In(common.Loc).Add(-24 * time.Hour).Format(common.DateFormat)
+		targetDate := time.Now().In(common.Loc).Add(-24 * time.Hour).Format(common.DateFormat) // Yesterday
 		if err := m.startToArchiveVideos(targetDate); err != nil {
 			log.Error(err)
 			return
 		}
+
 	})
 
 	scheduler.Start()
@@ -61,22 +61,23 @@ func (m *Manager) startToArchiveVideos(targetDate string) error {
 		"streamsToArchive":    len(streamIdListToArchive),
 		"streamsNotToArchive": len(streamIdListNotToArchive),
 	}).Debug("[manager] archiving is about to start")
+
 	if len(streamIdListToArchive) > 0 {
 		if err := m.startToArchiveVideosOnDate(streamIdListToArchive, targetDate); err != nil {
+			log.Error("failed to archive videos")
 			return err
 		}
 	}
-	if err := m.startDeletingUnnecessaryVideos(streamIdListNotToArchive, targetDate); err != nil {
+	if err := m.startToDeleteVideosNotToBeArchived(streamIdListNotToArchive, targetDate); err != nil {
+		log.Error("failed to delete videos")
 		return err
 	}
+
 	log.WithFields(log.Fields{
 		"duration(sec)": time.Since(t).Seconds(),
 		"targetDate":    targetDate,
 	}).Debug("[manager] archiving has been finished")
-	return common.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(common.ConfigBucket)
-		return b.Put(common.LastArchivingDateKey, []byte(targetDate))
-	})
+	return m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(targetDate))
 }
 
 func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
@@ -96,9 +97,6 @@ func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
 }
 
 func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) error {
-	if len(streamIdList) < 1 {
-		return nil
-	}
 	var result error
 	for _, streamId := range streamIdList {
 		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
@@ -112,9 +110,31 @@ func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) 
 			result = err
 			continue
 		}
+
+		if err := m.deleteLiveDataOnStreamDB(streamId, date); err != nil {
+			log.Error(err)
+			result = err
+			continue
+		}
 	}
 
 	return result
+}
+
+func (m *Manager) deleteLiveDataOnStreamDB(streamId int64, date string) error {
+	stream := m.getStreamById(streamId)
+	if stream == nil {
+		return errors.New(fmt.Sprintf("invalid stream id: %d", streamId))
+	}
+
+	return stream.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(date))
+		if b == nil {
+			return errors.New(fmt.Sprintf("streamId: %d, invalid bucket: %s", streamId, date))
+		}
+
+		return b.DeleteBucket([]byte(date))
+	})
 }
 
 func (m *Manager) archive(streamId int64, liveDir string, date string) error {
@@ -166,7 +186,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 	return err
 }
 
-func (m *Manager) startDeletingUnnecessaryVideos(streamIdList []int64, targetDate string) error {
+func (m *Manager) startToDeleteVideosNotToBeArchived(streamIdList []int64, targetDate string) error {
 	if len(streamIdList) < 1 {
 		return nil
 	}
@@ -174,7 +194,12 @@ func (m *Manager) startDeletingUnnecessaryVideos(streamIdList []int64, targetDat
 		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
 		filesToDelete, err := common.ReadVideoFilesOnDateInDir(liveDir, targetDate, common.VideoFileExt)
 		if err != nil {
-			log.Error(err)
+			log.WithFields(log.Fields{
+				"streamId":   streamId,
+				"targetDate": targetDate,
+				"dir":        liveDir,
+			})
+			log.Error("failed to remove unnecessary video files")
 			continue
 		}
 		deleted := common.RemoveLiveFiles(liveDir, filesToDelete)
