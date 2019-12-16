@@ -404,9 +404,9 @@ func (c *Controller) GetDailyVideoOld(w http.ResponseWriter, r *http.Request) {
 
 //func (c *Controller) RedirectToVideoFile(w http.ResponseWriter, r *http.Request) {
 //	vars := mux.Vars(r)
-//	seq, _ := strconv.ParseInt(vars["seq"], 10, 16)
+//	seq, _ := strconv.ParseInt(vars["seq"], 10, 64)
 //	var data []byte
-//	//streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+//	//streamId, _ := strconv.ParseInt(vars["id"], 10, 64)
 //	//date := vars["date"]
 //	bucket := []byte(fmt.Sprintf("stream-%s-%s", vars["id"], vars["date"]))
 //
@@ -550,7 +550,7 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 
 //func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {
 //	vars := mux.Vars(r)
-//	streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+//	streamId, _ := strconv.ParseInt(vars["id"], 10, 64)
 //	date := vars["date"]
 //	bucket := []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
 //	var maxTargetDuration float32

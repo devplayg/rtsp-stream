@@ -143,7 +143,7 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64]*c
 		}
 
 		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, common.LiveVideoFilePrefix), common.VideoFileExt)
-		seqId, _ := strconv.ParseInt(str, 10, 16)
+		seqId, _ := strconv.ParseInt(str, 10, 64)
 		segment := common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix())
 		log.WithFields(log.Fields{
 			"segId":          seg.SeqId,

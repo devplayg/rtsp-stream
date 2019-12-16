@@ -260,7 +260,7 @@ func parseAndGetStreamId(r *http.Request) (int64, error) {
 		return 0, errors.New("empty stream id")
 	}
 
-	streamId, _ := strconv.ParseInt(vars["id"], 10, 16)
+	streamId, _ := strconv.ParseInt(vars["id"], 10, 64)
 	return streamId, nil
 }
 

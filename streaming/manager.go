@@ -562,7 +562,7 @@ func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
 func (m *Manager) getLiveVideoStatus(bucketNames []string, date string) map[string]string {
 	liveMap := common.CreateDefaultDayRecord("live", bucketNames)
 	for _, bn := range bucketNames {
-		streamId, err := strconv.ParseInt(strings.TrimPrefix(bn, common.VideoBucketPrefix), 10, 16)
+		streamId, err := strconv.ParseInt(strings.TrimPrefix(bn, common.VideoBucketPrefix), 10, 64)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"bucketName": bn,
