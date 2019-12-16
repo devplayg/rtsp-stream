@@ -145,6 +145,12 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64]*c
 		str := strings.TrimSuffix(strings.TrimPrefix(seg.URI, common.LiveVideoFilePrefix), common.VideoFileExt)
 		seqId, _ := strconv.ParseInt(str, 10, 16)
 		segment := common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix())
+		log.WithFields(log.Fields{
+			"segId":          seg.SeqId,
+			"segUri":         seg.URI,
+			"str":            str,
+			"segIdConverted": seqId,
+		}).Debug("mediaPlayList")
 		data, _ := json.Marshal(common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
 		segment.Data = data
 		m[seqId] = segment
