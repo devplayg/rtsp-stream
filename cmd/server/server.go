@@ -19,7 +19,7 @@ const (
 
 var (
 	fs         = pflag.NewFlagSet(appName, pflag.ContinueOnError)
-	debug      = fs.Bool("debug", true, "Debug")
+	debug      = fs.Bool("debug", false, "Debug")
 	verbose    = fs.BoolP("verbose", "v", false, "Verbose")
 	version    = fs.Bool("version", false, "Version")
 	configPath = fs.StringP("config", "c", "config.yaml", "Configuration file")

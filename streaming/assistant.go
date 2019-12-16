@@ -111,7 +111,7 @@ func (s *Assistant) saveSegments(segments map[int64]*common.Segment) error {
 				"segId":   seg.SeqId,
 				"segUri":  seg.URI,
 				"segTime": seg.UnixTime,
-			}).Debug("saved a segment")
+			}).Trace("saved a segment")
 			if err = bucket.Put(common.Int64ToBytes(seqId), seg.Data); err != nil {
 				return err
 			}
@@ -150,7 +150,7 @@ func (s *Assistant) generateSegments(playlist *m3u8.MediaPlaylist) (map[int64]*c
 			"segUri":         seg.URI,
 			"str":            str,
 			"segIdConverted": seqId,
-		}).Debug("mediaPlayList")
+		}).Trace("mediaPlayList")
 		data, _ := json.Marshal(common.NewSegment(seqId, seg.Duration, seg.URI, file.ModTime().Unix()))
 		segment.Data = data
 		m[seqId] = segment
