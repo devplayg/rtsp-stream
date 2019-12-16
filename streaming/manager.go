@@ -523,8 +523,10 @@ func (m *Manager) getM3u8(id int64, date string) (string, error) {
 	}
 	tags := stream.makeM3u8Tags(segments)
 
-	f, err := ioutil.TempFile("", tags)
+	f, err := ioutil.TempFile("", "m3u8")
 	defer f.Close()
+	f.WriteString(tags)
+	log.Debug(f.Name())
 	return f.Name(), err
 	// return tags, nil
 }
