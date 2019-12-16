@@ -105,6 +105,11 @@ func (s *Assistant) saveSegments(segments map[int64]*common.Segment) error {
 			if err != nil {
 				return err
 			}
+			log.WithFields(log.Fields{
+				"bucket": bucketName,
+				"key":    seqId,
+				"val":    seg,
+			}).Debug("saved a segment")
 			if err = bucket.Put(common.Int64ToBytes(seqId), seg.Data); err != nil {
 				return err
 			}
