@@ -210,7 +210,7 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", common.ContentTypeM3u8)
+	w.Header().Set("Content-Type", "application/x-mpegURL")
 	w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
 	w.Header().Set("Accept-Range", "bytes")
 	w.Write([]byte(tags))
