@@ -58,7 +58,11 @@ func (m *Manager) init() error {
 		return err
 	}
 
-	m.checkOldLiveVideoFiles()
+	//if len(m.streams) > 0 {
+	//	if err := m.checkOldLiveVideoFiles(); err != nil {
+	//		return err
+	//	}
+	//}
 
 	return nil
 }
@@ -281,6 +285,7 @@ func (m *Manager) issueStream(input *Stream) error {
 		return err
 	}
 	input.Id = id
+	input.Created = time.Now().Unix()
 	m.streams[input.Id] = input
 
 	return SaveStreamInDB(input)
@@ -453,6 +458,9 @@ func (m *Manager) Stop() error {
 	m.cancel()
 	for id, _ := range m.streams {
 		m.stopStreaming(id, "manager")
+		if m.streams[id].db == nil {
+			continue
+		}
 		if err := m.streams[id].db.Close(); err != nil {
 			log.Error(err)
 		}
@@ -467,7 +475,7 @@ func (m *Manager) startStreamWatcher() {
 	}).Debug("[manager] watcher has been started")
 	for {
 		for id, stream := range m.streams {
-			active, lastStreamUpdated := stream.getStatus()
+			active, lastStreamUpdated, diff := stream.getStatus()
 			stream.LastStreamUpdated = lastStreamUpdated
 			if !stream.Enabled {
 				continue
@@ -475,7 +483,10 @@ func (m *Manager) startStreamWatcher() {
 
 			// just in case (if you restart immediately after stopping)
 			if !active && stream.Status == common.Started {
-				log.WithFields(log.Fields{}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", stream.Id)
+				log.WithFields(log.Fields{
+					"lastStreamUpdated": lastStreamUpdated.Format(time.RFC3339),
+					"diff":              diff,
+				}).Errorf("###[stream-%d]### status is 'started' but stream wasn't alive.", stream.Id)
 				if err := m.stopStreaming(id, "watcher"); err != nil {
 					log.Error(err)
 				}
@@ -544,11 +555,14 @@ func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
 		return nil, nil
 	}
 	t := time.Now().In(common.Loc)
+	lastArchivingDateKey, _ := m.server.GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
 	result := map[string]interface{}{
-		"date":    t.Format(common.DateFormat),
-		"streams": streams,
-		"videos":  nil,
+		"date":                 t.Format(common.DateFormat),
+		"lastArchivingDateKey": string(lastArchivingDateKey),
+		"streams":              streams,
+		"videos":               nil,
 	}
+
 	bucketNames := m.convertStreamsToBucketNames(streams)
 	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
 	if err != nil {
@@ -593,6 +607,9 @@ func (m *Manager) getPrevVideoRecords(bucketNames []string) (common.DayRecordMap
 	err := common.DB.View(func(tx *bolt.Tx) error {
 		for _, bn := range bucketNames {
 			b := tx.Bucket([]byte(bn))
+			if b == nil {
+				return nil
+			}
 			b.ForEach(func(key, _ []byte) error {
 				date := string(key)
 				if _, ok := dayRecordMap[date]; !ok {

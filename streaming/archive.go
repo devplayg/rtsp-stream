@@ -26,6 +26,15 @@ func (m *Manager) canArchive() bool {
 	return true
 }
 
+func (m *Manager) testScheduler() error {
+	targetDate := time.Now().In(common.Loc).Add(-24 * time.Hour).Format(common.DateFormat) // Yesterday
+	if err := m.startToArchiveVideos(targetDate); err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
+}
+
 func (m *Manager) startScheduler() error {
 	scheduler := cron.New(cron.WithLocation(common.Loc))
 	_, err := scheduler.AddFunc("10 0 * * *", func() {
@@ -57,9 +66,9 @@ func (m *Manager) startToArchiveVideos(targetDate string) error {
 	t := time.Now()
 	streamIdListToArchive, streamIdListNotToArchive := m.getStreamIdListToArchive()
 	log.WithFields(log.Fields{
-		"targetDate":          targetDate,
-		"streamsToArchive":    len(streamIdListToArchive),
-		"streamsNotToArchive": len(streamIdListNotToArchive),
+		"targetDate":               targetDate,
+		"streamsCountToArchive":    len(streamIdListToArchive),
+		"streamsCountNotToArchive": len(streamIdListNotToArchive),
 	}).Debug("[manager] archiving is about to start")
 
 	if len(streamIdListToArchive) > 0 {
@@ -111,11 +120,11 @@ func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) 
 			continue
 		}
 
-		if err := m.deleteLiveDataOnStreamDB(streamId, date); err != nil {
-			log.Error(err)
-			result = err
-			continue
-		}
+		//if err := m.deleteLiveDataOnStreamDB(streamId, date); err != nil {
+		//	log.Error(err)
+		//	result = err
+		//	continue
+		//}
 	}
 
 	return result
@@ -170,7 +179,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 		"dir":      liveDir,
 		"streamId": streamId,
 	}).Debugf("found %d video files; merging video files..", len(liveFiles))
-	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName))
+	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName), m.server.config.HlsOptions.SegmentTime)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -108,7 +109,7 @@ func RemoveLiveFiles(dir string, files []os.FileInfo) int {
 	return count
 }
 
-func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
+func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) error {
 	inputFile, _ := filepath.Abs(listFilePath)
 	outputFile := filepath.Base(metaFilePath)
 
@@ -139,9 +140,9 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string) error {
 		"-segment_list",
 		outputFile,
 		"-segment_list_flags",
-		"+live",
+		"+cache",
 		"-segment_time",
-		"30",
+		strconv.Itoa(segmentTime),
 		VideoFilePrefix+"%d.ts",
 	)
 	//output, err := cmd.CombinedOutput()

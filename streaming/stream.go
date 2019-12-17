@@ -34,6 +34,7 @@ type Stream struct {
 	Pid                int                  `json:"pid"`
 	LastStreamUpdated  time.Time            `json:"lastStreamUpdated"`
 	MaxStreamSeqId     int64                `json:"maxStreamSeqId"`
+	Created            int64                `json:"created"`
 	lastAttemptTime    time.Time
 	assistant          *Assistant
 	ctx                context.Context
@@ -46,29 +47,31 @@ func NewStream() *Stream {
 	return &Stream{}
 }
 
-func (s *Stream) getStatus() (bool, time.Time) {
+func (s *Stream) getStatus() (bool, time.Time, float64) {
 	active := false
 	lastStreamUpdated := time.Time{}
 
 	if s.cmd == nil || s.cmd.Process == nil {
-		return active, lastStreamUpdated
+		return active, lastStreamUpdated, 0
 	}
 
 	// Check if "index.m3u8" has been updated within the last 8 seconds
 	path := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
 	file, err := os.Stat(path)
+	var diff float64
 	if !os.IsNotExist(err) {
 		lastStreamUpdated = file.ModTime()
-		if time.Now().Sub(file.ModTime()).Seconds() <= 8.0 {
+		diff = time.Now().Sub(file.ModTime()).Seconds()
+		if diff <= 8.0 {
 			active = true
 		}
 	}
 
-	return active, lastStreamUpdated
+	return active, lastStreamUpdated, diff
 }
 
 func (s *Stream) IsActive() bool {
-	active, _ := s.getStatus()
+	active, _, _ := s.getStatus()
 	return active
 	//if s.cmd == nil || s.cmd.Process == nil {
 	//    return false

@@ -39,6 +39,8 @@ func (c *Controller) init() {
 	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
 
+	r.HandleFunc("/test", c.Test).Methods("GET")
+
 	// Video records
 	r.HandleFunc("/videos", c.GetVideoRecords).Methods("GET")
 
@@ -96,6 +98,16 @@ func (c *Controller) GetVideoRecords(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", common.ContentTypeJson)
 	w.Write(data)
+}
+
+func (c *Controller) Test(w http.ResponseWriter, r *http.Request) {
+	err := c.manager.testScheduler()
+	if err != nil {
+		Response(w, r, err, http.StatusBadRequest)
+		return
+	}
+
+	Response(w, r, nil, http.StatusOK)
 }
 
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
