@@ -330,8 +330,20 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 	if err != nil {
 		return err
 	}
+
 	//t := time.Now().In(common.Loc)
 	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		if !f.Mode().IsRegular() {
+			continue
+		}
+
+		if !strings.HasSuffix(f.Name(), common.VideoFileExt) {
+			continue
+		}
 		//if f.ModTime().In(common.Loc).Format(common.DateFormat) == t.Format(common.DateFormat) {
 		//	continue
 		//}

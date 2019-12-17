@@ -30,8 +30,9 @@ const (
 
 	// Content types
 	ContentTypeJson = "application/json"
-	ContentTypeTs   = "video/mp2t"
-	ContentTypeM3u8 = "application/vnd.apple.mpegurl"
+	ContentTypeTs   = "video/MP2T"
+	ContentTypeM3u8 = "application/x-mpegURL"
+	//ContentTypeM3u8 = "application/vnd.apple.mpegurl"
 
 	LiveBucketName = "live"
 
@@ -135,6 +136,7 @@ type Segment struct {
 	UnixTime int64   `json:"t"`
 	Data     []byte  `json:"-"`
 	Date     string  `json:"date"`
+	//Discontinuity bool    `json:"discontinuity"`
 }
 
 func NewSegment(seqId int64, duration float64, uri string, modTime time.Time) *Segment {

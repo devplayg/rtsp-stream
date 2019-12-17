@@ -56,6 +56,7 @@ func (s *Assistant) startCapturingLiveM3u8(size int) {
 				log.Error(err)
 			}
 		}
+
 		//segs := getM3u8Segments(stream, "")
 		//tags := makeM3u8Tags(stream, segs)
 
@@ -75,7 +76,7 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 		return err
 	}
 
-	if playlist == nil {
+	if playlist == nil || len(playlist.Segments) < 1 {
 		log.Warn("m3u8 length is zero")
 		return nil
 	}
@@ -86,12 +87,13 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 	}
 	s.stream.MaxStreamSeqId = maxSeqId
 	if err := s.saveSegments(segments); err != nil {
-		return nil
+		return err
 	}
 
 	log.WithFields(log.Fields{
-		"count":     len(segments),
-		"lastSeqId": maxSeqId,
+		"count":      len(segments),
+		"lastSeqId":  maxSeqId,
+		"firstSeqId": playlist.Segments[0].SeqId,
 	}).Debugf("    [stream-%d] read m3u8", s.stream.Id)
 
 	return nil

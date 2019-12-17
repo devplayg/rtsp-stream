@@ -3,12 +3,23 @@
 $(function() {
 
     let player = videojs('example-video', {
-        playbackRates: [0.5, 1, 1.5, 2, 4, 8]
+        playbackRates: [0.5, 1, 1.5, 2],
     });
-    videojs.options.autoplay = true;
+
+
+    // videojs.options.autoplay = true;
     let $table = $("#table-videos");
 
-
+    // let player = videojs.getPlayer("example-video").ready(function(){
+        // // When the player is ready, get a reference to it
+        // var myPlayer = this;
+        // // +++ Define the playback rate options +++
+        // var options = {"playbackRates":[0.5, 1, 1.5, 2, 4]};
+        // // +++ Initialize the playback rate button +++
+        // myPlayer.controlBar.playbackRateMenuButton = myPlayer.controlBar.addChild('PlaybackRateMenuButton', {
+        //     playbackRates: options.playbackRates
+        // });
+    // });
 
     updateVideos();
 
@@ -62,31 +73,65 @@ $(function() {
         'click .play': function (e, val, row, idx) {
             let id = $(e.currentTarget).data("id"),
                 url = "/videos/" + id + "/date/" + row.date + "/m3u8";
-            player.src({
-                "type": "application/x-mpegURL",
-                "src": url
-            });
-            player.play();
+
+            playVideo(url, false);
         },
         'click .live': function (e, val, row, idx) {
             let id = $(e.currentTarget).data("id"),
                 url = "/videos/" + id + "/live/m3u8";
-            player.src({
-                "type": "application/x-mpegURL",
-                "src": url
-            });
-            player.play();
+            playVideo(url, true);
         },
         'click .today': function (e, val, row, idx) {
             let id = $(e.currentTarget).data("id"),
                 url = "/videos/" + id + "/today/m3u8";
-            player.src({
-                "type": "application/x-mpegURL",
-                "src": url
-            });
-            player.play();
+            playVideo(url, false);
         },
     };
+
+    function playVideo(src, live) {
+        player.src({
+            "type": "application/x-mpegURL",
+            "src": src
+        });
+        player.play();
+        // videojs.getPlayer("example-video").src({
+        //     "type": "application/x-mpegURL",
+        //     "src": src
+        // });
+
+        // if (live) {
+        //     videojs.getPlayer("example-video").controlBar.removeChild("PlaybackRateMenuButton");
+        // } else {
+        //     videojs.getPlayer("example-video").controlBar.addChild('PlaybackRateMenuButton', {
+        //         playbackRates:  [0.5, 1, 1.5, 2, 4],
+        //     });
+        // }
+
+        // When the player is ready, get a reference to it
+        // var myPlayer = this;
+        // // +++ Define the playback rate options +++
+        // var options = {"playbackRates":[0.5, 1, 1.5, 2, 4]};
+        // // +++ Initialize the playback rate button +++
+        // myPlayer.controlBar.playbackRateMenuButton = myPlayer.controlBar.addChild('PlaybackRateMenuButton', {
+        //     playbackRates: options.playbackRates
+        // });
+
+        // videojs.getPlayer("example-video").play();
+
+
+
+
+
+        // videojs.getPlayer("example-video").ready(function(){
+        //     // When the player is ready, get a reference to it
+        //     var myPlayer = this;
+        //     options = {"playbackRates":[0.5, 1, 1.5, 2, 4]};
+        //     myPlayer.controlBar.playbackRateMenuButton = myPlayer.controlBar.addChild('PlaybackRateMenuButton', {
+        //         playbackRates: options.playbackRates
+        //     });
+        // });
+
+    }
     //
     // let $table = $("#table-videos");
     //     columns = [{

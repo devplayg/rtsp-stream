@@ -11,9 +11,7 @@ import (
 	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"html/template"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -222,16 +220,13 @@ func (c *Controller) GetTodayM3u8(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/x-mpegURL")
+	//path := filepath.Join(c.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10), "today.m3u8")
+	//http.ServeFile(w, r, path)
+
+	w.Header().Set("Content-Type", common.ContentTypeM3u8)
 	w.Header().Set("Content-Length", strconv.Itoa(len(tags)))
 	//w.Header().Set("Accept-Range", "bytes")
 	w.Write([]byte(tags))
-
-	//w.Header().Set("Content-Type", "application/x-mpegURL")
-	//size := strconv.FormatInt(sz, 10)
-	//w.Header().Set("Content-Length", size)
-
-	http.ServeFile(w, r, tags)
 }
 
 func (c *Controller) GetLiveM3u8(w http.ResponseWriter, r *http.Request) {
@@ -288,25 +283,27 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	path := filepath.ToSlash(filepath.Join(c.server.config.Storage.LiveDir, vars["id"], vars["media"]+".ts"))
-	file, err := os.Open(path)
-	if err != nil {
-		Response(w, r, err, http.StatusInternalServerError)
-		return
-	}
+	http.ServeFile(w, r, path)
 
-	stat, err := file.Stat()
-	if err != nil {
-		Response(w, r, err, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Accept-Range", "bytes")
-	w.Header().Set("Content-Type", common.ContentTypeTs)
-	w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
-	if _, err = io.Copy(w, file); err != nil {
-		Response(w, r, err, http.StatusInternalServerError)
-		return
-	}
+	//file, err := os.Open(path)
+	//if err != nil {
+	//	Response(w, r, err, http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	//stat, err := file.Stat()
+	//if err != nil {
+	//	Response(w, r, err, http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	//w.Header().Set("Accept-Range", "bytes")
+	//w.Header().Set("Content-Type", common.ContentTypeTs)
+	//w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
+	//if _, err = io.Copy(w, file); err != nil {
+	//	Response(w, r, err, http.StatusInternalServerError)
+	//	return
+	//}
 }
 
 //func (c *Controller) GetM3u8(w http.ResponseWriter, r *http.Request) {

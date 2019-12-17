@@ -131,6 +131,7 @@ func (s *Stream) start() (int, error) {
 	s.cmd = GetHlsStreamingCommand(s)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
+		// After finishing, you need to do some post-processing
 		defer func() {
 			if s.assistant != nil {
 				s.assistant.stop()
@@ -184,6 +185,7 @@ func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 
 	for _, seg := range segments {
 		err := playlist.Append(seg.URI, seg.Duration, "")
+		playlist.SetDiscontinuity()
 		if err != nil {
 			log.Error(err)
 		}
@@ -195,6 +197,8 @@ func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 		"playSeqNo": playlist.SeqNo,
 		"len(seg)":  len(segments),
 	}).Debug("test1")
+	//playlist.MediaType = m3u8.VOD
+	//playlist.SetVersion(4)
 	playlist.Close()
 	return playlist.Encode().String()
 }
