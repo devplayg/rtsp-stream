@@ -111,7 +111,7 @@ func RemoveLiveFiles(dir string, files []os.FileInfo) int {
 
 func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) error {
 	inputFile, _ := filepath.Abs(listFilePath)
-	outputFile := filepath.Base(metaFilePath)
+	//outputFile := filepath.Base(metaFilePath)
 
 	originDir, err := os.Getwd()
 	if err != nil {
@@ -121,7 +121,6 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) err
 	if err := os.Chdir(filepath.Dir(listFilePath)); err != nil {
 		return err
 	}
-
 	defer os.Chdir(originDir)
 
 	cmd := exec.Command(
