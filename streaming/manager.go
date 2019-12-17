@@ -330,14 +330,16 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 	if err != nil {
 		return err
 	}
-	t := time.Now().In(common.Loc)
+	//t := time.Now().In(common.Loc)
 	for _, f := range files {
-		if f.ModTime().In(common.Loc).Format(common.DateFormat) == t.Format(common.DateFormat) {
-			continue
-		}
-		if err := os.Remove(filepath.Join(stream.liveDir, f.Name())); err != nil {
-			log.Error(err)
-			continue
+		//if f.ModTime().In(common.Loc).Format(common.DateFormat) == t.Format(common.DateFormat) {
+		//	continue
+		//}
+		if f.Size() < 1 {
+			if err := os.Remove(filepath.Join(stream.liveDir, f.Name())); err != nil {
+				log.Error(err)
+				continue
+			}
 		}
 	}
 
