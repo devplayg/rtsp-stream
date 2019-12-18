@@ -1,4 +1,4 @@
-package streaming
+package server
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
+	"github.com/devplayg/rtsp-stream/streaming"
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -21,7 +22,7 @@ import (
 
 type Manager struct {
 	server               *Server
-	streams              map[int64]*Stream // Stream pool
+	streams              map[int64]*streaming.Stream // Stream pool
 	scheduler            *cron.Cron
 	ctx                  context.Context
 	cancel               context.CancelFunc
@@ -34,7 +35,7 @@ func NewManager(server *Server) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
 		server:               server,
-		streams:              make(map[int64]*Stream), /* key: id(int64), value: &stream */
+		streams:              make(map[int64]*streaming.Stream), /* key: id(int64), value: &stream */
 		ctx:                  ctx,
 		cancel:               cancel,
 		watcherCheckInterval: 5 * time.Second,
@@ -68,7 +69,7 @@ func (m *Manager) init() error {
 }
 
 func (m *Manager) getLastArchivingDate(t time.Time) (string, error) {
-	val, err := m.server.GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
+	val, err := GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +92,7 @@ func (m *Manager) checkOldLiveVideoFiles() error {
 	}).Debug("[manager] checking last archiving date")
 
 	if lastArchivingDate == expectedDate {
-		m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
+		PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
 		return nil
 	}
 
@@ -118,7 +119,7 @@ func (m *Manager) checkOldLiveVideoFiles() error {
 		d = d.Add(24 * time.Hour)
 	}
 
-	m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
+	PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
 
 	//err := common.DB.View(func(tx *bolt.Tx) error {
 	//    b := tx.Bucket(common.ConfigBucket)
@@ -143,7 +144,7 @@ func (m *Manager) initStreamDatabases() error {
 		if err != nil {
 			return err
 		}
-		m.streams[id].db = db
+		m.streams[id].DB = db
 	}
 	return nil
 }
@@ -181,10 +182,10 @@ func (m *Manager) start() error {
 func (m *Manager) loadStreamsFromDatabase() error {
 	m.Lock()
 	defer m.Unlock()
-	return common.DB.View(func(tx *bolt.Tx) error {
+	return db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(common.StreamBucket)
 		b.ForEach(func(k, v []byte) error {
-			var stream Stream
+			var stream streaming.Stream
 			err := json.Unmarshal(v, &stream)
 			if err != nil {
 				log.Error(err)
@@ -217,8 +218,8 @@ func (m *Manager) loadStreamsFromDatabase() error {
 	// unlock
 }
 
-func (m *Manager) getStreams() []*Stream {
-	streams := make([]*Stream, 0)
+func (m *Manager) getStreams() []*streaming.Stream {
+	streams := make([]*streaming.Stream, 0)
 	m.RLock()
 	defer m.RUnlock()
 	for _, stream := range m.streams {
@@ -228,7 +229,7 @@ func (m *Manager) getStreams() []*Stream {
 	return streams
 }
 
-func (m *Manager) getStreamById(id int64) *Stream {
+func (m *Manager) getStreamById(id int64) *streaming.Stream {
 	m.Lock()
 	defer m.Unlock()
 
@@ -236,14 +237,14 @@ func (m *Manager) getStreamById(id int64) *Stream {
 		return nil
 	}
 	stream := m.streams[id]
-	if stream.cmd != nil && stream.cmd.Process != nil {
-		stream.Pid = stream.cmd.Process.Pid
+	if stream.Cmd != nil && stream.Cmd.Process != nil {
+		stream.Pid = stream.Cmd.Process.Pid
 	}
 
 	return stream
 }
 
-func (m *Manager) addStream(stream *Stream) error {
+func (m *Manager) addStream(stream *streaming.Stream) error {
 	if err := m.isValidStream(stream); err != nil {
 		return err
 	}
@@ -256,7 +257,7 @@ func (m *Manager) addStream(stream *Stream) error {
 	if err != nil {
 		return err
 	}
-	stream.db = db
+	stream.DB = db
 	log.WithFields(log.Fields{
 		"stream_id": stream.Id,
 		"uri":       stream.Uri,
@@ -265,11 +266,11 @@ func (m *Manager) addStream(stream *Stream) error {
 	return nil
 }
 
-func (m *Manager) isValidStream(stream *Stream) error {
+func (m *Manager) isValidStream(stream *streaming.Stream) error {
 	if len(stream.Uri) < 1 {
 		return errors.New("empty stream url")
 	}
-	stream.UrlHash = GetHashString(stream.Uri)
+	stream.UrlHash = common.GetHashString(stream.Uri)
 
 	if !(stream.Protocol == common.HLS || stream.Protocol == common.WEBM) {
 		return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
@@ -279,7 +280,7 @@ func (m *Manager) isValidStream(stream *Stream) error {
 	return nil
 }
 
-func (m *Manager) issueStream(input *Stream) error {
+func (m *Manager) issueStream(input *streaming.Stream) error {
 	id, err := IssueStreamId()
 	if err != nil {
 		return err
@@ -291,7 +292,7 @@ func (m *Manager) issueStream(input *Stream) error {
 	return SaveStreamInDB(input)
 }
 
-func (m *Manager) updateStream(stream *Stream) error {
+func (m *Manager) updateStream(stream *streaming.Stream) error {
 	if err := m.isValidStream(stream); err != nil {
 		return err
 	}
@@ -311,7 +312,7 @@ func (m *Manager) deleteStream(id int64, from string) error {
 		return err
 	}
 
-	if err := os.Remove(filepath.Join(m.server.dbDir, m.streams[id].getDbFileName())); err != nil {
+	if err := os.Remove(filepath.Join(m.server.dbDir, m.streams[id].GetDBFileName())); err != nil {
 		return err
 	}
 
@@ -325,8 +326,8 @@ func (m *Manager) deleteStream(id int64, from string) error {
 	return err
 }
 
-func (m *Manager) cleanStreamDir(stream *Stream) error {
-	files, err := ioutil.ReadDir(stream.liveDir)
+func (m *Manager) cleanStreamDir(stream *streaming.Stream) error {
+	files, err := ioutil.ReadDir(stream.GetLiveDir())
 	if err != nil {
 		return err
 	}
@@ -348,7 +349,7 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 		//	continue
 		//}
 		if f.Size() < 1 {
-			if err := os.Remove(filepath.Join(stream.liveDir, f.Name())); err != nil {
+			if err := os.Remove(filepath.Join(stream.GetLiveDir(), f.Name())); err != nil {
 				log.Error(err)
 				continue
 			}
@@ -367,16 +368,16 @@ func (m *Manager) cleanStreamDir(stream *Stream) error {
 //	return nil
 //}
 
-func (m *Manager) createStreamDir(stream *Stream) error {
-	stream.liveDir = filepath.ToSlash(filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(stream.Id, 10)))
-	if err := hippo.EnsureDir(stream.liveDir); err != nil {
+func (m *Manager) createStreamDir(stream *streaming.Stream) error {
+	stream.SetLiveDir(filepath.ToSlash(filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(stream.Id, 10))))
+	if err := hippo.EnsureDir(stream.GetLiveDir()); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *Manager) changeStreamStatusToStart(id int64) (*Stream, error) {
+func (m *Manager) changeStreamStatusToStart(id int64) (*streaming.Stream, error) {
 	// Check stream status
 	m.Lock()
 	defer m.Unlock()
@@ -420,7 +421,7 @@ func (m *Manager) startStreaming(id int64, from string) error {
 	}
 
 	go func() {
-		count, err := stream.start()
+		count, err := stream.Start()
 		if err != nil {
 			log.WithFields(log.Fields{
 				"id": id,
@@ -432,7 +433,7 @@ func (m *Manager) startStreaming(id int64, from string) error {
 			"id":        id,
 			"url":       stream.Uri,
 			"waitCount": count,
-			"pid":       GetStreamPid(stream),
+			"pid":       streaming.GetStreamPid(stream),
 		}).Infof("[manager] stream-%d has been started", id)
 		//stream.Status = common.Started
 	}()
@@ -463,7 +464,7 @@ func (m *Manager) stopStreaming(id int64, from string) error {
 		return errors.New(fmt.Sprintf("[manager] stream-%d is already starting now", id))
 	}
 	stream.Status = common.Stopping
-	stream.stop()
+	stream.Stop()
 
 	return nil
 }
@@ -472,10 +473,10 @@ func (m *Manager) Stop() error {
 	m.cancel()
 	for id, _ := range m.streams {
 		m.stopStreaming(id, "manager")
-		if m.streams[id].db == nil {
+		if m.streams[id].DB == nil {
 			continue
 		}
-		if err := m.streams[id].db.Close(); err != nil {
+		if err := m.streams[id].DB.Close(); err != nil {
 			log.Error(err)
 		}
 	}
@@ -489,7 +490,7 @@ func (m *Manager) startStreamWatcher() {
 	}).Debug("[manager] watcher has been started")
 	for {
 		for id, stream := range m.streams {
-			active, lastStreamUpdated, diff := stream.getStatus()
+			active, lastStreamUpdated, diff := stream.GetStatus()
 			stream.LastStreamUpdated = lastStreamUpdated
 			if !stream.Enabled {
 				continue
@@ -516,7 +517,7 @@ func (m *Manager) startStreamWatcher() {
 				continue
 			}
 
-			if time.Since(stream.lastAttemptTime) < 10*time.Second {
+			if time.Since(stream.LastAttemptTime) < 10*time.Second {
 				continue
 			}
 
@@ -536,18 +537,14 @@ func (m *Manager) startStreamWatcher() {
 	}
 }
 
-func (m *Manager) getM3u8(id int64, date string) (string, error) {
+func (m *Manager) getM3u8(id int64, date string) (string, error) { // wondory
 	stream := m.getStreamById(id)
 	if stream == nil {
 		return "", common.ErrorStreamNotFound
 	}
 
-	segments, err := stream.getM3u8Segments(date)
-	if err != nil {
-		return "", err
-	}
-	tags := stream.makeM3u8Tags(segments)
-	return tags, nil
+	tags, err := stream.GetM3u8Tags(date)
+	return tags, err
 }
 
 func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
@@ -560,7 +557,7 @@ func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
 }
 
 func (m *Manager) closeStreamDB(id int64) error {
-	return m.streams[id].db.Close()
+	return m.streams[id].DB.Close()
 }
 
 func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
@@ -569,7 +566,7 @@ func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
 		return nil, nil
 	}
 	t := time.Now().In(common.Loc)
-	lastArchivingDateKey, _ := m.server.GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
+	lastArchivingDateKey, _ := GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
 	result := map[string]interface{}{
 		"date":                 t.Format(common.DateFormat),
 		"lastArchivingDateKey": string(lastArchivingDateKey),
@@ -608,7 +605,7 @@ func (m *Manager) getLiveVideoStatus(bucketNames []string, date string) map[stri
 		}
 
 		liveMap[bn] = "1"
-		if stream.m3u8BucketExists(date) {
+		if stream.M3u8BucketExists(date) {
 			liveMap[bn] += ",1"
 		}
 	}
@@ -618,7 +615,7 @@ func (m *Manager) getLiveVideoStatus(bucketNames []string, date string) map[stri
 
 func (m *Manager) getPrevVideoRecords(bucketNames []string) (common.DayRecordMap, error) {
 	dayRecordMap := make(common.DayRecordMap)
-	err := common.DB.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		for _, bn := range bucketNames {
 			b := tx.Bucket([]byte(bn))
 			if b == nil {
@@ -638,7 +635,7 @@ func (m *Manager) getPrevVideoRecords(bucketNames []string) (common.DayRecordMap
 	return dayRecordMap, err
 }
 
-func (m *Manager) convertStreamsToBucketNames(streams []*Stream) []string {
+func (m *Manager) convertStreamsToBucketNames(streams []*streaming.Stream) []string {
 	if len(streams) < 1 {
 		return nil
 	}

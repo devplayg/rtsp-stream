@@ -27,7 +27,7 @@ type Stream struct {
 	Protocol           int                  `json:"protocol"`     // Protocol (HLS, WebM)s
 	ProtocolInfo       *common.ProtocolInfo `json:"protocolInfo"` // Protocol info
 	UrlHash            string               `json:"urlHash"`      // URL Hash
-	cmd                *exec.Cmd            `json:"-"`            // Command
+	Cmd                *exec.Cmd            `json:"-"`            // Command
 	liveDir            string               `json:"-"`            // Live video directory
 	Status             int                  `json:"status"`       // Stream status
 	DataRetentionHours int                  `json:"dataRetentionHours"`
@@ -35,11 +35,11 @@ type Stream struct {
 	LastStreamUpdated  time.Time            `json:"lastStreamUpdated"`
 	MaxStreamSeqId     int64                `json:"maxStreamSeqId"`
 	Created            int64                `json:"created"`
-	lastAttemptTime    time.Time
+	DB                 *bolt.DB             `json:"-"`
+	LastAttemptTime    time.Time            `json:"-"`
 	assistant          *Assistant
 	ctx                context.Context
 	cancel             context.CancelFunc
-	db                 *bolt.DB
 	// waitTimeUntilStreamStarts time.Duration
 }
 
@@ -47,11 +47,11 @@ func NewStream() *Stream {
 	return &Stream{}
 }
 
-func (s *Stream) getStatus() (bool, time.Time, float64) {
+func (s *Stream) GetStatus() (bool, time.Time, float64) {
 	active := false
 	lastStreamUpdated := time.Time{}
 
-	if s.cmd == nil || s.cmd.Process == nil {
+	if s.Cmd == nil || s.Cmd.Process == nil {
 		return active, lastStreamUpdated, 0
 	}
 
@@ -79,7 +79,7 @@ func (s *Stream) getStatus() (bool, time.Time, float64) {
 }
 
 func (s *Stream) IsActive() bool {
-	active, _, _ := s.getStatus()
+	active, _, _ := s.GetStatus()
 	return active
 	//if s.cmd == nil || s.cmd.Process == nil {
 	//    return false
@@ -134,9 +134,9 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Co
 	}
 }
 
-func (s *Stream) start() (int, error) {
-	s.lastAttemptTime = time.Now().In(common.Loc)
-	s.cmd = GetHlsStreamingCommand(s)
+func (s *Stream) Start() (int, error) {
+	s.LastAttemptTime = time.Now().In(common.Loc)
+	s.Cmd = GetHlsStreamingCommand(s)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
 		// After finishing, you need to do some post-processing
@@ -149,7 +149,7 @@ func (s *Stream) start() (int, error) {
 			//os.Remove(metaFilePath)
 			s.Status = common.Stopped
 		}()
-		err := s.cmd.Run()
+		err := s.Cmd.Run()
 		log.WithFields(log.Fields{
 			"err": err,
 			"pid": GetStreamPid(s),
@@ -169,17 +169,17 @@ func (s *Stream) start() (int, error) {
 		s.Status = common.Started
 		return count, nil
 	case <-s.ctx.Done():
-		s.stop()
+		s.Stop()
 		s.Status = common.Failed
 		return 0, errors.New("failed or canceled")
 	}
 }
 
-func (s *Stream) stop() {
-	if s.cmd == nil || s.cmd.Process == nil {
+func (s *Stream) Stop() {
+	if s.Cmd == nil || s.Cmd.Process == nil {
 		return
 	}
-	err := s.cmd.Process.Kill()
+	err := s.Cmd.Process.Kill()
 	log.WithFields(log.Fields{
 		"uri":    s.Uri,
 		"result": err,
@@ -211,9 +211,18 @@ func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 	return playlist.Encode().String()
 }
 
+func (s *Stream) GetM3u8Tags(date string) (string, error) {
+	segments, err := s.getM3u8Segments(date)
+	if err != nil {
+		return "", err
+	}
+	tags := s.makeM3u8Tags(segments)
+	return tags, nil
+}
+
 func (s *Stream) getM3u8Segments(date string) ([]*common.Segment, error) {
 	segments := make([]*common.Segment, 0)
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err := s.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(date))
 		if b == nil {
 			return nil
@@ -230,9 +239,9 @@ func (s *Stream) getM3u8Segments(date string) ([]*common.Segment, error) {
 	return segments, err
 }
 
-func (s *Stream) m3u8BucketExists(date string) bool {
+func (s *Stream) M3u8BucketExists(date string) bool {
 	exist := false
-	_ = s.db.View(func(tx *bolt.Tx) error {
+	_ = s.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(date))
 		if b != nil {
 			exist = true
@@ -242,6 +251,14 @@ func (s *Stream) m3u8BucketExists(date string) bool {
 	return exist
 }
 
-func (s *Stream) getDbFileName() string {
+func (s *Stream) GetDBFileName() string {
 	return "stream-" + strconv.FormatInt(s.Id, 10) + ".db"
+}
+
+func (s *Stream) GetLiveDir() string {
+	return s.liveDir
+}
+
+func (s *Stream) SetLiveDir(dir string) {
+	s.liveDir = dir
 }

@@ -1,7 +1,6 @@
-package streaming
+package server
 
 import (
-	"errors"
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
@@ -12,13 +11,15 @@ import (
 	"time"
 )
 
+var db *bolt.DB
+
 type Server struct {
-	engine     *hippo.Engine
-	controller *Controller
-	manager    *Manager
-	addr       string
-	dbDir      string
-	config     *common.Config
+	engine     *hippo.Engine  // Server framework
+	controller *Controller    // Controller
+	manager    *Manager       // Stream manager
+	addr       string         // Service address
+	dbDir      string         // Database directory
+	config     *common.Config // config
 }
 
 func NewServer(config *common.Config) *Server {
@@ -62,7 +63,7 @@ func (s *Server) Stop() error {
 		log.Error(err)
 	}
 
-	if err := common.DB.Close(); err != nil {
+	if err := db.Close(); err != nil {
 		log.Error(err)
 	}
 
@@ -74,7 +75,6 @@ func (s *Server) SetEngine(e *hippo.Engine) {
 }
 
 func (s *Server) init() error {
-
 	if err := s.initTimezone(); err != nil {
 		return err
 	}
@@ -82,7 +82,6 @@ func (s *Server) init() error {
 	if err := s.initDatabase(); err != nil {
 		return err
 	}
-	log.WithFields(log.Fields{}).Debug("[server] database has been loaded")
 
 	if err := s.initDirectories(); err != nil {
 		return err
@@ -92,13 +91,20 @@ func (s *Server) init() error {
 		return err
 	}
 
+	if err := s.initManagerAndController(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) initManagerAndController() error {
 	s.manager = NewManager(s)
 	if err := s.manager.start(); err != nil {
 		return err
 	}
 
 	s.controller = NewController(s)
-
 	return nil
 }
 
@@ -139,13 +145,13 @@ func (s *Server) initDatabase() error {
 	}
 	var err error
 
-	common.DB, err = bolt.Open(filepath.Join(s.dbDir, "stream.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err = bolt.Open(filepath.Join(s.dbDir, "stream.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
 
 	defaultBuckets := [][]byte{common.StreamBucket, common.ConfigBucket}
-	return common.DB.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bolt.Tx) error {
 		for _, b := range defaultBuckets {
 			if _, err := tx.CreateBucketIfNotExists(b); err != nil {
 				return err
@@ -153,39 +159,14 @@ func (s *Server) initDatabase() error {
 		}
 		return nil
 	})
-}
+	if err != nil {
+		return err
+	}
 
-func (s *Server) GetValueFromDB(bucket, key []byte) ([]byte, error) {
-	var data []byte
-	err := common.DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket)
-		if b == nil {
-			return errors.New("bucket not found: " + string(bucket))
-		}
-		data = b.Get(key)
-		return nil
-	})
-	return data, err
-}
-
-func (s *Server) PutDataInDB(bucket, key, value []byte) error {
-	return common.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket)
-		if b == nil {
-			return errors.New("bucket not found: " + string(bucket))
-		}
-		return b.Put(key, value)
-	})
-}
-
-func (s *Server) DeleteDataInDB(bucket, key []byte) error {
-	return common.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket)
-		if b == nil {
-			return errors.New("bucket not found" + string(bucket))
-		}
-		return b.Delete(key)
-	})
+	log.WithFields(log.Fields{
+		"dir": s.dbDir,
+	}).Debug("[server] database has been loaded")
+	return nil
 }
 
 func (s *Server) initStorage() error {
@@ -204,8 +185,3 @@ func (s *Server) initStorage() error {
 	}
 	return nil
 }
-
-//
-//func CreateVideoFileList(name string, files []os.FileInfo, dir string) {
-//
-//}

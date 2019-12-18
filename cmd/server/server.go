@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
-	"github.com/devplayg/rtsp-stream/streaming"
+	"github.com/devplayg/rtsp-stream/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"os"
@@ -35,7 +35,7 @@ func main() {
 		Verbose:     *verbose,
 		IsService:   true,
 	}
-	server := streaming.NewServer(common.ReadConfig(*configPath))
+	server := server.NewServer(common.ReadConfig(*configPath))
 	engine := hippo.NewEngine(server, config)
 	if err := engine.Start(); err != nil {
 		log.Fatal(err)

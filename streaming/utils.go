@@ -1,8 +1,6 @@
 package streaming
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/minio/highwayhash"
 	"github.com/minio/minio-go"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -23,35 +20,6 @@ import (
 	"strings"
 )
 
-var HashKey []byte
-
-func init() {
-	data := []byte("this is the key")
-	sum := sha256.Sum256(data)
-	HashKey = sum[:]
-}
-
-func Response(w http.ResponseWriter, r *http.Request, err error, statusCode int) {
-	if statusCode != http.StatusOK {
-		log.WithFields(log.Fields{
-			"ip":     r.RemoteAddr,
-			"uri":    r.RequestURI,
-			"method": r.Method,
-			"length": r.ContentLength,
-		}).Error(err)
-	}
-
-	w.Header().Add("Content-Type", common.ContentTypeJson)
-	b, _ := json.Marshal(common.NewResult(err))
-	w.WriteHeader(statusCode)
-	w.Write(b)
-}
-
-func GetHashString(str string) string {
-	hash := highwayhash.Sum128([]byte(str), HashKey)
-	return hex.EncodeToString(hash[:])
-}
-
 func GetHashFromFile(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -59,7 +27,7 @@ func GetHashFromFile(path string) ([]byte, error) {
 	}
 	defer file.Close()
 
-	hash, err := highwayhash.New128(HashKey)
+	hash, err := highwayhash.New128(common.HashKey)
 	if err != nil {
 		return nil, err
 	}
@@ -71,24 +39,25 @@ func GetHashFromFile(path string) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
-func GetStreamingCommand(stream *Stream) *exec.Cmd {
-	if stream.Protocol == common.HLS {
-		return GetHlsStreamingCommand(stream)
-	}
-
-	return GetHlsStreamingCommand(stream)
-}
+//
+//func GetStreamingCommand(stream *Stream) *exec.Cmd {
+//	if stream.Protocol == common.HLS {
+//		return GetHlsStreamingCommand(stream)
+//	}
+//
+//	return GetHlsStreamingCommand(stream)
+//}
 
 func GetStreamPid(stream *Stream) int {
-	if stream.cmd == nil {
+	if stream.Cmd == nil {
 		return 0
 	}
 
-	if stream.cmd.Process == nil {
+	if stream.Cmd.Process == nil {
 		return 0
 	}
 
-	return stream.cmd.Process.Pid
+	return stream.Cmd.Process.Pid
 }
 
 //func checkStreamUri(stream *Stream) error {
@@ -235,7 +204,7 @@ func GetVideoFileSeq(name string) (int, error) {
 	return mediaFileSeq, nil
 }
 
-func parseAndGetStream(body io.Reader) (*Stream, error) {
+func ParseAndGetStream(body io.Reader) (*Stream, error) {
 	stream := NewStream()
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
@@ -254,7 +223,7 @@ func parseAndGetStream(body io.Reader) (*Stream, error) {
 	return stream, nil
 }
 
-func parseAndGetStreamId(r *http.Request) (int64, error) {
+func ParseAndGetStreamId(r *http.Request) (int64, error) {
 	vars := mux.Vars(r)
 	if len(vars["id"]) < 1 {
 		return 0, errors.New("empty stream id")
@@ -320,3 +289,44 @@ func parseAndGetStreamId(r *http.Request) (int64, error) {
 //func GetM3u8Footer() string {
 //    return "#EXT-X-ENDLIST"
 //}
+
+func GetHlsStreamingCommand(stream *Stream) *exec.Cmd {
+	return exec.Command(
+		"ffmpeg",
+		"-y",
+		"-fflags",
+		"nobuffer",
+		"-rtsp_transport",
+		"tcp",
+		"-i",
+		stream.StreamUri(),
+		"-vsync",
+		"0",
+		"-copyts",
+		"-vcodec",
+		"copy",
+		"-movflags",
+		"frag_keyframe+empty_moov",
+		"-an",
+		"-hls_flags",
+		"append_list",
+		"-f",
+		"hls",
+		"-segment_list_flags",
+		"live",
+		"-hls_time",
+		"1",
+		"-hls_list_size",
+		"3",
+		//"-hls_time",
+		//"60",
+		"-hls_segment_filename",
+		stream.liveDir+"/"+stream.ProtocolInfo.LiveFilePrefix+"%d.ts",
+		stream.liveDir+"/"+stream.ProtocolInfo.MetaFileName,
+	)
+	//output, err := cmd.CombinedOutput()
+	//if err != nil {
+	//    log.Error(string(output))
+	//    return err
+	//}
+}

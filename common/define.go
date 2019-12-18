@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/boltdb/bolt"
+	"crypto/sha256"
 	"github.com/minio/minio-go"
 	"github.com/pkg/errors"
 	"os"
@@ -9,10 +9,16 @@ import (
 )
 
 var (
-	DB          *bolt.DB
 	Loc         *time.Location
 	MinioClient *minio.Client
+	HashKey     []byte
 )
+
+func init() {
+	data := []byte("this is the key")
+	sum := sha256.Sum256(data)
+	HashKey = sum[:]
+}
 
 const (
 	// Status

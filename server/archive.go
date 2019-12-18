@@ -1,4 +1,4 @@
-package streaming
+package server
 
 import (
 	"errors"
@@ -87,7 +87,7 @@ func (m *Manager) startToArchiveVideos(targetDate string) error {
 		"duration(sec)": time.Since(t).Seconds(),
 		"targetDate":    targetDate,
 	}).Debug("[manager] archiving has been finished")
-	return m.server.PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(targetDate))
+	return PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(targetDate))
 }
 
 func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
@@ -137,7 +137,7 @@ func (m *Manager) deleteLiveDataOnStreamDB(streamId int64, date string) error {
 		return errors.New(fmt.Sprintf("invalid stream id: %d", streamId))
 	}
 
-	return stream.db.Update(func(tx *bolt.Tx) error {
+	return stream.DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(date))
 		if b == nil {
 			return errors.New(fmt.Sprintf("streamId: %d, invalid bucket: %s", streamId, date))
@@ -179,7 +179,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 		"date": date,
 		"dir":  liveDir,
 	}).Debugf("[manager] found %d video files in stream-%d; merging video files..", len(liveFiles), streamId)
-	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName), m.server.config.HlsOptions.SegmentTime)
+	err = MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName), m.server.config.HlsOptions.SegmentTime)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, r
 
 func (m *Manager) writeVideoArchivingHistory(streamId int64, date string) error {
 	bucketName := []byte(common.VideoBucketPrefix + strconv.FormatInt(streamId, 10))
-	return common.DB.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketName)
 		if err != nil {
 			return err
