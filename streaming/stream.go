@@ -72,6 +72,7 @@ func (s *Stream) getStatus() (bool, time.Time, float64) {
 		"path":    path,
 		"absPath": absPath,
 		"pwd":     pwd,
+		"diff":    diff,
 	}).Debug("status check")
 
 	return active, lastStreamUpdated, diff
