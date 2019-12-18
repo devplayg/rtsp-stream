@@ -110,18 +110,21 @@ func RemoveLiveFiles(dir string, files []os.FileInfo) int {
 }
 
 func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) error {
-	inputFile, _ := filepath.Abs(listFilePath)
-	outputFile := filepath.Base(metaFilePath)
+	//inputFile, _ := filepath.Abs(listFilePath)
+	//outputFile := filepath.Base(metaFilePath)
 
-	originDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+	//originDir, err := os.Getwd()
+	//if err != nil {
+	//	return err
+	//}
 
-	if err := os.Chdir(filepath.Dir(listFilePath)); err != nil {
-		return err
-	}
-	defer os.Chdir(originDir)
+	// /data/record/1/20191217/list.txt -c copy -f ssegment -segment_list /data/record/1/20191217/index.m3u8
+	// -segment_list_flags +cache -segment_time 30 /data/record/1/20191217/media%d.ts
+
+	//if err := os.Chdir(filepath.Dir(listFilePath)); err != nil {
+	//	return err
+	//}
+	//defer os.Chdir(originDir)
 
 	cmd := exec.Command(
 		"ffmpeg",
@@ -131,18 +134,18 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) err
 		"-safe",
 		"0",
 		"-i",
-		inputFile,
+		listFilePath,
 		"-c",
 		"copy",
 		"-f",
 		"ssegment",
 		"-segment_list",
-		outputFile,
+		metaFilePath,
 		"-segment_list_flags",
 		"+cache",
 		"-segment_time",
 		strconv.Itoa(segmentTime),
-		VideoFilePrefix+"%d.ts",
+		filepath.Join(filepath.Dir(metaFilePath), VideoFilePrefix+"%d.ts"),
 	)
 	//output, err := cmd.CombinedOutput()
 	//if err != nil {
