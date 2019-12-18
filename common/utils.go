@@ -155,7 +155,7 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) err
 	log.WithFields(log.Fields{
 		"name": "MergeLiveVideoFiles",
 	}).Debug(cmd.Args)
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		log.Error(cmd.Args)
 	}
