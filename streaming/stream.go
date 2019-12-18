@@ -57,6 +57,8 @@ func (s *Stream) getStatus() (bool, time.Time, float64) {
 
 	// Check if "index.m3u8" has been updated within the last 8 seconds
 	path := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
+	absPath, _ := filepath.Abs(path)
+	pwd, _ := os.Getwd()
 	file, err := os.Stat(path)
 	var diff float64
 	if !os.IsNotExist(err) {
@@ -66,6 +68,11 @@ func (s *Stream) getStatus() (bool, time.Time, float64) {
 			active = true
 		}
 	}
+	log.WithFields(log.Fields{
+		"path":    path,
+		"absPath": absPath,
+		"pwd":     pwd,
+	}).Debug("status check")
 
 	return active, lastStreamUpdated, diff
 }
