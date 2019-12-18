@@ -191,7 +191,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 		"duration": time.Since(t).Seconds(),
 	}).Debug("[manager] completed merging video files")
 
-	// common.RemoveLiveFiles(liveDir, liveFiles) // wondory
+	common.RemoveLiveFiles(liveDir, liveFiles) // wondory
 	return err
 }
 
