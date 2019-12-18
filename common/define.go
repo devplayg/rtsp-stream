@@ -29,9 +29,10 @@ const (
 	DateFormat = "20060102"
 
 	// Content types
-	ContentTypeJson = "application/json"
-	ContentTypeTs   = "video/MP2T"
-	ContentTypeM3u8 = "application/x-mpegURL"
+	ContentTypeJson        = "application/json"
+	ContentTypeTs          = "video/MP2T"
+	ContentTypeM3u8        = "application/x-mpegURL"
+	ContentTypeOctetStream = "application/octet-stream"
 	//ContentTypeM3u8 = "application/vnd.apple.mpegurl"
 
 	LiveBucketName = "live"

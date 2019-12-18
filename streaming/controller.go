@@ -12,6 +12,7 @@ import (
 	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"html/template"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -129,8 +130,10 @@ func (c *Controller) setAssetRoutes() {
 			//}).Debug("set asset routers")
 
 			key := strings.TrimPrefix(r.RequestURI, "/")
-			if val, ok := assetMap[key]; ok {
-				w.Write(val)
+			if content, hasAsset := assetMap[key]; hasAsset {
+				w.Header().Set("Content-Type", common.DetectContentType(filepath.Ext(r.RequestURI)))
+				w.Header().Set("Content-Length", strconv.FormatInt(int64(len(content)), 10))
+				w.Write(content)
 			}
 		}).Methods("GET")
 	}
@@ -146,6 +149,7 @@ func (c *Controller) DisplayVideos(w http.ResponseWriter, r *http.Request) {
 	if tmpl, err = tmpl.Parse(ui.Videos()); err != nil {
 		fmt.Println(err)
 	}
+	w.Header().Set("Content-Type", mime.TypeByExtension(".html"))
 	tmpl.Execute(w, nil)
 }
 

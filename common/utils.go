@@ -5,6 +5,7 @@ import (
 	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"mime"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -205,4 +206,12 @@ func SortDayRecord(dayRecordMap DayRecordMap) []map[string]string {
 	}
 
 	return values
+}
+
+func DetectContentType(ext string) string {
+	ctype := mime.TypeByExtension(filepath.Ext(ext))
+	if ctype == "" {
+		return ContentTypeOctetStream
+	}
+	return ctype
 }
