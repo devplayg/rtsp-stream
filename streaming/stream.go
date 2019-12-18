@@ -68,12 +68,12 @@ func (s *Stream) getStatus() (bool, time.Time, float64) {
 			active = true
 		}
 	}
-	log.WithFields(log.Fields{
-		"path":    path,
-		"absPath": absPath,
-		"pwd":     pwd,
-		"diff":    diff,
-	}).Debug("status check")
+	//log.WithFields(log.Fields{
+	//	"path":    path,
+	//	"absPath": absPath,
+	//	"pwd":     pwd,
+	//	"diff":    diff,
+	//}).Debug("status check")
 
 	return active, lastStreamUpdated, diff
 }

@@ -178,7 +178,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 	log.WithFields(log.Fields{
 		"date": date,
 		"dir":  liveDir,
-	}).Debugf("[manager] found %d video files in stream-%d; merging video files..", streamId, len(liveFiles))
+	}).Debugf("[manager] found %d video files in stream-%d; merging video files..", len(liveFiles), streamId)
 	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName), m.server.config.HlsOptions.SegmentTime)
 	if err != nil {
 		return err
