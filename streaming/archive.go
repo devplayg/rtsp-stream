@@ -37,6 +37,7 @@ func (m *Manager) testScheduler() error {
 
 func (m *Manager) startScheduler() error {
 	scheduler := cron.New(cron.WithLocation(common.Loc))
+
 	_, err := scheduler.AddFunc("10 0 * * *", func() {
 		if !m.canArchive() {
 			log.Debug("archiving is already running")
@@ -175,10 +176,9 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 
 	t := time.Now()
 	log.WithFields(log.Fields{
-		"date":     date,
-		"dir":      liveDir,
-		"streamId": streamId,
-	}).Debugf("found %d video files; merging video files..", len(liveFiles))
+		"date": date,
+		"dir":  liveDir,
+	}).Debugf("[manager] found %d video files in stream-%d; merging video files..", streamId, len(liveFiles))
 	err = common.MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName), m.server.config.HlsOptions.SegmentTime)
 	if err != nil {
 		return err
@@ -189,9 +189,9 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 		"streamId": streamId,
 		"count":    len(liveFiles),
 		"duration": time.Since(t).Seconds(),
-	}).Debug("completed merging video files")
+	}).Debug("[manager] completed merging video files")
 
-	common.RemoveLiveFiles(liveDir, liveFiles)
+	// common.RemoveLiveFiles(liveDir, liveFiles)
 	return err
 }
 
@@ -222,7 +222,7 @@ func (m *Manager) startToDeleteVideosNotToBeArchived(streamIdList []int64, targe
 	return nil
 }
 
-func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, tempDir string) (string, error) {
+func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, recordDir string) (string, error) {
 	var text string
 	for _, f := range files {
 		path, _ := filepath.Abs(filepath.ToSlash(filepath.Join(liveDir, f.Name())))
@@ -233,7 +233,7 @@ func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, t
 		return "", errors.New("no data")
 	}
 
-	f, err := ioutil.TempFile(tempDir, "list")
+	f, err := ioutil.TempFile(recordDir, "list")
 	if err != nil {
 		return "", err
 	}

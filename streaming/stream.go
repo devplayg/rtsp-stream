@@ -193,10 +193,10 @@ func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {
 	if len(segments) > 0 {
 		playlist.SeqNo = uint64(segments[0].SeqId)
 	}
-	log.WithFields(log.Fields{
-		"playSeqNo": playlist.SeqNo,
-		"len(seg)":  len(segments),
-	}).Debug("test1")
+	//log.WithFields(log.Fields{
+	//	"playSeqNo": playlist.SeqNo,
+	//	"len(seg)":  len(segments),
+	//}).Debug("test1")
 	//playlist.MediaType = m3u8.VOD
 	//playlist.SetVersion(4)
 	playlist.Close()
