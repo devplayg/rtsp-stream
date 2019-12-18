@@ -64,6 +64,7 @@ func NewController(server *Server) *Controller {
 func (c *Controller) init() {
 	c.setApiRoutes()
 	c.setAssetRoutes()
+	c.setUiRoutes()
 	http.Handle("/", c.router)
 }
 
@@ -104,9 +105,13 @@ func (c *Controller) setApiRoutes() {
 	r.
 		PathPrefix("/static").
 		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
+}
 
-	r.HandleFunc("/streams/", ui.Stream).Methods("GET")
+func (c *Controller) setUiRoutes() {
+	c.router.HandleFunc("/streams/", ui.Stream).Methods("GET")
+	c.router.HandleFunc("/videos/", c.DisplayVideos).Methods("GET")
 	//http.HandleFunc("/ui", serveTemplate)
+
 }
 
 func (c *Controller) setAssetRoutes() {
@@ -119,9 +124,9 @@ func (c *Controller) setAssetRoutes() {
 	for path, _ := range assetMap {
 		log.Debug("######################" + path)
 		c.router.HandleFunc("/"+path, func(w http.ResponseWriter, r *http.Request) {
-			log.WithFields(log.Fields{
-				"uri": r.RequestURI,
-			}).Debug("set asset routers")
+			//log.WithFields(log.Fields{
+			//	"uri": r.RequestURI,
+			//}).Debug("set asset routers")
 
 			key := strings.TrimPrefix(r.RequestURI, "/")
 			if val, ok := assetMap[key]; ok {
@@ -131,8 +136,17 @@ func (c *Controller) setAssetRoutes() {
 	}
 }
 
-func (c *Controller) GetAsset(w http.ResponseWriter, r *http.Request) {
-	log.Debug(r.RequestURI)
+func (c *Controller) DisplayVideos(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.New("videos")
+
+	tmpl, err := tmpl.Parse(ui.BootstrapBase())
+	if err != nil {
+
+	}
+	if tmpl, err = tmpl.Parse(ui.Videos()); err != nil {
+		fmt.Println(err)
+	}
+	tmpl.Execute(w, nil)
 }
 
 /*
