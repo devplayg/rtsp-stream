@@ -57,14 +57,14 @@ func (s *Stream) getStatus() (bool, time.Time, float64) {
 
 	// Check if "index.m3u8" has been updated within the last 8 seconds
 	path := filepath.Join(s.liveDir, s.ProtocolInfo.MetaFileName)
-	absPath, _ := filepath.Abs(path)
-	pwd, _ := os.Getwd()
+	//absPath, _ := filepath.Abs(path)
+	//pwd, _ := os.Getwd()
 	file, err := os.Stat(path)
 	var diff float64
 	if !os.IsNotExist(err) {
 		lastStreamUpdated = file.ModTime()
 		diff = time.Now().Sub(file.ModTime()).Seconds()
-		if diff <= 8.0 {
+		if diff <= 12.0 {
 			active = true
 		}
 	}
