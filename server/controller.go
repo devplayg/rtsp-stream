@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -92,20 +91,49 @@ func (c *Controller) setUiRoutes() {
 
 func (c *Controller) setAssetRoutes() {
 	/*
-	   /assets/js/jquery-3.4.1.min.js
-	   /assets/js/popper.min.js
-	   /assets/css/bootstrap.min.css
-	   /assets/js/bootstrap.min.js
+		/assets/css/custom.js
+		/assets/img/logo.png
+		/assets/js/custom.js
+		/assets/js/jquery-3.4.1.min.js
+		/assets/js/jquery.mask.min.js
+		/assets/js/js.cookie-2.2.1.min.js
+		/assets/js/popper.min.js
+		/assets/plugins/bootstrap-table/bootstrap-table.min.css
+		-
+		/assets/plugins/bootstrap/bootstrap.min.css
+		/assets/plugins/bootstrap/bootstrap.min.js
+		/assets/plugins/moment/moment-timezone-with-data.min.js
+		/assets/plugins/moment/moment-timezone.min.js
+		/assets/plugins/moment/moment.min.js
 	*/
-	for path, _ := range assetMap {
-		c.router.HandleFunc("/"+path, func(w http.ResponseWriter, r *http.Request) {
-			key := strings.TrimPrefix(r.RequestURI, "/")
-			if content, hasAsset := assetMap[key]; hasAsset {
-				w.Header().Set("Content-Type", common.DetectContentType(filepath.Ext(r.RequestURI)))
-				w.Header().Set("Content-Length", strconv.FormatInt(int64(len(content)), 10))
-				w.Write(content)
-			}
-		}).Methods("GET")
+
+	c.router.HandleFunc("/assets/{assetType}/{name}", func(w http.ResponseWriter, r *http.Request) {
+		GetAsset(w, r)
+	})
+
+	c.router.HandleFunc("/assets/plugins/{pluginName}/{name}", func(w http.ResponseWriter, r *http.Request) {
+		GetAsset(w, r)
+	})
+	c.router.HandleFunc("/assets/plugins/{pluginName}/{kind}/{name}", func(w http.ResponseWriter, r *http.Request) {
+		GetAsset(w, r)
+	})
+	//for path, _ := range assetMap {
+	//	c.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	//		key := strings.TrimPrefix(r.RequestURI, "/")
+	//		if content, hasAsset := assetMap[key]; hasAsset {
+	//			w.Header().Set("Content-Type", common.DetectContentType(filepath.Ext(r.RequestURI)))
+	//			w.Header().Set("Content-Length", strconv.FormatInt(int64(len(content)), 10))
+	//			w.Write(content)
+	//		}
+	//	}).Methods("GET")
+	//}
+}
+
+func GetAsset(w http.ResponseWriter, r *http.Request) {
+	if content, hasAsset := uiAssetMap[r.RequestURI]; hasAsset {
+		w.Header().Set("Content-Type", common.DetectContentType(filepath.Ext(r.RequestURI)))
+		w.Header().Set("Content-Length", strconv.FormatInt(int64(len(content)), 10))
+		w.Write(content)
 	}
 }
 
@@ -141,16 +169,6 @@ func (c *Controller) GetVideoRecords(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", common.ContentTypeJson)
 	w.Write(data)
-}
-
-func (c *Controller) Test(w http.ResponseWriter, r *http.Request) {
-	err := c.manager.testScheduler()
-	if err != nil {
-		Response(w, r, err, http.StatusBadRequest)
-		return
-	}
-
-	Response(w, r, nil, http.StatusOK)
 }
 
 func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
@@ -775,4 +793,14 @@ func Response(w http.ResponseWriter, r *http.Request, err error, statusCode int)
 	b, _ := json.Marshal(common.NewResult(err))
 	w.WriteHeader(statusCode)
 	w.Write(b)
+}
+
+func (c *Controller) Test(w http.ResponseWriter, r *http.Request) {
+	//err := c.manager.testScheduler()
+	//if err != nil {
+	//	Response(w, r, err, http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//Response(w, r, nil, http.StatusOK)
 }

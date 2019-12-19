@@ -7,18 +7,33 @@
 * BoltDB
 * MinIO
 * Highwayhash
-* Hippo
+* Hippo(https://github.com/devplayg/hippo)
+
+
+server 
+
+- server
+- manager
+- controller
+- asset
+
+streaming
+
+- stream
+- assistant
+
+
 
 ### Processes
 
 Server
 
-실시간 영상 스트리밍
-오늘 영상 스트리밍
+[] 실시간 영상 스트리밍
+[] 오늘 영상 스트리밍
 [X] 영상 수신
 [X] 영상 압축 저장
 [X] 영상 시작/재시작
-영상 프로세스 관리
+[] 영상 프로세스 관리
 
 Librarian
 
