@@ -117,6 +117,10 @@ func (c *Controller) setAssetRoutes() {
 	c.router.HandleFunc("/assets/plugins/{pluginName}/{kind}/{name}", func(w http.ResponseWriter, r *http.Request) {
 		GetAsset(w, r)
 	})
+
+	c.router.HandleFunc("/assets/modules/{moduleName}/{name}", func(w http.ResponseWriter, r *http.Request) {
+		GetAsset(w, r)
+	})
 	//for path, _ := range assetMap {
 	//	c.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 	//		key := strings.TrimPrefix(r.RequestURI, "/")
@@ -206,6 +210,8 @@ func (c *Controller) UpdateStream(w http.ResponseWriter, r *http.Request) {
 		Response(w, r, err, http.StatusBadRequest)
 		return
 	}
+	vars := mux.Vars(r)
+	stream.Id, _ = strconv.ParseInt(vars["id"], 10, 64)
 
 	err = c.manager.updateStream(stream)
 	if err != nil {
@@ -329,8 +335,10 @@ func (c *Controller) StopStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", common.ContentTypeJson)
-	w.WriteHeader(http.StatusOK)
+	Response(w, r, nil, http.StatusOK)
+
+	//w.Header().Set("Content-Type", common.ContentTypeJson)
+	//w.WriteHeader(http.StatusOK)
 }
 
 func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
@@ -342,6 +350,15 @@ func (c *Controller) DebugStream(w http.ResponseWriter, r *http.Request) {
 		})
 	})
 }
+
+//
+//func (c *Controller) ToggleEnabled(w http.ResponseWriter, r *http.Request) {
+//	streamId, err := streaming.ParseAndGetStreamId(r)
+//	if err != nil {
+//		Response(w, r, err, http.StatusBadRequest)
+//		return
+//	}
+//}
 
 func (c *Controller) GetTodayVideo(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

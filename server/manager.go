@@ -12,6 +12,7 @@ import (
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -270,12 +271,17 @@ func (m *Manager) isValidStream(stream *streaming.Stream) error {
 	if len(stream.Uri) < 1 {
 		return errors.New("empty stream url")
 	}
+	if _, err := url.Parse(stream.Uri); err != nil {
+		return common.ErrorInvalidUri
+	}
 	stream.UrlHash = common.GetHashString(stream.Uri)
 
-	if !(stream.Protocol == common.HLS || stream.Protocol == common.WEBM) {
-		return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
-	}
-	stream.ProtocolInfo = common.NewProtocolInfo(stream.Protocol)
+	//if !(stream.Protocol == common.HLS || stream.Protocol == common.WEBM) {
+	//	return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
+	//}
+	stream.SetProtocol(common.HLS)
+	//stream.Protocol = common.HLS
+	//stream.ProtocolInfo = common.NewProtocolInfo(common.HLS)
 
 	return nil
 }
@@ -287,6 +293,7 @@ func (m *Manager) issueStream(input *streaming.Stream) error {
 	}
 	input.Id = id
 	input.Created = time.Now().Unix()
+	input.SetProtocol(common.HLS)
 	m.streams[input.Id] = input
 
 	return SaveStreamInDB(input)
@@ -557,6 +564,9 @@ func (m *Manager) openStreamDB(id int64) (*bolt.DB, error) {
 }
 
 func (m *Manager) closeStreamDB(id int64) error {
+	if m.streams[id].DB == nil {
+		return errors.New("no database")
+	}
 	return m.streams[id].DB.Close()
 }
 
@@ -646,3 +656,5 @@ func (m *Manager) convertStreamsToBucketNames(streams []*streaming.Stream) []str
 	}
 	return bucketNames
 }
+
+//func (m *Manager) toggleStreamEnabled()

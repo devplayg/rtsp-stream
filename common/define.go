@@ -70,6 +70,19 @@ var (
 	ErrorStreamNotFound   = errors.New("stream not found")
 )
 
+type StreamKey struct {
+	Id int64 `json:"id"`
+}
+
+func NewStreamKey(id int64) *StreamKey {
+	return &StreamKey{Id: id}
+}
+
+func (s *StreamKey) Marshal() []byte {
+	// b, _ := json.Marshal(s)
+	return Int64ToBytes(s.Id)
+}
+
 type Result struct {
 	Error string `json:"error"`
 }
@@ -116,20 +129,22 @@ func NewTransmissionResult(streamId int64, seq int, size int64, hash []byte, dat
 }
 
 type ProtocolInfo struct {
+	Protocol        int    `json:"protocol"`
 	MetaFileName    string `json:"metaFileName"`
 	LiveFilePrefix  string `json:"liveFilePrefix"`
 	VideoFilePrefix string `json:"videoFilePrefix"`
 }
 
 func NewProtocolInfo(protocol int) *ProtocolInfo {
-	if protocol == HLS {
-		return &ProtocolInfo{
-			MetaFileName:    LiveM3u8FileName,
-			LiveFilePrefix:  LiveVideoFilePrefix,
-			VideoFilePrefix: VideoFilePrefix,
-		}
-	}
+	//if protocol == HLS {
+	//    return &ProtocolInfo{
+	//        MetaFileName:    LiveM3u8FileName,
+	//        LiveFilePrefix:  LiveVideoFilePrefix,
+	//        VideoFilePrefix: VideoFilePrefix,
+	//    }
+	//}
 	return &ProtocolInfo{
+		Protocol:        protocol,
 		MetaFileName:    LiveM3u8FileName,
 		LiveFilePrefix:  LiveVideoFilePrefix,
 		VideoFilePrefix: VideoFilePrefix,

@@ -31,15 +31,15 @@ func PutDataInDB(bucket, key, value []byte) error {
 	})
 }
 
-func DeleteDataInDB(bucket, key []byte) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket)
-		if b == nil {
-			return errors.New("bucket not found" + string(bucket))
-		}
-		return b.Delete(key)
-	})
-}
+//func DeleteDataInDB(bucket, key []byte) error {
+//	return db.Update(func(tx *bolt.Tx) error {
+//		b := tx.Bucket(bucket)
+//		if b == nil {
+//			return errors.New("bucket not found" + string(bucket))
+//		}
+//		return b.Delete(key)
+//	})
+//}
 
 func IssueStreamId() (int64, error) {
 	var streamId int64
@@ -47,9 +47,13 @@ func IssueStreamId() (int64, error) {
 		b := tx.Bucket(common.StreamBucket)
 		id, _ := b.NextSequence()
 		streamId = int64(id)
-		return b.Put(common.Int64ToBytes(streamId), nil)
+		return b.Put(CreateStreamKey(streamId), nil)
 	})
 	return streamId, err
+}
+
+func CreateStreamKey(id int64) []byte {
+	return common.Int64ToBytes(id)
 }
 
 func SaveStreamInDB(stream *streaming.Stream) error {
@@ -63,14 +67,14 @@ func SaveStreamInDB(stream *streaming.Stream) error {
 		if err != nil {
 			return err
 		}
-		return b.Put(common.Int64ToBytes(stream.Id), buf)
+		return b.Put(CreateStreamKey(stream.Id), buf)
 	})
 }
 
 func DeleteStreamInDB(id int64) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(common.StreamBucket)
-		return b.Delete(common.Int64ToBytes(id))
+		return b.Delete(CreateStreamKey(id))
 	})
 }
 
