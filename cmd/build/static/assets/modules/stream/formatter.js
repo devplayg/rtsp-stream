@@ -64,3 +64,10 @@ function videosCanPlayFormatter(val, row, idx, field) {
     }
 }
 
+function streamsCreatedFormatter(val, row, idx) {
+    return moment.unix(val).format();
+}
+
+function streamsUpdatedFormatter(val, row, idx) {
+    return moment.unix(val).format();
+}

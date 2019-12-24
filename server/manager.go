@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
 	"github.com/devplayg/rtsp-stream/streaming"
@@ -15,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -39,7 +41,7 @@ func NewManager(server *Server) *Manager {
 		streams:              make(map[int64]*streaming.Stream), /* key: id(int64), value: &stream */
 		ctx:                  ctx,
 		cancel:               cancel,
-		watcherCheckInterval: 5 * time.Second,
+		watcherCheckInterval: 15 * time.Second,
 	}
 }
 
@@ -189,6 +191,7 @@ func (m *Manager) loadStreamsFromDatabase() error {
 			var stream streaming.Stream
 			err := json.Unmarshal(v, &stream)
 			if err != nil {
+				spew.Dump(k)
 				log.Error(err)
 				return nil
 			}
@@ -222,10 +225,13 @@ func (m *Manager) loadStreamsFromDatabase() error {
 func (m *Manager) getStreams() []*streaming.Stream {
 	streams := make([]*streaming.Stream, 0)
 	m.RLock()
-	defer m.RUnlock()
 	for _, stream := range m.streams {
 		streams = append(streams, stream)
 	}
+	defer m.RUnlock()
+	sort.Slice(streams, func(i, j int) bool {
+		return streams[i].Name < streams[j].Name
+	})
 
 	return streams
 }
@@ -293,20 +299,37 @@ func (m *Manager) issueStream(input *streaming.Stream) error {
 	}
 	input.Id = id
 	input.Created = time.Now().Unix()
+	input.Updated = input.Created
 	input.SetProtocol(common.HLS)
 	m.streams[input.Id] = input
 
 	return SaveStreamInDB(input)
 }
 
-func (m *Manager) updateStream(stream *streaming.Stream) error {
-	if err := m.isValidStream(stream); err != nil {
+func (m *Manager) updateStream(input *streaming.Stream) error {
+	if err := m.isValidStream(input); err != nil {
 		return err
 	}
 
-	m.Lock()
-	m.streams[stream.Id] = stream
-	m.Unlock()
+	//m.Lock()
+	//m.streams[stream.Id] = stream
+	//m.Unlock()
+	stream := m.getStreamById(input.Id)
+	if stream == nil {
+		return common.ErrorInvalidStream
+	}
+
+	m.RLock()
+	defer m.RUnlock()
+	stream.Name = input.Name
+	stream.Uri = input.Uri
+	stream.Enabled = input.Enabled
+	stream.Recording = input.Recording
+	stream.Username = input.Username
+	stream.Password = input.Password
+	stream.ProtocolInfo = input.ProtocolInfo
+	stream.UrlHash = input.UrlHash
+	stream.Updated = time.Now().Unix()
 
 	return SaveStreamInDB(stream)
 }

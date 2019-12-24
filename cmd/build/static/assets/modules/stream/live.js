@@ -3,7 +3,7 @@ $(function() {
 
     function checkLiveCameras() {
         $.ajax({
-            url: prefix+"/videos",
+            url: "/videos",
         }).done(function(result) {
             if (result.streams.length < 1) {
                 return;
@@ -25,7 +25,7 @@ $(function() {
 
             player.src({
                 "type": "application/x-mpegURL",
-                "src": prefix+"/videos/" + s.id + "/live/m3u8"
+                "src": "/videos/" + s.id + "/live/m3u8"
             });
             player.ready(function() {
                 player.muted(true);

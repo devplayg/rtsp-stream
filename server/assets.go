@@ -1,12 +1,7 @@
 package server
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"io"
+	"github.com/devplayg/eggcrate"
 )
 
 /*
@@ -33,61 +28,10 @@ var (
 	uiAssetMap map[string][]byte
 )
 
-//func decodeAssets() (map[string][]byte, error) {
-//	var m map[string][]byte
-//	b, err := base64.StdEncoding.DecodeString(encodedUiAssets)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	err = json.Unmarshal(b, &m)
-//	return m, err
-//}
-
 func init() {
-
-	compressed, err := decodeAssets(assetData)
-	if err != nil {
-		panic(err)
-	}
-
-	b, err := decompress(compressed)
-	if err != nil {
-		panic(err)
-	}
-
-	uiAssetMap = make(map[string][]byte)
-	err = json.Unmarshal(b, &uiAssetMap)
-
-	if err != nil {
-		panic(err)
-	}
-
-	for k, _ := range uiAssetMap {
-		fmt.Printf("%s is loaded. len=%d\n", k, len(uiAssetMap[k]))
-	}
-}
-
-func decompress(b []byte) ([]byte, error) {
-	buf := bytes.NewBuffer(b)
-
-	var r io.Reader
 	var err error
-	r, err = gzip.NewReader(buf)
+	uiAssetMap, err = eggcrate.Decode(assetData)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	var resB bytes.Buffer
-	_, err = resB.ReadFrom(r)
-	if err != nil {
-		return nil, err
-	}
-
-	return resB.Bytes(), nil
-
-}
-
-func decodeAssets(data string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(data)
 }

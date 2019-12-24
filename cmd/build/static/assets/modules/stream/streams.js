@@ -182,16 +182,3 @@ window.streamsActiveEvents = {
         manager.show(row.id);
     },
 };
-
-
-
-$('.modal').on('shown.bs.modal', function () {
-});
-
-
-
-
-
-
-
-

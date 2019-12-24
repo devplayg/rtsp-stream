@@ -35,6 +35,7 @@ type Stream struct {
 	LastStreamUpdated  time.Time            `json:"lastStreamUpdated"`
 	MaxStreamSeqId     int64                `json:"maxStreamSeqId"`
 	Created            int64                `json:"created"`
+	Updated            int64                `json:"updated"`
 	DB                 *bolt.DB             `json:"-"`
 	LastAttemptTime    time.Time            `json:"-"`
 	assistant          *Assistant

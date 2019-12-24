@@ -67,6 +67,7 @@ var (
 var (
 	ErrorInvalidUri       = errors.New("invalid URI")
 	ErrorDuplicatedStream = errors.New("duplicated stream")
+	ErrorInvalidStream    = errors.New("invalid stream")
 	ErrorStreamNotFound   = errors.New("stream not found")
 )
 

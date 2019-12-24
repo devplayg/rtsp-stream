@@ -11,7 +11,7 @@ $(function() {
 
     function updateVideos() {
         $.ajax({
-            url: prefix+"/videos",
+            url: "/videos",
         }).done(function(result) {
             console.log(result);
             if (result.streams.length < 1) {
@@ -65,7 +65,7 @@ $(function() {
     function playVideo(uri, live) {
         player.src({
             "type": "application/x-mpegURL",
-            "src": prefix + uri
+            "src": uri
         });
         player.ready(function() {
             player.play();

@@ -5,18 +5,18 @@ import (
 	"time"
 )
 
-func Base() string {
-	return `<!doctype html>
-<html lang="en">
- <body>
-    {{ block "content" . }}{{ end }}
-  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
-{{ block "script" . }}{{ end }}
-
- </body>
-</html>
-`
-}
+//func Base() string {
+//	return `<!doctype html>
+//<html lang="en">
+// <body>
+//    {{ block "content" . }}{{ end }}
+//  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+//{{ block "script" . }}{{ end }}
+//
+// </body>
+//</html>
+//`
+//}
 
 func Layout(body string) string {
 	tpl := `<!doctype html>
@@ -52,7 +52,6 @@ Customer Service
 
 </body>
 </html>`
-
 	return fmt.Sprintf(tpl, body)
 }
 
@@ -91,12 +90,12 @@ func CreateMockStatement() Statement {
 			LastName:  "Dow",
 		},
 		Purchases: []Purchase{
-			Purchase{
+			{
 				Date:          time.Date(2016, 1, 3, 0, 0, 0, 0, time.UTC),
 				Description:   "Shovel",
 				AmountInCents: 2326,
 			},
-			Purchase{
+			{
 				Date:          time.Date(2016, 1, 8, 0, 0, 0, 0, time.UTC),
 				Description:   "Staple remover",
 				AmountInCents: 5432,

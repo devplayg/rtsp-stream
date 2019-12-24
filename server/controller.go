@@ -12,7 +12,6 @@ import (
 	"github.com/minio/minio-go"
 	log "github.com/sirupsen/logrus"
 	"html/template"
-	"mime"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -38,99 +37,8 @@ func NewController(server *Server) *Controller {
 }
 
 func (c *Controller) init() {
-	c.setApiRoutes()
-	c.setAssetRoutes()
-	c.setUiRoutes()
+	c.initRouter()
 	http.Handle("/", c.router)
-}
-
-func (c *Controller) setApiRoutes() {
-	r := c.router
-
-	r.HandleFunc("/streams", c.GetStreams).Methods("GET")
-	r.HandleFunc("/streams", c.AddStream).Methods("POST")
-	r.HandleFunc("/streams/debug", c.DebugStream).Methods("GET")
-
-	r.HandleFunc("/streams/{id:[0-9]+}", c.GetStreamById).Methods("GET")
-	r.HandleFunc("/streams/{id:[0-9]+}", c.UpdateStream).Methods("PATCH")
-	r.HandleFunc("/streams/{id:[0-9]+}", c.DeleteStream).Methods("DELETE")
-
-	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
-	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
-
-	r.HandleFunc("/test", c.Test).Methods("GET")
-
-	// Video records
-	r.HandleFunc("/videos", c.GetVideoRecords).Methods("GET")
-
-	// Today M3u8: http://127.0.0.1:8000/videos/1/today/m3u8
-	r.HandleFunc("/videos/{id:[0-9]+}/today/m3u8", c.GetTodayM3u8).Methods("GET")
-	// Today videos: http://127.0.0.1:8000/videos/1/today/media0.ts
-	r.HandleFunc("/videos/{id:[0-9]+}/today/{media}.ts", c.GetTodayVideo).Methods("GET")
-
-	// (O) Live M3u8: http://127.0.0.1:8000/videos/1/live/m3u8
-	r.HandleFunc("/videos/{id:[0-9]+}/live/m3u8", c.GetLiveM3u8).Methods("GET")
-	// (O) Live videos: http://127.0.0.1:8000/videos/1/live/media0.ts
-	r.HandleFunc("/videos/{id:[0-9]+}/live/{media}.ts", c.GetLiveVideo).Methods("GET")
-
-	// Old M3u8: http://127.0.0.1:8000/videos/1/date/20191211/m3u8
-	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetDailyM3u8).Methods("GET")
-	// Old videos: http://127.0.0.1:8000/videos/1/date/20191211/media0.ts
-	r.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/{media}.ts", c.GetDailyVideo).Methods("GET")
-
-	r.
-		PathPrefix("/static").
-		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
-}
-
-func (c *Controller) setUiRoutes() {
-	c.router.HandleFunc("/streams/", ui.Stream).Methods("GET")
-	c.router.HandleFunc("/videos/", c.DisplayVideos).Methods("GET")
-	//http.HandleFunc("/ui", serveTemplate)
-}
-
-func (c *Controller) setAssetRoutes() {
-	/*
-		/assets/css/custom.js
-		/assets/img/logo.png
-		/assets/js/custom.js
-		/assets/js/jquery-3.4.1.min.js
-		/assets/js/jquery.mask.min.js
-		/assets/js/js.cookie-2.2.1.min.js
-		/assets/js/popper.min.js
-		/assets/plugins/bootstrap-table/bootstrap-table.min.css
-		-
-		/assets/plugins/bootstrap/bootstrap.min.css
-		/assets/plugins/bootstrap/bootstrap.min.js
-		/assets/plugins/moment/moment-timezone-with-data.min.js
-		/assets/plugins/moment/moment-timezone.min.js
-		/assets/plugins/moment/moment.min.js
-	*/
-
-	c.router.HandleFunc("/assets/{assetType}/{name}", func(w http.ResponseWriter, r *http.Request) {
-		GetAsset(w, r)
-	})
-
-	c.router.HandleFunc("/assets/plugins/{pluginName}/{name}", func(w http.ResponseWriter, r *http.Request) {
-		GetAsset(w, r)
-	})
-	c.router.HandleFunc("/assets/plugins/{pluginName}/{kind}/{name}", func(w http.ResponseWriter, r *http.Request) {
-		GetAsset(w, r)
-	})
-
-	c.router.HandleFunc("/assets/modules/{moduleName}/{name}", func(w http.ResponseWriter, r *http.Request) {
-		GetAsset(w, r)
-	})
-	//for path, _ := range assetMap {
-	//	c.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-	//		key := strings.TrimPrefix(r.RequestURI, "/")
-	//		if content, hasAsset := assetMap[key]; hasAsset {
-	//			w.Header().Set("Content-Type", common.DetectContentType(filepath.Ext(r.RequestURI)))
-	//			w.Header().Set("Content-Length", strconv.FormatInt(int64(len(content)), 10))
-	//			w.Write(content)
-	//		}
-	//	}).Methods("GET")
-	//}
 }
 
 func GetAsset(w http.ResponseWriter, r *http.Request) {
@@ -141,18 +49,46 @@ func GetAsset(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (c *Controller) DisplayStreams(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.New("streams")
+	tmpl, err := tmpl.Parse(ui.Base(ui.Fluid))
+	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
+	if tmpl, err = tmpl.Parse(ui.StreamPage()); err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
+	if err := tmpl.Execute(w, nil); err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
+}
+
 func (c *Controller) DisplayVideos(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.New("videos")
-
-	tmpl, err := tmpl.Parse(ui.BootstrapBase())
+	tmpl, err := tmpl.Parse(ui.Base(ui.Fluid))
 	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
+	if tmpl, err = tmpl.Parse(ui.VideoPage()); err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
+	if err := tmpl.Execute(w, nil); err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
+}
 
+func (c *Controller) DisplayLive(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.New("live")
+	tmpl, err := tmpl.Parse(ui.Base(ui.Fluid))
+	if err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
 	}
-	if tmpl, err = tmpl.Parse(ui.Videos()); err != nil {
-		fmt.Println(err)
+	if tmpl, err = tmpl.Parse(ui.LivePage()); err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
 	}
-	w.Header().Set("Content-Type", mime.TypeByExtension(".html"))
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		Response(w, r, err, http.StatusInternalServerError)
+	}
 }
 
 /*
@@ -789,9 +725,8 @@ func serveTemplate2(w http.ResponseWriter, r *http.Request) {
 	str := "hello"
 
 	//t := template.Must(template.New("email.tmpl").Funcs(fmap).Parse(ui.Layout(str)))
-	t := template.Must(template.New("streams").Funcs(fmap).Parse(ui.Layout(str)))
-	err := t.Execute(w, ui.CreateMockStatement())
-	if err != nil {
+	t := template.Must(template.New("xxx").Funcs(fmap).Parse(ui.Layout(str)))
+	if err := t.Execute(w, ui.CreateMockStatement()); err != nil {
 		log.Println("executing template:", err)
 	}
 }

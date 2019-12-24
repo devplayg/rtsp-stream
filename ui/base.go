@@ -1,5 +1,10 @@
 package ui
 
+const (
+	Single = iota
+	Fluid
+)
+
 /*
 	/assets/css/custom.css
 	/assets/img/logo.png
@@ -37,39 +42,49 @@ package ui
 	/assets/plugins/videojs/videojs-http-streaming.min.js
 */
 
-func BootstrapBase() string {
+func Base(mode int) string {
+	if mode == Fluid {
+		return baseFluid()
+	}
+
+	return ""
+}
+
+func baseFluid() string {
 	return `<!doctype html>
 <html lang="en">
-  <head>
-    <!-- Required meta tags -->
+
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="/assets/plugins/videojs/video-js.min.css">
     <link rel="stylesheet" href="/assets/plugins/bootstrap/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/plugins/bootstrap-table/bootstrap-table.min.css">
     <link rel="stylesheet" href="/assets/plugins/fontawesome/css/all.min.css" >
-
+    <link rel="stylesheet" href="/assets/plugins/bootstrap-table/bootstrap-table.min.css">
+    <link rel="stylesheet" href="/assets/plugins/videojs/video-js.min.css">
     <link rel="stylesheet" href="/assets/css/custom.css">
+    <title>RTSP-Stream</title>
+</head>
 
+<body>
+    <div class="container-fluid">
+{{ block "content" . }}{{ end }}
+    </div>
 
-    <title>Hello, world!</title>
-  </head>
-  <body>
-    {{ block "content" . }}{{ end }}
-    <script src="/assets/js/jquery-3.4.1.min.js" ></script>
+    <!-- Framework -->
+    <script src="/assets/js/jquery-3.4.1.min.js"></script>
     <script src="/assets/js/popper.min.js"></script>
-    <script src="/assets/plugins/bootstrap/bootstrap.min.js" ></script>
-	<script src="/assets/js/jquery.mask.min.js"></script>
-	<script src="/assets/js/js.cookie-2.2.1.min.js"></script>
-	<script src="/assets/plugins/moment/moment.min.js"></script>
-	<script src="/assets/plugins/moment/moment-timezone-with-data.min.js"></script>
-	<script src="/assets/plugins/videojs/video.min.js"></script>
-	<script src="/assets/plugins/videojs/videojs-http-streaming.min.js"></script>
-	<script src="/assets/js/custom.js"></script>
-    {{ block "script" . }}{{ end }}
-  </body>
+    <script src="/assets/plugins/bootstrap/bootstrap.min.js"></script>
+    <script src="/assets/js/jquery.mask.min.js"></script>
+    <script src="/assets/js/js.cookie-2.2.1.min.js"></script>
+    <script src="/assets/plugins/bootstrap-table/bootstrap-table.min.js"></script>
+    <script src="/assets/plugins/moment/moment.min.js"></script>
+    <script src="/assets/plugins/moment/moment-timezone-with-data.min.js"></script>
+    <script src="/assets/plugins/videojs/video.min.js"></script>
+    <script src="/assets/plugins/videojs/videojs-http-streaming.min.js"></script>
+    <script src="/assets/js/custom.js"></script>
+{{ block "script" . }}{{ end }}
+</body>
+
 </html>`
 }
 
