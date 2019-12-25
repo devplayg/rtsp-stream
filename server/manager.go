@@ -228,8 +228,11 @@ func (m *Manager) getStreams() []*streaming.Stream {
 	for _, stream := range m.streams {
 		streams = append(streams, stream)
 	}
-	defer m.RUnlock()
+	m.RUnlock()
 	sort.Slice(streams, func(i, j int) bool {
+		if streams[i].Name == streams[j].Name {
+			return streams[i].Id < streams[j].Id
+		}
 		return streams[i].Name < streams[j].Name
 	})
 
@@ -238,12 +241,12 @@ func (m *Manager) getStreams() []*streaming.Stream {
 
 func (m *Manager) getStreamById(id int64) *streaming.Stream {
 	m.Lock()
-	defer m.Unlock()
-
 	if _, ok := m.streams[id]; !ok {
 		return nil
 	}
 	stream := m.streams[id]
+	m.Unlock()
+
 	if stream.Cmd != nil && stream.Cmd.Process != nil {
 		stream.Pid = stream.Cmd.Process.Pid
 	}
@@ -678,6 +681,15 @@ func (m *Manager) convertStreamsToBucketNames(streams []*streaming.Stream) []str
 		bucketNames = append(bucketNames, bucketName)
 	}
 	return bucketNames
+}
+
+func (m *Manager) getLiveData() map[string]interface{} {
+	streams := m.getStreams()
+
+	return map[string]interface{}{
+		"streams": streams,
+	}
+
 }
 
 //func (m *Manager) toggleStreamEnabled()

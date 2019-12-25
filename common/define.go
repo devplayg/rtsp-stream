@@ -178,6 +178,11 @@ type Record struct {
 
 type DayRecordMap map[string]map[string]string
 
+type TplGlobalVar struct {
+	Common   map[string]interface{}
+	Contents interface{}
+}
+
 //type VideoRecord struct {
 //    Seq      int64   `json:"seq"`
 //    Name     string  `json:"nm"`

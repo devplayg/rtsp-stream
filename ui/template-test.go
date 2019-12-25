@@ -18,7 +18,7 @@ import (
 //`
 //}
 
-func Layout(body string) string {
+func TestLayout(body string) string {
 	tpl := `<!doctype html>
 <html>
 <head>

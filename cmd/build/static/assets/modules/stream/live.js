@@ -1,16 +1,16 @@
 $(function() {
-    checkLiveCameras();
+    checkLiveCameras(streams);
 
-    function checkLiveCameras() {
-        $.ajax({
-            url: "/videos",
-        }).done(function(result) {
-            if (result.streams.length < 1) {
+    function checkLiveCameras(streams) {
+        // console.log(streams);
+        // $.ajax({
+        //     url: "/videos",
+        // }).done(function(result) {
+            if (streams.length < 1) {
                 return;
             }
 
-            updateLiveVideos(result.streams);
-        });
+            updateLiveVideos(streams);
     }
 
     function updateLiveVideos(streams) {

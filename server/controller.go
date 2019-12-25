@@ -86,7 +86,7 @@ func (c *Controller) DisplayLive(w http.ResponseWriter, r *http.Request) {
 	if tmpl, err = tmpl.Parse(ui.LivePage()); err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 	}
-	if err := tmpl.Execute(w, nil); err != nil {
+	if err := tmpl.Execute(w, c.manager.getLiveData()); err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 	}
 }
@@ -128,8 +128,8 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
-	list := c.manager.getStreams()
-	data, err := json.MarshalIndent(list, "", "  ")
+	streams := c.manager.getStreams()
+	data, err := json.MarshalIndent(streams, "", "  ")
 	if err != nil {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
@@ -725,7 +725,7 @@ func serveTemplate2(w http.ResponseWriter, r *http.Request) {
 	str := "hello"
 
 	//t := template.Must(template.New("email.tmpl").Funcs(fmap).Parse(ui.Layout(str)))
-	t := template.Must(template.New("xxx").Funcs(fmap).Parse(ui.Layout(str)))
+	t := template.Must(template.New("xxx").Funcs(fmap).Parse(ui.TestLayout(str)))
 	if err := t.Execute(w, ui.CreateMockStatement()); err != nil {
 		log.Println("executing template:", err)
 	}

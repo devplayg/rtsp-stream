@@ -10,9 +10,17 @@ func (c *Controller) initRouter() {
 	c.setUiRoutes()
 }
 
+func (c *Controller) setUiRoutes() {
+	c.router.HandleFunc("/streams/", c.DisplayStreams).Methods("GET")
+	c.router.HandleFunc("/videos/", c.DisplayVideos).Methods("GET")
+	c.router.HandleFunc("/live/", c.DisplayLive).Methods("GET")
+	c.router.HandleFunc("/tpl", serveTemplate2)
+}
+
 func (c *Controller) setApiRoutes() {
 	r := c.router
 
+	//r.HandleFunc("/test", c.Test).Methods("GET")
 	r.HandleFunc("/streams", c.GetStreams).Methods("GET")
 	r.HandleFunc("/streams", c.AddStream).Methods("POST")
 	r.HandleFunc("/streams/debug", c.DebugStream).Methods("GET")
@@ -23,8 +31,6 @@ func (c *Controller) setApiRoutes() {
 
 	r.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
 	r.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
-
-	r.HandleFunc("/test", c.Test).Methods("GET")
 
 	// Video records
 	r.HandleFunc("/videos", c.GetVideoRecords).Methods("GET")
@@ -47,13 +53,6 @@ func (c *Controller) setApiRoutes() {
 	r.
 		PathPrefix("/static").
 		Handler(http.StripPrefix("/static", http.FileServer(http.Dir(c.staticDir))))
-}
-
-func (c *Controller) setUiRoutes() {
-	c.router.HandleFunc("/streams/", c.DisplayStreams).Methods("GET")
-	c.router.HandleFunc("/videos/", c.DisplayVideos).Methods("GET")
-	c.router.HandleFunc("/live/", c.DisplayLive).Methods("GET")
-	c.router.HandleFunc("/tpl", serveTemplate2)
 }
 
 func (c *Controller) setAssetRoutes() {
