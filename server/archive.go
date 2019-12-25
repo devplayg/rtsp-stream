@@ -87,7 +87,7 @@ func (m *Manager) startToArchiveVideos(targetDate string) error {
 		"duration(sec)": time.Since(t).Seconds(),
 		"targetDate":    targetDate,
 	}).Debug("[manager] archiving has been finished")
-	return PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(targetDate))
+	return PutDataIntoDbBucket(common.ConfigBucket, common.LastArchivingDateKey, []byte(targetDate))
 }
 
 func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {

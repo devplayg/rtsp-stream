@@ -49,7 +49,7 @@ func (s *Server) Start() error {
 	log.WithFields(log.Fields{
 		"liveDir":   absLiveDir,
 		"recordDir": absRecordDir,
-		"bucket":    absRecordDir,
+		"bucket":    s.config.Storage.Bucket,
 	}).Infof("[server] listening on %s", s.addr)
 	go func() {
 		log.Fatal(srv.ListenAndServe())

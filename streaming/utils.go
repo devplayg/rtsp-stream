@@ -3,7 +3,6 @@ package streaming
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/devplayg/rtsp-stream/common"
 	"github.com/gorilla/mux"
 	"github.com/minio/highwayhash"
@@ -186,12 +185,12 @@ func SendToStorage(bucketName, objectName, path, contentType string) error {
 	return nil
 }
 
-func GetStreamBucketName(streamId int64, date string) []byte {
-	if len(date) < 1 {
-		date = common.LiveBucketName
-	}
-	return []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
-}
+//func GetStreamBucketName(streamId int64, date string) []byte {
+//	if len(date) < 1 {
+//		date = common.LiveBucketName
+//	}
+//	return []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
+//}
 
 func GetVideoFileSeq(name string) (int, error) {
 	str := strings.TrimPrefix(filepath.Base(name), common.VideoFilePrefix)

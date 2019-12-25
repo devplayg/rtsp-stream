@@ -72,7 +72,7 @@ func (m *Manager) init() error {
 }
 
 func (m *Manager) getLastArchivingDate(t time.Time) (string, error) {
-	val, err := GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
+	val, err := GetValueFromDbBucket(common.ConfigBucket, common.LastArchivingDateKey)
 	if err != nil {
 		return "", err
 	}
@@ -95,7 +95,7 @@ func (m *Manager) checkOldLiveVideoFiles() error {
 	}).Debug("[manager] checking last archiving date")
 
 	if lastArchivingDate == expectedDate {
-		PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
+		PutDataIntoDbBucket(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
 		return nil
 	}
 
@@ -122,7 +122,7 @@ func (m *Manager) checkOldLiveVideoFiles() error {
 		d = d.Add(24 * time.Hour)
 	}
 
-	PutDataInDB(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
+	PutDataIntoDbBucket(common.ConfigBucket, common.LastArchivingDateKey, []byte(expectedDate))
 
 	//err := common.DB.View(func(tx *bolt.Tx) error {
 	//    b := tx.Bucket(common.ConfigBucket)
@@ -306,7 +306,17 @@ func (m *Manager) issueStream(input *streaming.Stream) error {
 	input.SetProtocol(common.HLS)
 	m.streams[input.Id] = input
 
-	return SaveStreamInDB(input)
+	return m.saveStream(input)
+
+}
+
+func (m *Manager) saveStream(stream *streaming.Stream) error {
+	b, err := json.Marshal(stream)
+	if err != nil {
+		return err
+	}
+
+	return PutDataIntoDbBucket(common.StreamBucket, common.CreateStreamKey(stream.Id), b)
 }
 
 func (m *Manager) updateStream(input *streaming.Stream) error {
@@ -334,7 +344,8 @@ func (m *Manager) updateStream(input *streaming.Stream) error {
 	stream.UrlHash = input.UrlHash
 	stream.Updated = time.Now().Unix()
 
-	return SaveStreamInDB(stream)
+	return m.saveStream(stream)
+	// return SaveStreamInDB(stream)
 }
 
 func (m *Manager) deleteStream(id int64, from string) error {
@@ -602,7 +613,7 @@ func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
 		return nil, nil
 	}
 	t := time.Now().In(common.Loc)
-	lastArchivingDateKey, _ := GetValueFromDB(common.ConfigBucket, common.LastArchivingDateKey)
+	lastArchivingDateKey, _ := GetValueFromDbBucket(common.ConfigBucket, common.LastArchivingDateKey)
 	result := map[string]interface{}{
 		"date":                 t.Format(common.DateFormat),
 		"lastArchivingDateKey": string(lastArchivingDateKey),

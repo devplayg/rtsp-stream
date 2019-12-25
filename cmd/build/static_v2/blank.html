@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>
+        RTSP Stream
+    </title>
+    <meta name="description" content="Page Titile">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no, minimal-ui">
+    <!-- Call App Mode on ios devices -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- Remove Tap Highlight on Windows Phone IE -->
+    <meta name="msapplication-tap-highlight" content="no">
+    <!-- base css -->
+    <link rel="stylesheet" media="screen, print" href="/static/assets/css/vendors.bundle.css">
+    <link rel="stylesheet" media="screen, print" href="/static/assets/css/app.bundle.css">
+    <link rel="stylesheet" media="screen, print" href="/static/assets/css/themes/cust-theme-3.css">
+    <!-- Place favicon.ico in the root directory -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/assets/img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/img/favicon/favicon-32x32.png">
+    <link rel="mask-icon" href="/static/assets/img/favicon/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="stylesheet" media="screen, print" href="/static/assets/css/fa-regular.css">
+    <!--<link rel="stylesheet" media="screen, print" href="css/your_styles.css">-->
+</head>
+<body class="mod-bg-1 nav-function-fixed">
+<!-- BEGIN Page Wrapper -->
+<div class="page-wrapper">
+    <div class="page-inner">
+        <!-- BEGIN Left Aside -->
+        <aside class="page-sidebar">
+            <div class="page-logo">
+                <a href="#" class="page-logo-link press-scale-down d-flex align-items-center position-relative">
+                    <img src="img/logo.png" alt="RTSP Stream" aria-roledescription="logo">
+                    <span class="page-logo-text mr-1">RTSP Stream</span>
+                    <span class="position-absolute text-white opacity-50 small pos-top pos-right mr-2 mt-n2"></span>
+                    <i class="fal fa-angle-down d-inline-block ml-1 fs-lg color-primary-300"></i>
+                </a>
+            </div>
+            <!-- BEGIN PRIMARY NAVIGATION -->
+            <nav id="js-primary-nav" class="primary-nav" role="navigation">
+                <div class="nav-filter">
+                    <div class="position-relative">
+                        <input type="text" id="nav_filter_input" placeholder="Filter menu" class="form-control" tabindex="0">
+                        <a href="#" onclick="return false;" class="btn-primary btn-search-close js-waves-off" data-action="toggle" data-class="list-filter-active" data-target=".page-sidebar">
+                            <i class="fal fa-chevron-up"></i>
+                        </a>
+                    </div>
+                </div>
+                <ul id="js-nav-menu" class="nav-menu">
+                    <li class="nav-title">Streaming</li>
+                    <li>
+                        <a href="/static/live.html" title="Live">
+                            <i class="fal fa-window"></i>
+                            <span class="nav-link-text">Live</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/static/live.html" title="Videos">
+                            <i class="far fa-video"></i>
+                            <span class="nav-link-text">Videos</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/static/live.html" title="Settings">
+                            <i class="fal fa-cog"></i>
+                            <span class="nav-link-text">Settings</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" title="Blank">
+                            <i class="fal fa-map-marker-alt"></i>
+                            <span class="nav-link-text">Blank</span>
+                            <span class="dl-ref bg-primary-500 hidden-nav-function-minify hidden-nav-function-top">2,500+</span>
+                        </a>
+                        <ul>
+                            <li>
+                                <a href="javascript:void(0);" title="FontAwesome">
+                                    <span class="nav-link-text">FontAwesome Pro</span>
+                                </a>
+                                <ul>
+                                    <li>
+                                        <a href="/static/blank.html" title="Light">
+                                            <span class="nav-link-text">Light</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="icons_fontawesome_regular.html" title="Regular">
+                                            <span class="nav-link-text">Regular</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                <div class="filter-message js-filter-message bg-success-600"></div>
+            </nav>
+            <!-- END PRIMARY NAVIGATION -->
+            <!-- NAV FOOTER -->
+            <div class="nav-footer shadow-top">
+                <a href="#" onclick="return false;" data-action="toggle" data-class="nav-function-minify" class="hidden-md-down">
+                    <i class="ni ni-chevron-right"></i>
+                    <i class="ni ni-chevron-right"></i>
+                </a>
+                <ul class="list-table m-auto nav-footer-buttons">
+                    <li>
+                        <a href="javascript:void(0);" data-toggle="tooltip" data-placement="top" title="Chat logs">
+                            <i class="fal fa-comments"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0);" data-toggle="tooltip" data-placement="top" title="Support Chat">
+                            <i class="fal fa-life-ring"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:void(0);" data-toggle="tooltip" data-placement="top" title="Make a call">
+                            <i class="fal fa-phone"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div> <!-- END NAV FOOTER -->
+        </aside>
+        <!-- END Left Aside -->
+        <div class="page-content-wrapper">
+            <!-- BEGIN Page Header -->
+            <header class="page-header" role="banner">
+                <!-- we need this logo when user switches to nav-function-top -->
+                <div class="page-logo">
+                    <a href="#" class="page-logo-link press-scale-down d-flex align-items-center position-relative">
+                        <img src="img/logo.png" alt="RTSP Stream" aria-roledescription="logo">
+                        <span class="page-logo-text mr-1">RTSP Stream</span>
+                        <span class="position-absolute text-white opacity-50 small pos-top pos-right mr-2 mt-n2"></span>
+                        <i class="fal fa-angle-down d-inline-block ml-1 fs-lg color-primary-300"></i>
+                    </a>
+                </div>
+                <!-- DOC: mobile button appears during mobile width -->
+                <div class="hidden-lg-up">
+                    <a href="#" class="header-btn btn press-scale-down" data-action="toggle" data-class="mobile-nav-on">
+                        <i class="ni ni-menu"></i>
+                    </a>
+                </div>
+                <div class="ml-auto d-flex">
+                    <!-- activate app search icon (mobile) -->
+                    <div class="hidden-sm-up">
+                        <a href="#" class="header-icon" data-action="toggle" data-class="mobile-search-on" data-focus="search-field" title="Search">
+                            <i class="fal fa-search"></i>
+                        </a>
+                    </div>
+                    <!-- app shortcuts -->
+                    <div>
+                        <a href="#" class="header-icon" data-toggle="dropdown" title="My Apps">
+                            <i class="fal fa-cube"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-animated w-auto h-auto">
+                            <div class="dropdown-header bg-trans-gradient d-flex justify-content-center align-items-center rounded-top">
+                                <h4 class="m-0 text-center color-white">
+                                    Quick Shortcut
+                                    <small class="mb-0 opacity-80">User Applications & Addons</small>
+                                </h4>
+                            </div>
+                            <div class="custom-scroll h-100">
+                                <ul class="app-list">
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-2 icon-stack-3x color-primary-600"></i>
+                                                        <i class="base-3 icon-stack-2x color-primary-700"></i>
+                                                        <i class="ni ni-settings icon-stack-1x text-white fs-lg"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Services
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-2 icon-stack-3x color-primary-400"></i>
+                                                        <i class="base-10 text-white icon-stack-1x"></i>
+                                                        <i class="ni md-profile color-primary-800 icon-stack-2x"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Account
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-9 icon-stack-3x color-success-400"></i>
+                                                        <i class="base-2 icon-stack-2x color-success-500"></i>
+                                                        <i class="ni ni-shield icon-stack-1x text-white"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Security
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-18 icon-stack-3x color-info-700"></i>
+                                                        <span class="position-absolute pos-top pos-left pos-right color-white fs-md mt-2 fw-400">28</span>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Calendar
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-7 icon-stack-3x color-info-500"></i>
+                                                        <i class="base-7 icon-stack-2x color-info-700"></i>
+                                                        <i class="ni ni-graph icon-stack-1x text-white"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Stats
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-4 icon-stack-3x color-danger-500"></i>
+                                                        <i class="base-4 icon-stack-1x color-danger-400"></i>
+                                                        <i class="ni ni-envelope icon-stack-1x text-white"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Messages
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-4 icon-stack-3x color-fusion-400"></i>
+                                                        <i class="base-5 icon-stack-2x color-fusion-200"></i>
+                                                        <i class="base-5 icon-stack-1x color-fusion-100"></i>
+                                                        <i class="fal fa-keyboard icon-stack-1x color-info-50"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Notes
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-16 icon-stack-3x color-fusion-500"></i>
+                                                        <i class="base-10 icon-stack-1x color-primary-50 opacity-30"></i>
+                                                        <i class="base-10 icon-stack-1x fs-xl color-primary-50 opacity-20"></i>
+                                                        <i class="fal fa-dot-circle icon-stack-1x text-white opacity-85"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Photos
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-19 icon-stack-3x color-primary-400"></i>
+                                                        <i class="base-7 icon-stack-2x color-primary-300"></i>
+                                                        <i class="base-7 icon-stack-1x fs-xxl color-primary-200"></i>
+                                                        <i class="base-7 icon-stack-1x color-primary-500"></i>
+                                                        <i class="fal fa-globe icon-stack-1x text-white opacity-85"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Maps
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-5 icon-stack-3x color-success-700 opacity-80"></i>
+                                                        <i class="base-12 icon-stack-2x color-success-700 opacity-30"></i>
+                                                        <i class="fal fa-comment-alt icon-stack-1x text-white"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Chat
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-5 icon-stack-3x color-warning-600"></i>
+                                                        <i class="base-7 icon-stack-2x color-warning-800 opacity-50"></i>
+                                                        <i class="fal fa-phone icon-stack-1x text-white"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Phone
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" class="app-list-item hover-white">
+                                                    <span class="icon-stack">
+                                                        <i class="base-6 icon-stack-3x color-danger-600"></i>
+                                                        <i class="fal fa-chart-line icon-stack-1x text-white"></i>
+                                                    </span>
+                                            <span class="app-list-name">
+                                                        Projects
+                                                    </span>
+                                        </a>
+                                    </li>
+                                    <li class="w-100">
+                                        <a href="#" class="btn btn-default mt-4 mb-2 pr-5 pl-5"> Add more apps </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- app user menu -->
+                    <div>
+                        <a href="#" data-toggle="dropdown" title="drlantern@gotbootstrap.com" class="header-icon d-flex align-items-center justify-content-center ml-2">
+                            <img src="/static/img/avatar.png" class="profile-image rounded-circle" alt="Devplayg">
+                            <!-- you can also add username next to the avatar with the codes below:
+                            <span class="ml-1 mr-1 text-truncate text-truncate-header hidden-xs-down">Me</span>
+                            <i class="ni ni-chevron-down hidden-xs-down"></i> -->
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-animated dropdown-lg">
+                            <div class="dropdown-header bg-trans-gradient d-flex flex-row py-4 rounded-top">
+                                <div class="d-flex flex-row align-items-center mt-1 mb-1 color-white">
+                                            <span class="mr-2">
+                                                <img src="/static/img/avatar.png" class="rounded-circle profile-image" alt="Devplayg">
+                                            </span>
+                                    <div class="info-card-text">
+                                        <div class="fs-lg text-truncate text-truncate-lg">Devplayg</div>
+                                        <span class="text-truncate text-truncate-md opacity-80">devplayg@devplayg.com</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider m-0"></div>
+                            <a href="#" class="dropdown-item" data-action="app-fullscreen">
+                                <span>Fullscreen</span>
+                                <i class="float-right text-muted fw-n">F11</i>
+                            </a>
+                            <div class="dropdown-divider m-0"></div>
+                            <div class="dropdown-multilevel dropdown-multilevel-left">
+                                <div class="dropdown-item">
+                                    Language
+                                </div>
+                                <div class="dropdown-menu">
+                                    <a href="#?lang=fr" class="dropdown-item" data-action="lang" data-lang="fr">Français</a>
+                                    <a href="#?lang=en" class="dropdown-item active" data-action="lang" data-lang="en">English (US)</a>
+                                    <a href="#?lang=es" class="dropdown-item" data-action="lang" data-lang="es">Español</a>
+                                    <a href="#?lang=ru" class="dropdown-item" data-action="lang" data-lang="ru">Русский язык</a>
+                                    <a href="#?lang=jp" class="dropdown-item" data-action="lang" data-lang="jp">日本語</a>
+                                    <a href="#?lang=ch" class="dropdown-item" data-action="lang" data-lang="ch">中文</a>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider m-0"></div>
+                            <a class="dropdown-item fw-500 pt-3 pb-3" href="page_login_alt.html">
+                                <span>Logout</span>
+                                <span class="float-right fw-n">&commat;devplayg</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <!-- END Page Header -->
+            <!-- BEGIN Page Content -->
+            <!-- the #js-page-content id is needed for some plugins to initialize -->
+            <main id="js-page-content" role="main" class="page-content">
+                <ol class="breadcrumb page-breadcrumb">
+                    <li class="breadcrumb-item"><a href="javascript:void(0);">Devplayg</a></li>
+                    <li class="breadcrumb-item">category_1</li>
+                    <li class="breadcrumb-item">category_2</li>
+                    <li class="breadcrumb-item active">Page Titile</li>
+                    <li class="position-absolute pos-top pos-right d-none d-sm-block"><span class="js-get-date"></span></li>
+                </ol>
+                <div class="subheader">
+                    <h1 class="subheader-title">
+                        <i class='subheader-icon fal fa-'></i> Page <span class='fw-300'>Title</span> <sup class='badge badge-primary fw-500'>ADDON</sup>
+                        <small>
+                            blank description
+                        </small>
+                    </h1>
+                    <div class="subheader-block">
+                        Right content of header
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xl-12">
+                        <div id="panel-1" class="panel">
+                            <div class="panel-hdr">
+                                <h2>
+                                    Panel <span class="fw-300"><i>Title</i></span>
+                                </h2>
+                                <div class="panel-toolbar">
+                                    <button class="btn btn-panel" data-action="panel-collapse" data-toggle="tooltip" data-offset="0,10" data-original-title="Collapse"></button>
+                                    <button class="btn btn-panel" data-action="panel-fullscreen" data-toggle="tooltip" data-offset="0,10" data-original-title="Fullscreen"></button>
+                                    <button class="btn btn-panel" data-action="panel-close" data-toggle="tooltip" data-offset="0,10" data-original-title="Close"></button>
+                                </div>
+                            </div>
+                            <div class="panel-container show">
+                                <div class="panel-content">
+                                    <div class="panel-tag">
+                                        Panel tag <code>code</code>
+                                    </div>
+                                    Text
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <!-- this overlay is activated only when mobile menu is triggered -->
+            <div class="page-content-overlay" data-action="toggle" data-class="mobile-nav-on"></div> <!-- END Page Content -->
+            <!-- BEGIN Page Footer -->
+            <footer class="page-footer" role="contentinfo">
+                <div class="d-flex align-items-center flex-1 text-muted">
+                    <span class="hidden-md-down fw-700">2019 © Hello&nbsp;</span>
+                </div>
+                <div>
+                    <ul class="list-table m-0">
+                        <li><a href="intel_introduction.html" class="text-secondary fw-700">About</a></li>
+                        <li class="pl-3"><a href="info_app_licensing.html" class="text-secondary fw-700">License</a></li>
+                        <li class="pl-3"><a href="info_app_docs.html" class="text-secondary fw-700">Documentation</a></li>
+                        <li class="pl-3 fs-xl"><a href="https://wrapbootstrap.com/user/MyOrange" class="text-secondary" target="_blank"><i class="fal fa-question-circle" aria-hidden="true"></i></a></li>
+                    </ul>
+                </div>
+            </footer>
+            <!-- END Page Footer -->
+            <!-- BEGIN Color profile -->
+            <!-- this area is hidden and will not be seen on screens or screen readers -->
+            <!-- we use this only for CSS color refernce for JS stuff -->
+            <p id="js-color-profile" class="d-none">
+                <span class="color-primary-50"></span>
+                <span class="color-primary-100"></span>
+                <span class="color-primary-200"></span>
+                <span class="color-primary-300"></span>
+                <span class="color-primary-400"></span>
+                <span class="color-primary-500"></span>
+                <span class="color-primary-600"></span>
+                <span class="color-primary-700"></span>
+                <span class="color-primary-800"></span>
+                <span class="color-primary-900"></span>
+                <span class="color-info-50"></span>
+                <span class="color-info-100"></span>
+                <span class="color-info-200"></span>
+                <span class="color-info-300"></span>
+                <span class="color-info-400"></span>
+                <span class="color-info-500"></span>
+                <span class="color-info-600"></span>
+                <span class="color-info-700"></span>
+                <span class="color-info-800"></span>
+                <span class="color-info-900"></span>
+                <span class="color-danger-50"></span>
+                <span class="color-danger-100"></span>
+                <span class="color-danger-200"></span>
+                <span class="color-danger-300"></span>
+                <span class="color-danger-400"></span>
+                <span class="color-danger-500"></span>
+                <span class="color-danger-600"></span>
+                <span class="color-danger-700"></span>
+                <span class="color-danger-800"></span>
+                <span class="color-danger-900"></span>
+                <span class="color-warning-50"></span>
+                <span class="color-warning-100"></span>
+                <span class="color-warning-200"></span>
+                <span class="color-warning-300"></span>
+                <span class="color-warning-400"></span>
+                <span class="color-warning-500"></span>
+                <span class="color-warning-600"></span>
+                <span class="color-warning-700"></span>
+                <span class="color-warning-800"></span>
+                <span class="color-warning-900"></span>
+                <span class="color-success-50"></span>
+                <span class="color-success-100"></span>
+                <span class="color-success-200"></span>
+                <span class="color-success-300"></span>
+                <span class="color-success-400"></span>
+                <span class="color-success-500"></span>
+                <span class="color-success-600"></span>
+                <span class="color-success-700"></span>
+                <span class="color-success-800"></span>
+                <span class="color-success-900"></span>
+                <span class="color-fusion-50"></span>
+                <span class="color-fusion-100"></span>
+                <span class="color-fusion-200"></span>
+                <span class="color-fusion-300"></span>
+                <span class="color-fusion-400"></span>
+                <span class="color-fusion-500"></span>
+                <span class="color-fusion-600"></span>
+                <span class="color-fusion-700"></span>
+                <span class="color-fusion-800"></span>
+                <span class="color-fusion-900"></span>
+            </p>
+            <!-- END Color profile -->
+        </div>
+    </div>
+</div>
+<!-- END Page Wrapper -->
+<!-- BEGIN Quick Menu -->
+<!-- to add more items, please make sure to change the variable '$menu-items: number;' in your _page-components-shortcut.scss -->
+<nav class="shortcut-menu d-none d-sm-block">
+    <input type="checkbox" class="menu-open" name="menu-open" id="menu_open" />
+    <label for="menu_open" class="menu-open-button ">
+        <span class="app-shortcut-icon d-block"></span>
+    </label>
+    <a href="#" class="menu-item btn" data-toggle="tooltip" data-placement="left" title="Scroll Top">
+        <i class="fal fa-arrow-up"></i>
+    </a>
+    <a href="page_login_alt.html" class="menu-item btn" data-toggle="tooltip" data-placement="left" title="Logout">
+        <i class="fal fa-sign-out"></i>
+    </a>
+    <a href="#" class="menu-item btn" data-action="app-fullscreen" data-toggle="tooltip" data-placement="left" title="Full Screen">
+        <i class="fal fa-expand"></i>
+    </a>
+    <a href="#" class="menu-item btn" data-action="app-print" data-toggle="tooltip" data-placement="left" title="Print page">
+        <i class="fal fa-print"></i>
+    </a>
+    <a href="#" class="menu-item btn" data-action="app-voice" data-toggle="tooltip" data-placement="left" title="Voice command">
+        <i class="fal fa-microphone"></i>
+    </a>
+</nav>
+<!-- END Quick Menu -->
+<script src="/static/assets/js/vendors.bundle.js"></script>
+<script src="/static/assets/js/app.bundle.js"></script>
+<!--<script src="js/../script.js"></script>-->
+<script>
+$(document).ready(function () {
+
+});
+</script>
+</body>
+</html>

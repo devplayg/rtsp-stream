@@ -24,6 +24,10 @@ func Int64ToBytes(i int64) []byte {
 	return buf
 }
 
+func CreateStreamKey(id int64) []byte {
+	return Int64ToBytes(id)
+}
+
 func ReadVideoFilesOnDateInDir(dir, date, ext string) ([]os.FileInfo, error) {
 	list, err := ioutil.ReadDir(dir)
 	if err != nil {
