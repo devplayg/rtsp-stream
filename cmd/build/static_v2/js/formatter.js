@@ -1,32 +1,43 @@
 function onOffFormatter(tf, idx, row) {
     if (tf) {
-        return '<span class="badge badge-success">On</span>';
+        return '<h5><span class="badge badge-success">On</span></h5>';
     }
-    return '<span class="badge badge-secondary">Off</span>';
+    return '<h5><span class="badge badge-secondary">Off</span></h5>';
 }
 
 function streamsControlFormatter(val, row, idx) {
-    return [
-        '<a href="#" class="delete" data-id="' + row.id + '">',
-        "Delete",
-        '</a>',
-        '<br>',
+    let arr = [];
+    arr.push('<a href="#" class="delete text-danger " data-id="' + row.id + '"><i class="far fa-times"></i></a>');
+    arr.push('<a href="#" class="edit" data-id="' + row.id + '"><i class="far fa-edit"></i></a>');
+    if (row.status === Stopped) {
+        arr.push('<a href="#" class="start" data-id="' + row.id + '"><i class="far fa-play"></i></a>');
+    }
 
-        '<a href="#" class="start" data-id="' + row.id + '">',
-        "Start",
-        '</a>',
-        '<br>',
+    if (row.status === Started) {
+        arr.push('<a href="#" class="stop" data-id="' + row.id + '"><i class="far fa-stop"></i></a>');
+    }
+    // console.log(arr);
+    // console.log(arr.join(''));
+    // return [
+    //     '<a href="#" class="delete text-danger " data-id="' + row.id + '">',
+    //     '<i class="far fa-times"></i>',
+    //     '</a>',
+    //
+    //     '<a href="#" class="start" data-id="' + row.id + '">',
+    //     '<i class="far fa-play"></i>',
+    //     '</a>',
+    //
+    //     '<a href="#" class="stop" data-id="' + row.id + '">',
+    //     '<i class="far fa-stop"></i>',
+    //     '</a>',
+    //
+    //     '<a href="#" class="edit" data-id="' + row.id + '">',
+    //     '<i class="far fa-edit"></i>',
+    //     '</a>',
+    //
+    // ].join("");
 
-        '<a href="#" class="stop" data-id="' + row.id + '">',
-        "Stop",
-        '</a>',
-        '<br>',
-
-        '<a href="#" class="edit" data-id="' + row.id + '">',
-        "Edit",
-        '</a>',
-
-    ].join("");
+    return arr.join(' ');
 }
 //
 // function streamsActiveFormatter(active, row, idx) {
@@ -84,19 +95,23 @@ function videosCanPlayFormatter(val, row, idx, field) {
 }
 
 function streamsStatusFormatter(val, row, idx) {
-    if (val === -1) {
+    if (val === Failed) {
         return '<span class="text-danger">' + 'Failed' + '</span>';
     }
 
-    if (val === 1) {
+    if (val === Stopped) {
         return '<span class="text-muted">Stopped</span>';
     }
 
-    if (val === 3) {
+    if (val === Stopping) {
+        return '<div class="spinner-grow text-warning" role="status"><span class="sr-only">Loading...</span></div> Stopping';
+    }
+
+    if (val === Starting) {
         return '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="sr-only">Loading...</span></div> Starting';
     }
 
-    if (val === 4) {
+    if (val === Started) {
         return '<span class="badge badge-danger">Live</span>';
     }
 

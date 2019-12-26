@@ -1,3 +1,17 @@
+.bred {
+    border: 1px solid red;
+}
+
+.bblue {
+    border: 1px solid blue;
+}
+
+.stream {
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+    margin-bottom: 1px !important;
+}
+
 /*.page-logo,*/
 /*.page-sidebar,*/
 /*.page-header,*/

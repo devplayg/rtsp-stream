@@ -66,16 +66,39 @@ let StreamManager = function () {
         });
     };
 
-    this.delete = function(id) {
+    this.delete = function(row) {
         let c = this;
-        $.ajax({
-            url: "/streams/" + id,
-            type: "DELETE",
-        }).done(function(data) {
-            c.refreshTable();
-        }).fail(function(xhr, status, errorThrown) {
-            console.error(xhr);
-        });
+        Swal.fire({
+            title: 'Are you sure you want to delete stream ?',
+            text: row.name,
+            type: "warning",
+            showCancelButton: true,
+            // confirmButtonColor: '#3085d6',
+            // cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.value) {
+                $.ajax({
+                    url: "/streams/" + row.id,
+                    type: "DELETE",
+                }).done(function(data) {
+                    c.refreshTable();
+                    Swal.fire(
+                        'Deleted!',
+                        'Your file has been deleted.',
+                        'success'
+                    )
+                }).fail(function(xhr, status, errorThrown) {
+                    console.error(xhr);
+                    Swal.fire(
+                        'Fail',
+                        xhr.responseJSON.error,
+                        'error'
+                    )
+                });
+            }
+        })
+
     };
 
     this.show = function(id) {
@@ -170,7 +193,7 @@ $(".btn-streams-update").click(function() {
 
 window.streamsActiveEvents = {
     'click .delete': function (e, value, row, index) {
-        manager.delete(row.id);
+        manager.delete(row);
     },
     'click .start': function (e, value, row, index) {
         manager.start(row.id);

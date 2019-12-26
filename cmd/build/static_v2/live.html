@@ -374,49 +374,48 @@
 
                 <!-- Content -->
                 <div class="row">
-                    <div class="col">
-                        <div  class="panel ">
-                            <div class="panel-hdr">
-                                <h2>
-                                    Settings
-                                </h2>
-                            </div>
-                            <div class="panel-container show">
-                                <div class="panel-content">
-                                    <div id="toolbar-streams">
-                                        <a href="javascript:void(0);" class="btn btn-primary btn-icon"  data-toggle="modal" data-target="#modal-streams-add">
-                                            <i class="far fa-plus"></i>
-                                        </a>
-                                    </div>
-                                    <table  id="table-streams"
-                                            data-toggle="table"
-                                            data-toolbar="#toolbar-streams"
-                                            data-search="true"
-                                            data-url="/streams"
-                                            data-pagination="true"
-                                            data-side-pagination="client"
-                                            data-show-refresh="true"
-                                            data-show-columns="true"
-                                            data-sort-name="uri"
-                                            data-sort-order="asc">
-                                        <thead>
-                                        <tr>
-                                            <th data-field="id">Stream-ID</th>
-                                            <th data-formatter="streamsControlFormatter" data-events="streamsActiveEvents">Control</th>
-                                            <th data-field="name">Name</th>
-                                            <th data-field="status" data-formatter="streamsStatusFormatter">Status</th>
-                                            <th data-field="uri" data-visible="false">URI</th>
-                                            <th data-field="enabled" data-formatter="onOffFormatter">Auto Start</th>
-                                            <th data-field="recording" data-formatter="onOffFormatter">Recording</th>
-                                            <th data-field="created" data-formatter="streamsCreatedFormatter" data-visible="false">Created</th>
-                                            <th data-field="updated" data-formatter="streamsUpdatedFormatter">Updated</th>
-                                        </tr>
-                                        </thead>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-lg-3 stream">
+                        <video-js id="live6" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
 
+                    <div class="col-lg-3 stream">
+                        <video-js id="live7" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live8" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live9" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live10" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live11" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live12" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live13" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live1" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live4" class="vjs-default-skin vjs-fluid"></video-js>
+                    </div>
+
+                    <div class="col-lg-3 stream">
+                        <video-js id="live5" class="vjs-default-skin vjs-fluid"></video-js>
                     </div>
                 </div>
 
@@ -663,11 +662,88 @@
 <script src="/static/js/custom.js"></script>
 <script src="/static/js/formatter.js"></script>
 <script>
-    $(document).ready(function () {
+    let streams = [];
 
+    streams.push({
+        id:  6 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  7 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  8 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  9 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  10 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  11 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  12 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  13 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  1 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  4 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+
+    streams.push({
+        id:  5 ,
+        enabled:  true ,
+        recording:  false ,
+        status:  3 ,
+    });
+        $(document).ready(function () {
     });
 </script>
 <!-- Modules -->
-<script src="/static/js/streams.js"></script>
+<script src="/static/js/live.js"></script>
 </body>
 </html>
