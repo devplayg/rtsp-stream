@@ -16,27 +16,6 @@ function streamsControlFormatter(val, row, idx) {
     if (row.status === Started) {
         arr.push('<a href="#" class="stop" data-id="' + row.id + '"><i class="far fa-stop"></i></a>');
     }
-    // console.log(arr);
-    // console.log(arr.join(''));
-    // return [
-    //     '<a href="#" class="delete text-danger " data-id="' + row.id + '">',
-    //     '<i class="far fa-times"></i>',
-    //     '</a>',
-    //
-    //     '<a href="#" class="start" data-id="' + row.id + '">',
-    //     '<i class="far fa-play"></i>',
-    //     '</a>',
-    //
-    //     '<a href="#" class="stop" data-id="' + row.id + '">',
-    //     '<i class="far fa-stop"></i>',
-    //     '</a>',
-    //
-    //     '<a href="#" class="edit" data-id="' + row.id + '">',
-    //     '<i class="far fa-edit"></i>',
-    //     '</a>',
-    //
-    // ].join("");
-
     return arr.join(' ');
 }
 //
@@ -104,11 +83,11 @@ function streamsStatusFormatter(val, row, idx) {
     }
 
     if (val === Stopping) {
-        return '<div class="spinner-grow text-warning" role="status"><span class="sr-only">Loading...</span></div> Stopping';
+        return '<div class="spinner-grow spinner-grow-sm rounded-0 text-warning" role="status"><span class="sr-only">Loading...</span></div> Stopping';
     }
 
     if (val === Starting) {
-        return '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="sr-only">Loading...</span></div> Starting';
+        return '<div class="spinner-grow spinner-grow-sm text-info" role="status"><span class="sr-only">Loading...</span></div> Starting';
     }
 
     if (val === Started) {

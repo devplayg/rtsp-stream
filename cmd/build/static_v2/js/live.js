@@ -15,7 +15,7 @@ $(function() {
 
     function updateLiveVideos(streams) {
         $.each(streams, function(i, s) {
-            console.log(s);
+            console.log(s.id + " => " + s.status);
             let videoId = 'live'+s.id;
 
             if (s.status === Started) {
