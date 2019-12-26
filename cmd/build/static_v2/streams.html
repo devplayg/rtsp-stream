@@ -34,7 +34,7 @@
         <aside class="page-sidebar">
             <div class="page-logo">
                 <a href="#" class="page-logo-link press-scale-down d-flex align-items-center position-relative">
-                    <img src="img/logo.png" alt="RTSP Stream" aria-roledescription="logo">
+                    <!--<img src="img/logo.png" alt="RTSP Stream" aria-roledescription="logo">-->
                     <span class="page-logo-text mr-1">RTSP Stream</span>
                     <span class="position-absolute text-white opacity-50 small pos-top pos-right mr-2 mt-n2"></span>
                     <i class="fal fa-angle-down d-inline-block ml-1 fs-lg color-primary-300"></i>
@@ -60,12 +60,12 @@
                     </li>
                     <li>
                         <a href="/static/live.html" title="Videos">
-                            <i class="far fa-video"></i>
+                            <i class="fal fa-video"></i>
                             <span class="nav-link-text">Videos</span>
                         </a>
                     </li>
                     <li>
-                        <a href="/static/live.html" title="Settings">
+                        <a href="/static/streams.html" title="Settings">
                             <i class="fal fa-cog"></i>
                             <span class="nav-link-text">Settings</span>
                         </a>
@@ -370,50 +370,175 @@
             <!-- BEGIN Page Content -->
             <!-- the #js-page-content id is needed for some plugins to initialize -->
             <main id="js-page-content" role="main" class="page-content">
-                <ol class="breadcrumb page-breadcrumb">
-                    <li class="breadcrumb-item"><a href="javascript:void(0);">Devplayg</a></li>
-                    <li class="breadcrumb-item">category_1</li>
-                    <li class="breadcrumb-item">category_2</li>
-                    <li class="breadcrumb-item active">Page Titile</li>
-                    <li class="position-absolute pos-top pos-right d-none d-sm-block"><span class="js-get-date"></span></li>
-                </ol>
-                <div class="subheader">
-                    <h1 class="subheader-title">
-                        <i class='subheader-icon fal fa-'></i> Page <span class='fw-300'>Title</span> <sup class='badge badge-primary fw-500'>ADDON</sup>
-                        <small>
-                            blank description
-                        </small>
-                    </h1>
-                    <div class="subheader-block">
-                        Right content of header
-                    </div>
-                </div>
 
                 <!-- Content -->
                 <div class="row">
                     <div class="col">
-                        <div id="panel-1" class="panel">
+                        <div  class="panel ">
                             <div class="panel-hdr">
                                 <h2>
-                                    Panel <span class="fw-300"><i>Title</i></span>
+                                    Settings
                                 </h2>
-                                <div class="panel-toolbar">
-                                    <button class="btn btn-panel" data-action="panel-collapse" data-toggle="tooltip" data-offset="0,10" data-original-title="Collapse"></button>
-                                    <button class="btn btn-panel" data-action="panel-fullscreen" data-toggle="tooltip" data-offset="0,10" data-original-title="Fullscreen"></button>
-                                    <button class="btn btn-panel" data-action="panel-close" data-toggle="tooltip" data-offset="0,10" data-original-title="Close"></button>
-                                </div>
                             </div>
                             <div class="panel-container show">
                                 <div class="panel-content">
-                                    <div class="panel-tag">
-                                        Panel tag <code>code</code>
+                                    <div id="toolbar-streams">
+                                        <a href="javascript:void(0);" class="btn btn-primary btn-icon"  data-toggle="modal" data-target="#modal-streams-add">
+                                            <i class="far fa-plus"></i>
+                                        </a>
                                     </div>
-                                    Text
+                                    <table  id="table-streams"
+                                            class=""
+                                            data-toggle="table"
+                                            data-toolbar="#toolbar-streams"
+                                            data-search="true"
+                                            data-url="/streams"
+                                            data-pagination="true"
+                                            data-side-pagination="client"
+                                            data-show-refresh="true"
+                                            data-show-columns="true"
+                                            data-sort-name="uri"
+                                            data-sort-order="asc">
+                                        <thead>
+                                        <tr>
+                                            <th data-formatter="streamsControlFormatter" data-events="streamsActiveEvents">Control</th>
+                                            <th data-field="id">Stream-ID</th>
+                                            <th data-field="name">Name</th>
+                                            <th data-field="status" data-formatter="streamsStatusFormatter">Status</th>
+                                            <th data-field="uri" data-visible="false">URI</th>
+                                            <th data-field="enabled" data-formatter="onOffFormatter">Auto Start</th>
+                                            <th data-field="recording" data-formatter="onOffFormatter">Recording</th>
+                                            <th data-field="created" data-formatter="streamsCreatedFormatter" data-visible="false">Created</th>
+                                            <th data-field="updated" data-formatter="streamsUpdatedFormatter">Updated</th>
+                                        </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Modal -->
+                <form id="form-streams-add">
+                    <div class="modal fade modal-form" id="modal-streams-add" tabindex="-1" role="dialog" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Modal title</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" name="name" class="form-control" value="New Stream" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">URI</label>
+                                        <input type="text" name="uri" class="form-control" value="rtsp://10.0.75.1:8801/MainCam" />
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col">
+                                            <div class="form-group">
+                                                <label class="form-label">Username</label>
+                                                <input type="text" name="username" class="form-control" value="admin" />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="form-label">Password</label>
+                                                <input type="password" name="password" class="form-control" value="1234"/>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="custom-control custom-switch">
+                                                <input type="checkbox" name="recording" class="custom-control-input" id="customSwitchAddRecording">
+                                                <label class="custom-control-label" for="customSwitchAddRecording">Recording</label>
+                                            </div>
+
+                                            <div class="custom-control custom-switch">
+                                                <input type="checkbox" name="enabled" class="custom-control-input" id="customSwitchAddEnabled" checked>
+                                                <label class="custom-control-label" for="customSwitchAddEnabled">Auto Start</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-danger d-none" role="alert">
+                                        <strong>Error!</strong> <span class="msg"></span>
+                                    </div>
+
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary btn-streams-add">Add</button>
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </form>
+
+                <!-- Modal -->
+                <form id="form-streams-edit">
+                    <div class="modal fade modal-form" id="modal-streams-edit" tabindex="-1" role="dialog" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" name="name" class="form-control"/>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">URI</label>
+                                        <input type="text" name="uri" class="form-control"/>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col">
+                                            <div class="form-group">
+                                                <label class="form-label">Username</label>
+                                                <input type="text" name="username" class="form-control"/>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="form-label">Password</label>
+                                                <input type="password" name="password" class="form-control"/>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="custom-control custom-switch">
+                                                <input type="checkbox" name="recording" class="custom-control-input" id="customSwitchEditRecording">
+                                                <label class="custom-control-label" for="customSwitchEditRecording">Recording</label>
+                                            </div>
+
+                                            <div class="custom-control custom-switch">
+                                                <input type="checkbox" name="enabled" class="custom-control-input" id="customSwitchEditEnabled">
+                                                <label class="custom-control-label" for="customSwitchEditEnabled">Auto Start</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-danger d-none" role="alert">
+                                        <strong>Error!</strong> <span class="msg"></span>
+                                    </div>
+
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary btn-streams-update">Update</button>
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </main>
             <!-- this overlay is activated only when mobile menu is triggered -->
             <div class="page-content-overlay" data-action="toggle" data-class="mobile-nav-on"></div> <!-- END Page Content -->
@@ -519,7 +644,7 @@
         <i class="fal fa-expand"></i>
     </a>
     <a href="#" class="menu-item btn" data-action="app-print" data-toggle="tooltip" data-placement="left" title="Print page">
-        <i class="fal fa-print"></i>`
+        <i class="fal fa-print"></i>
     </a>
     <a href="#" class="menu-item btn" data-action="app-voice" data-toggle="tooltip" data-placement="left" title="Voice command">
         <i class="fal fa-microphone"></i>

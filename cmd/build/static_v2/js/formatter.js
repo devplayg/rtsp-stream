@@ -1,3 +1,10 @@
+function onOffFormatter(tf, idx, row) {
+    if (tf) {
+        return '<span class="badge badge-success">On</span>';
+    }
+    return '<span class="badge badge-secondary">Off</span>';
+}
+
 function streamsControlFormatter(val, row, idx) {
     return [
         '<a href="#" class="delete" data-id="' + row.id + '">',
@@ -21,38 +28,38 @@ function streamsControlFormatter(val, row, idx) {
 
     ].join("");
 }
-
-function streamsActiveFormatter(active, row, idx) {
-    let text = "Stopped",
-        css = "btn-default";
-
-    if (row.active) {
-        text = "Running";
-        //css = "btn-primary";
-    }
-
-    return [
-        '<button class="btn btn-xs btn-streams-active ' + css + '" data-id="' + row.id + '">',
-        text,
-        '</button>'
-    ].join("");
-}
-
-function streamsRecordingFormatter(recording, row, idx) {
-    let text = "Stopped",
-        css = "btn-default";
-
-    if (recording) {
-        text = "Recording";
-        //  css = "btn-danger";
-    }
-
-    return [
-        '<button class="btn btn-xs btn-active ' + css + '">',
-        text,
-        '</button>'
-    ].join("");
-}
+//
+// function streamsActiveFormatter(active, row, idx) {
+//     let text = "Stopped",
+//         css = "btn-default";
+//
+//     if (row.active) {
+//         text = "Running";
+//         //css = "btn-primary";
+//     }
+//
+//     return [
+//         '<button class="btn btn-xs btn-streams-active ' + css + '" data-id="' + row.id + '">',
+//         text,
+//         '</button>'
+//     ].join("");
+// }
+//
+// function streamsRecordingFormatter(recording, row, idx) {
+//     let text = "Stopped",
+//         css = "btn-default";
+//
+//     if (recording) {
+//         text = "Recording";
+//         //  css = "btn-danger";
+//     }
+//
+//     return [
+//         '<button class="btn btn-xs btn-active ' + css + '">',
+//         text,
+//         '</button>'
+//     ].join("");
+// }
 
 function videosCanPlayFormatter(val, row, idx, field) {
     let id = field.replace("video-", "");
@@ -76,3 +83,26 @@ function videosCanPlayFormatter(val, row, idx, field) {
     }
 }
 
+function streamsStatusFormatter(val, row, idx) {
+    if (val === -1) {
+        return '<span class="text-danger">' + 'Failed' + '</span>';
+    }
+
+    if (val === 1) {
+        return '<span class="text-muted">Stopped</span>';
+    }
+
+    if (val === 3) {
+        return '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="sr-only">Loading...</span></div> Starting';
+    }
+
+    if (val === 4) {
+        return '<span class="badge badge-danger">Live</span>';
+    }
+
+    return val;
+}
+
+function streamsUpdatedFormatter(val, row, idx) {
+    return moment.unix(val).format();
+}
