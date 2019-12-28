@@ -106,6 +106,17 @@ func (m *Manager) getStreamIdListToArchive() ([]int64, []int64) {
 	return streamIdListToArchive, streamIdListNotToArchive
 }
 
+func (m *Manager) getStreamIdList() []int64 {
+	var list []int64
+	m.RLock()
+	defer m.RUnlock()
+	for id, _ := range m.streams {
+		list = append(list, id)
+	}
+
+	return list
+}
+
 func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) error {
 	var result error
 	for _, streamId := range streamIdList {

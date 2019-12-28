@@ -55,13 +55,13 @@
                     <li class="nav-title">Streaming</li>
                     <li>
                         <a href="/static/live.html" title="Live">
-                            <i class="fal fa-window"></i>
+                            <i class="fal fa-video"></i>
                             <span class="nav-link-text">Live</span>
                         </a>
                     </li>
                     <li>
                         <a href="/static/videos.html" title="Videos">
-                            <i class="far fa-video"></i>
+                            <i class="fas fa-play-circle"></i>
                             <span class="nav-link-text">Playback</span>
                         </a>
                     </li>
@@ -371,184 +371,44 @@
             <!-- BEGIN Page Content -->
             <!-- the #js-page-content id is needed for some plugins to initialize -->
             <main id="js-page-content" role="main" class="page-content">
-
-                <!-- Content -->
+                <!-- Content ### -->
                 <div class="row">
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <div>
-                            <video-js id="live6" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                            <div class="small">
-                                CH <span class="streamId">6</span>
+                    <div class="col col-xl-3">
+                        <div  class="panel ">
+                            <!--
+                            <div class="panel-hdr">
+                                <h2>
+                                    <i class="far fa-play-circle"></i>  Videos
+                                </h2>
+                            </div>
+                            -->
+                            <div class="panel-container show">
+                                <div class="panel-content">
+                                    <table  id="table-videos"
+                                            class="table-sm"
+                                            data-toggle="table"
+                                            data-url="/videos"
+                                            data-toolbar="#toolbar-videos"
+                                            data-pagination="true"
+                                            data-side-pagination="client"
+                                            data-show-refresh="true"
+                                            data-sort-name="date"
+                                            data-sort-order="desc">
+                                        <thead>
+                                        <tr>
+                                            <th data-field="date" data-formatter="videosDateFormatter">Date</th>
+                                            <th data-formatter="videosVideoFormatter">Playback</th>
+                                        </tr>
+                                        </thead>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live7" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                        <div class="small">
-                            CH <span class="streamId">7</span>
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live8" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live9" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                        <div class="small">
-                            CH <span class="streamId">9</span>
-                        </div>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live10" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live11" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live12" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live13" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live1" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live4" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
-                    </div>
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 stream">
-                        <video-js id="live5" class="vjs-default-skin vjs-fluid vjs-4-3"></video-js>
+                    <div class="col">
+                        asdf
                     </div>
                 </div>
-
-                <!-- Modal -->
-                <form id="form-streams-add">
-                    <div class="modal fade modal-form" id="modal-streams-add" tabindex="-1" role="dialog" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Modal title</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="form-group">
-                                        <label class="form-label">Name</label>
-                                        <input type="text" name="name" class="form-control" value="New Stream" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">URI</label>
-                                        <input type="text" name="uri" class="form-control" value="rtsp://10.0.75.1:8801/MainCam" />
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col">
-                                            <div class="form-group">
-                                                <label class="form-label">Username</label>
-                                                <input type="text" name="username" class="form-control" value="admin" />
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label class="form-label">Password</label>
-                                                <input type="password" name="password" class="form-control" value="1234"/>
-                                            </div>
-                                        </div>
-                                        <div class="col">
-                                            <div class="custom-control custom-switch">
-                                                <input type="checkbox" name="recording" class="custom-control-input" id="customSwitchAddRecording">
-                                                <label class="custom-control-label" for="customSwitchAddRecording">Recording</label>
-                                            </div>
-
-                                            <div class="custom-control custom-switch">
-                                                <input type="checkbox" name="enabled" class="custom-control-input" id="customSwitchAddEnabled" checked>
-                                                <label class="custom-control-label" for="customSwitchAddEnabled">Auto Start</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="alert alert-danger d-none" role="alert">
-                                        <strong>Error!</strong> <span class="msg"></span>
-                                    </div>
-
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-primary btn-streams-add">Add</button>
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-
-                <!-- Modal -->
-                <form id="form-streams-edit">
-                    <div class="modal fade modal-form" id="modal-streams-edit" tabindex="-1" role="dialog" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Edit</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="form-group">
-                                        <label class="form-label">Name</label>
-                                        <input type="text" name="name" class="form-control"/>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">URI</label>
-                                        <input type="text" name="uri" class="form-control"/>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col">
-                                            <div class="form-group">
-                                                <label class="form-label">Username</label>
-                                                <input type="text" name="username" class="form-control"/>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label class="form-label">Password</label>
-                                                <input type="password" name="password" class="form-control"/>
-                                            </div>
-                                        </div>
-                                        <div class="col">
-                                            <div class="custom-control custom-switch">
-                                                <input type="checkbox" name="recording" class="custom-control-input" id="customSwitchEditRecording">
-                                                <label class="custom-control-label" for="customSwitchEditRecording">Recording</label>
-                                            </div>
-
-                                            <div class="custom-control custom-switch">
-                                                <input type="checkbox" name="enabled" class="custom-control-input" id="customSwitchEditEnabled">
-                                                <label class="custom-control-label" for="customSwitchEditEnabled">Auto Start</label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="alert alert-danger d-none" role="alert">
-                                        <strong>Error!</strong> <span class="msg"></span>
-                                    </div>
-
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-primary btn-streams-update">Update</button>
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
             </main>
             <!-- this overlay is activated only when mobile menu is triggered -->
             <div class="page-content-overlay" data-action="toggle" data-class="mobile-nav-on"></div> <!-- END Page Content -->
@@ -654,7 +514,7 @@
         <i class="fal fa-expand"></i>
     </a>
     <a href="#" class="menu-item btn" data-action="app-print" data-toggle="tooltip" data-placement="left" title="Print page">
-        <i class="fal fa-print"></i>
+        <i class="fal fa-print"></i>`
     </a>
     <a href="#" class="menu-item btn" data-action="app-voice" data-toggle="tooltip" data-placement="left" title="Voice command">
         <i class="fal fa-microphone"></i>
@@ -668,93 +528,17 @@
 <script src="/static/plugins/jquery.mask.min.js"></script>
 <script src="/static/plugins/js.cookie-2.2.1.min.js"></script>
 <script src="/static/plugins/moment/moment.min.js"></script>
+<script src="/static/plugins/moment/moment-timezone.min.js"></script>
 <script src="/static/plugins/videojs/video.min.js"></script>
 <script src="/static/plugins/videojs/videojs-http-streaming.min.js"></script>
 <script src="/static/js/custom.js"></script>
 <script src="/static/js/formatter.js"></script>
 <script>
-    let streams = [];
+    $(document).ready(function () {
 
-    streams.push({
-        id:  6 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  1 ,
-    });
-
-    streams.push({
-        id:  7 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  4 ,
-    });
-
-    streams.push({
-        id:  8 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  3 ,
-    });
-
-    streams.push({
-        id:  9 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  4 ,
-    });
-
-    streams.push({
-        id:  10 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  3 ,
-    });
-
-    streams.push({
-        id:  11 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  3 ,
-    });
-
-    streams.push({
-        id:  12 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  1 ,
-    });
-
-    streams.push({
-        id:  13 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  2 ,
-    });
-
-    streams.push({
-        id:  1 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  3 ,
-    });
-
-    streams.push({
-        id:  4 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  -1 ,
-    });
-
-    streams.push({
-        id:  5 ,
-        enabled:  true ,
-        recording:  false ,
-        status:  2 ,
-    });
-        $(document).ready(function () {
     });
 </script>
 <!-- Modules -->
-<script src="/static/js/live.js"></script>
+<script src="/static/js/videos.js"></script>
 </body>
 </html>

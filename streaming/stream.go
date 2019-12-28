@@ -36,12 +36,28 @@ type Stream struct {
 	MaxStreamSeqId     int64                `json:"maxStreamSeqId"`
 	Created            int64                `json:"created"`
 	Updated            int64                `json:"updated"`
+	Seq                int                  `json:"seq"`
 	DB                 *bolt.DB             `json:"-"`
 	LastAttemptTime    time.Time            `json:"-"`
 	assistant          *Assistant
 	ctx                context.Context
 	cancel             context.CancelFunc
 	// waitTimeUntilStreamStarts time.Duration
+}
+
+type SimpleStream struct {
+	Id                 int64     `json:"id"`        // Stream unique ID
+	Uri                string    `json:"uri"`       // Stream URL
+	Name               string    `json:"name"`      // Name
+	Recording          bool      `json:"recording"` // Is recording
+	Enabled            bool      `json:"enabled"`   // Enabled
+	Status             int       `json:"status"`    // Stream status
+	DataRetentionHours int       `json:"dataRetentionHours"`
+	LastStreamUpdated  time.Time `json:"lastStreamUpdated"`
+	MaxStreamSeqId     int64     `json:"maxStreamSeqId"`
+	Seq                int       `json:"seq"`
+	Created            int64     `json:"created"`
+	Updated            int64     `json:"updated"`
 }
 
 func NewStream() *Stream {
@@ -267,4 +283,22 @@ func (s *Stream) SetLiveDir(dir string) {
 
 func (s *Stream) SetProtocol(protocol int) {
 	s.ProtocolInfo = common.NewProtocolInfo(protocol)
+}
+
+func (s *Stream) Simplify() *SimpleStream {
+	return &SimpleStream{
+		Id:                 s.Id,
+		Uri:                s.Uri,
+		Name:               s.Name,
+		Recording:          s.Recording,
+		Enabled:            s.Enabled,
+		Status:             s.Status,
+		DataRetentionHours: s.DataRetentionHours,
+		LastStreamUpdated:  s.LastStreamUpdated,
+		MaxStreamSeqId:     s.MaxStreamSeqId,
+		Created:            s.Created,
+		Updated:            s.Updated,
+		Seq:                s.Seq,
+	}
+
 }

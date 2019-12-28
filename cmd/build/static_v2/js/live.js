@@ -25,7 +25,7 @@ $(function() {
                     preload: 'auto',
                     sources: [{
                         type: "application/x-mpegURL",
-                        src: "/videos/" + s.id + "/live/m3u8",
+                        src: "/live/" + s.id + "/m3u8",
                     }]
                 });
 

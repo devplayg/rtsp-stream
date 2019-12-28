@@ -67,6 +67,37 @@ func (m *Manager) init() error {
 	//		return err
 	//	}
 	//}
+	//
+	//for _, id := range m.getStreamIdList() {
+	//	m.writeVideoArchivingHistory(id, "20191201")
+	//	m.writeVideoArchivingHistory(id, "20191202")
+	//	m.writeVideoArchivingHistory(id, "20191203")
+	//	m.writeVideoArchivingHistory(id, "20191204")
+	//	m.writeVideoArchivingHistory(id, "20191205")
+	//	m.writeVideoArchivingHistory(id, "20191206")
+	//	m.writeVideoArchivingHistory(id, "20191207")
+	//	m.writeVideoArchivingHistory(id, "20191208")
+	//	m.writeVideoArchivingHistory(id, "20191209")
+	//	m.writeVideoArchivingHistory(id, "20191210")
+	//	m.writeVideoArchivingHistory(id, "20191211")
+	//	m.writeVideoArchivingHistory(id, "20191212")
+	//	m.writeVideoArchivingHistory(id, "20191213")
+	//	m.writeVideoArchivingHistory(id, "20191214")
+	//	m.writeVideoArchivingHistory(id, "20191215")
+	//	m.writeVideoArchivingHistory(id, "20191216")
+	//	m.writeVideoArchivingHistory(id, "20191217")
+	//	m.writeVideoArchivingHistory(id, "20191218")
+	//	m.writeVideoArchivingHistory(id, "20191219")
+	//	m.writeVideoArchivingHistory(id, "20191220")
+	//	m.writeVideoArchivingHistory(id, "20191221")
+	//	m.writeVideoArchivingHistory(id, "20191222")
+	//	m.writeVideoArchivingHistory(id, "20191223")
+	//	m.writeVideoArchivingHistory(id, "20191224")
+	//	m.writeVideoArchivingHistory(id, "20191225")
+	//	m.writeVideoArchivingHistory(id, "20191226")
+	//	m.writeVideoArchivingHistory(id, "20191227")
+	//
+	//}
 
 	return nil
 }
@@ -227,6 +258,23 @@ func (m *Manager) getStreams() []*streaming.Stream {
 	m.RLock()
 	for _, stream := range m.streams {
 		streams = append(streams, stream)
+	}
+	m.RUnlock()
+	sort.Slice(streams, func(i, j int) bool {
+		if streams[i].Name == streams[j].Name {
+			return streams[i].Id < streams[j].Id
+		}
+		return streams[i].Name < streams[j].Name
+	})
+
+	return streams
+}
+
+func (m *Manager) getSimpleStreams() []*streaming.SimpleStream {
+	streams := make([]*streaming.SimpleStream, 0)
+	m.RLock()
+	for _, stream := range m.streams {
+		streams = append(streams, stream.Simplify())
 	}
 	m.RUnlock()
 	sort.Slice(streams, func(i, j int) bool {
@@ -607,92 +655,125 @@ func (m *Manager) closeStreamDB(id int64) error {
 	return m.streams[id].DB.Close()
 }
 
-func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
-	streams := m.getStreams()
-	if len(streams) < 1 {
-		return nil, nil
-	}
-	t := time.Now().In(common.Loc)
-	lastArchivingDateKey, _ := GetValueFromDbBucket(common.ConfigBucket, common.LastArchivingDateKey)
-	result := map[string]interface{}{
-		"date":                 t.Format(common.DateFormat),
-		"lastArchivingDateKey": string(lastArchivingDateKey),
-		"streams":              streams,
-		"videos":               nil,
-	}
-
-	bucketNames := m.convertStreamsToBucketNames(streams)
-	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
+func (m *Manager) getVideoRecords() ([]map[string]interface{}, error) {
+	videoMap, dateMap, err := common.GetVideoRecordHistory(db)
 	if err != nil {
 		return nil, err
 	}
-	dayRecordMap[common.LiveBucketName] = m.getLiveVideoStatus(bucketNames, t.Format(common.DateFormat))
-	result["videos"] = common.SortDayRecord(dayRecordMap)
-	return result, err
-}
 
-func (m *Manager) getLiveVideoStatus(bucketNames []string, date string) map[string]string {
-	liveMap := common.CreateDefaultDayRecord("live", bucketNames)
-	for _, bn := range bucketNames {
-		streamId, err := strconv.ParseInt(strings.TrimPrefix(bn, common.VideoBucketPrefix), 10, 64)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"bucketName": bn,
-			}).Error(err)
-			continue
-		}
-
-		stream := m.getStreamById(streamId)
-		if stream == nil {
-			continue
-		}
-
-		if !stream.IsActive() {
-			continue
-		}
-
-		liveMap[bn] = "1"
-		if stream.M3u8BucketExists(date) {
-			liveMap[bn] += ",1"
-		}
+	videoNames := make([]string, 0, len(videoMap)) // video-1, video-2...
+	for k, _ := range videoMap {
+		videoNames = append(videoNames, k)
 	}
-
-	return liveMap
-}
-
-func (m *Manager) getPrevVideoRecords(bucketNames []string) (common.DayRecordMap, error) {
-	dayRecordMap := make(common.DayRecordMap)
-	err := db.View(func(tx *bolt.Tx) error {
-		for _, bn := range bucketNames {
-			b := tx.Bucket([]byte(bn))
-			if b == nil {
-				return nil
-			}
-			b.ForEach(func(key, _ []byte) error {
-				date := string(key)
-				if _, ok := dayRecordMap[date]; !ok {
-					dayRecordMap[date] = common.CreateDefaultDayRecord(date, bucketNames)
-				}
-				dayRecordMap[date][bn] = "1"
-				return nil
-			})
-		}
-		return nil
+	dates := make([]string, 0, len(dateMap))
+	for d, _ := range dateMap {
+		dates = append(dates, d)
+	}
+	sort.Slice(dates, func(i, j int) bool {
+		return dates[i] > dates[j]
 	})
-	return dayRecordMap, err
+
+	videoArr := make([]map[string]interface{}, 0)
+	for _, d := range dates {
+		m := common.CreateDefaultDayRecord(d, videoNames)
+		videoArr = append(videoArr, m)
+		for _, videoName := range videoNames {
+			if _, ok := videoMap[videoName][d]; !ok {
+				continue
+			}
+			m[videoName] = 1
+		}
+	}
+
+	return videoArr, err
 }
 
-func (m *Manager) convertStreamsToBucketNames(streams []*streaming.Stream) []string {
-	if len(streams) < 1 {
-		return nil
-	}
-	bucketNames := make([]string, 0)
-	for _, s := range streams {
-		bucketName := common.VideoBucketPrefix + strconv.FormatInt(s.Id, 10)
-		bucketNames = append(bucketNames, bucketName)
-	}
-	return bucketNames
-}
+//func (m *Manager) getVideoRecords() (map[string]interface{}, error) {
+//	streams := m.getSimpleStreams()
+//	if len(streams) < 1 {
+//		return nil, nil
+//	}
+//	t := time.Now().In(common.Loc)
+//	lastArchivingDateKey, _ := GetValueFromDbBucket(common.ConfigBucket, common.LastArchivingDateKey)
+//	result := map[string]interface{}{
+//		"date":                 t.Format(common.DateFormat),
+//		"lastArchivingDateKey": string(lastArchivingDateKey),
+//		"streams":              streams,
+//		"videos":               nil,
+//	}
+//
+//	bucketNames := m.convertStreamsToBucketNames(streams)
+//	dayRecordMap, err := m.getPrevVideoRecords(bucketNames)
+//	if err != nil {
+//		return nil, err
+//	}
+//	dayRecordMap[common.LiveBucketName] = m.getLiveVideoStatus(bucketNames, t.Format(common.DateFormat))
+//	result["videos"] = common.SortDayRecord(dayRecordMap)
+//	return result, err
+//}
+
+//func (m *Manager) getLiveVideoStatus(bucketNames []string, date string) map[string]string {
+//	liveMap := common.CreateDefaultDayRecord("live", bucketNames)
+//	for _, bn := range bucketNames {
+//		streamId, err := strconv.ParseInt(strings.TrimPrefix(bn, common.VideoBucketPrefix), 10, 64)
+//		if err != nil {
+//			log.WithFields(log.Fields{
+//				"bucketName": bn,
+//			}).Error(err)
+//			continue
+//		}
+//
+//		stream := m.getStreamById(streamId)
+//		if stream == nil {
+//			continue
+//		}
+//
+//		if !stream.IsActive() {
+//			continue
+//		}
+//
+//		liveMap[bn] = "1"
+//		if stream.M3u8BucketExists(date) {
+//			liveMap[bn] += ",1"
+//		}
+//	}
+//
+//	return liveMap
+//}
+//
+//func (m *Manager) getPrevVideoRecords() (common.DayRecordMap, error) {
+//	dayRecordMap := make(common.DayRecordMap)
+//	err := db.View(func(tx *bolt.Tx) error {
+//		//for _, bn := range bucketNames {
+//		//	b := tx.Bucket([]byte(bn))
+//		//	if b == nil {
+//		//		return nil
+//		//	}
+//		//	b.ForEach(func(key, _ []byte) error {
+//		//		date := string(key)
+//		//		if _, ok := dayRecordMap[date]; !ok {
+//		//			dayRecordMap[date] = common.CreateDefaultDayRecord(date, bucketNames)
+//		//		}
+//		//		dayRecordMap[date][bn] = "1"
+//		//		return nil
+//		//	})
+//		//}
+//		return nil
+//	})
+//	return dayRecordMap, err
+//}
+
+//func (m *Manager) convertStreamsToBucketNames(streams []*streaming.SimpleStream) []string {
+//	if len(streams) < 1 {
+//		return nil
+//	}
+//	bucketNames := make([]string, 0)
+//	for _, s := range streams {
+//		bucketName := common.VideoBucketPrefix + strconv.FormatInt(s.Id, 10)
+//		bucketNames = append(bucketNames, bucketName)
+//	}
+//	return bucketNames
+//}
 
 func (m *Manager) getLiveData() map[string]interface{} {
 	streams := m.getStreams()

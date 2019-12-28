@@ -128,7 +128,7 @@ func (c *Controller) AddStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) GetStreams(w http.ResponseWriter, r *http.Request) {
-	streams := c.manager.getStreams()
+	streams := c.manager.getSimpleStreams()
 	data, err := json.MarshalIndent(streams, "", "  ")
 	if err != nil {
 		Response(w, r, err, http.StatusInternalServerError)

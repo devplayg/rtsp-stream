@@ -39,9 +39,9 @@ func (c *Controller) setApiRoutes() {
 	c.router.HandleFunc("/videos/{id:[0-9]+}/today/{media}.ts", c.GetTodayVideo).Methods("GET")
 
 	// (O) Live M3u8: http://127.0.0.1:8000/videos/1/live/m3u8
-	c.router.HandleFunc("/videos/{id:[0-9]+}/live/m3u8", c.GetLiveM3u8).Methods("GET")
+	c.router.HandleFunc("/live/{id:[0-9]+}/m3u8", c.GetLiveM3u8).Methods("GET")
 	// (O) Live videos: http://127.0.0.1:8000/videos/1/live/media0.ts
-	c.router.HandleFunc("/videos/{id:[0-9]+}/live/{media}.ts", c.GetLiveVideo).Methods("GET")
+	c.router.HandleFunc("/live/{id:[0-9]+}/{media}.ts", c.GetLiveVideo).Methods("GET")
 
 	// Old M3u8: http://127.0.0.1:8000/videos/1/date/20191211/m3u8
 	c.router.HandleFunc("/videos/{id:[0-9]+}/date/{date:[0-9]+}/m3u8", c.GetDailyM3u8).Methods("GET")

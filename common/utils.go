@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"github.com/boltdb/bolt"
@@ -114,32 +115,56 @@ func RemoveLiveFiles(dir string, files []os.FileInfo) int {
 	return count
 }
 
-func GetDbBucketList(db *bolt.DB, prefix string) ([]string, error) {
-	bucketNames := make([]string, 0)
+func GetDbBuckets(db *bolt.DB, prefix string) ([][]byte, error) {
+	buckets := make([][]byte, 0)
 	err := db.View(func(tx *bolt.Tx) error {
-		err := tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+		err := tx.ForEach(func(b []byte, _ *bolt.Bucket) error {
 			if len(prefix) > 0 {
-				if strings.HasPrefix(string(name), prefix) {
-					bucketNames = append(bucketNames, string(name))
+				if strings.HasPrefix(string(b), prefix) {
+					buckets = append(buckets, b)
 					return nil
 				}
 				return nil
 			}
-			bucketNames = append(bucketNames, string(name))
+			buckets = append(buckets, b)
 			return nil
 		})
 		return err
 	})
-	return bucketNames, err
+	return buckets, err
 }
 
-func CreateDefaultDayRecord(date string, bucketNames []string) map[string]string {
-	m := make(map[string]string)
-	m["date"] = date
-	for _, name := range bucketNames {
-		m[name] = ""
-	}
+func GetVideoRecordHistory(db *bolt.DB) (map[string]map[string]bool, map[string]bool, error) {
+	prefix := []byte("video-")
+	videoMap := make(map[string]map[string]bool) // videoName / date / bool
+	dateMap := make(map[string]bool)             // date / bool
+	err := db.View(func(tx *bolt.Tx) error {
+		err := tx.ForEach(func(bucketName []byte, b *bolt.Bucket) error {
+			if !bytes.HasPrefix(bucketName, prefix) {
+				return nil
+			}
 
+			b.ForEach(func(date, _ []byte) error {
+				if _, ok := videoMap[string(bucketName)]; !ok {
+					videoMap[string(bucketName)] = make(map[string]bool)
+				}
+				videoMap[string(bucketName)][string(date)] = true
+				dateMap[string(date)] = true
+				return nil
+			})
+			return nil
+		})
+		return err
+	})
+	return videoMap, dateMap, err
+}
+
+func CreateDefaultDayRecord(date string, videoNames []string) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["date"] = date
+	for _, name := range videoNames {
+		m[name] = 0
+	}
 	return m
 }
 

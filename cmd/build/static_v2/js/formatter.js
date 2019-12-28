@@ -100,3 +100,40 @@ function streamsStatusFormatter(val, row, idx) {
 function streamsUpdatedFormatter(val, row, idx) {
     return moment.unix(val).format();
 }
+
+function videosVideoFormatter(val, row, idx) {
+    // console.log(row);
+    let keys = $.map(row, function(v, k) {
+        if (k.startsWith("video-")) {
+            return k;
+        }
+    });
+    if (keys.length < 1) return;
+
+    let tags = "";
+    $.each(keys, function(i, k) {
+        // console.log(k);
+        if (row[k] === 1) {
+            tags += '<a href="#" class="btn btn-primary btn-xs btn-icon rounded-circle"><i class="fal fa-check"></i></a>';
+            return true;
+        }
+        tags += '<a href="#" class="btn btn-default btn-xs btn-icon rounded-circle">-</a>';
+        return true;
+    });
+
+    return tags;
+    // console.log(keys);
+
+    // var collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
+    // var myArray = ['1_Document', '11_Document', '2_Document'];
+    // console.log(myArray.sort(collator.compare));
+
+
+    // console.log(row);
+    // return row.date;
+}
+
+function videosDateFormatter(val, idx, row) {
+    let m =  moment(val, 'YYYYMMDD');
+    return m.format("ll") + '<span class="small">' + m.format("ddd") + '</span>';
+}

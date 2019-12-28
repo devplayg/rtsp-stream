@@ -12,6 +12,11 @@
     margin-bottom: 3px !important;
 }
 
+.daily-video {
+    height: 20px;
+    width: 20px;
+}
+
 /*.page-logo,*/
 /*.page-sidebar,*/
 /*.page-header,*/

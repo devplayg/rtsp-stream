@@ -176,7 +176,7 @@ type Record struct {
 	Id int64
 }
 
-type DayRecordMap map[string]map[string]string
+type DayRecordMap map[string]map[string]string // rename to dailyVideoMap
 
 type TplGlobalVar struct {
 	Common   map[string]interface{}
