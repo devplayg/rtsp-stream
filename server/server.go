@@ -50,6 +50,7 @@ func (s *Server) Start() error {
 		"liveDir":   absLiveDir,
 		"recordDir": absRecordDir,
 		"bucket":    s.config.Storage.Bucket,
+		"staticDir": s.config.StaticDir,
 	}).Infof("[server] listening on %s", s.addr)
 	go func() {
 		log.Fatal(srv.ListenAndServe())

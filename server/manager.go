@@ -62,41 +62,15 @@ func (m *Manager) init() error {
 		return err
 	}
 
-	//if len(m.streams) > 0 {
-	//	if err := m.checkOldLiveVideoFiles(); err != nil {
-	//		return err
-	//	}
-	//}
 	//
+	//s2 := rand.NewSource(42)
+	//r2 := rand.New(s2)
 	//for _, id := range m.getStreamIdList() {
-	//	m.writeVideoArchivingHistory(id, "20191201")
-	//	m.writeVideoArchivingHistory(id, "20191202")
-	//	m.writeVideoArchivingHistory(id, "20191203")
-	//	m.writeVideoArchivingHistory(id, "20191204")
-	//	m.writeVideoArchivingHistory(id, "20191205")
-	//	m.writeVideoArchivingHistory(id, "20191206")
-	//	m.writeVideoArchivingHistory(id, "20191207")
-	//	m.writeVideoArchivingHistory(id, "20191208")
-	//	m.writeVideoArchivingHistory(id, "20191209")
-	//	m.writeVideoArchivingHistory(id, "20191210")
-	//	m.writeVideoArchivingHistory(id, "20191211")
-	//	m.writeVideoArchivingHistory(id, "20191212")
-	//	m.writeVideoArchivingHistory(id, "20191213")
-	//	m.writeVideoArchivingHistory(id, "20191214")
-	//	m.writeVideoArchivingHistory(id, "20191215")
-	//	m.writeVideoArchivingHistory(id, "20191216")
-	//	m.writeVideoArchivingHistory(id, "20191217")
-	//	m.writeVideoArchivingHistory(id, "20191218")
-	//	m.writeVideoArchivingHistory(id, "20191219")
-	//	m.writeVideoArchivingHistory(id, "20191220")
-	//	m.writeVideoArchivingHistory(id, "20191221")
-	//	m.writeVideoArchivingHistory(id, "20191222")
-	//	m.writeVideoArchivingHistory(id, "20191223")
-	//	m.writeVideoArchivingHistory(id, "20191224")
-	//	m.writeVideoArchivingHistory(id, "20191225")
-	//	m.writeVideoArchivingHistory(id, "20191226")
-	//	m.writeVideoArchivingHistory(id, "20191227")
-	//
+	//	for i:=0; i<29; i++ {
+	//		n := r2.Intn(29) + 1
+	//		// fmt.Printf("201912%02d\n", n)
+	//		m.writeVideoArchivingHistory(id, fmt.Sprintf("201912%02d\n", n))
+	//	}
 	//}
 
 	return nil
