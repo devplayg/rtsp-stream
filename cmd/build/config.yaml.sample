@@ -1,6 +1,8 @@
 bind-address: 0.0.0.0:8000
 timezone: Asia/Seoul
 staticDir:
+hlsOption
+  segmentTime: 2
 storage:
   remote: false
   address: 127.0.0.1:9000
