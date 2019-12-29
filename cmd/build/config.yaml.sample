@@ -1,6 +1,6 @@
 bind-address: 0.0.0.0:8000
 timezone: Asia/Seoul
-staticDir:
+staticDir: /data
 hlsOption:
   segmentTime: 2
 storage:
