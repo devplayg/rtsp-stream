@@ -104,7 +104,7 @@ server.db
 |video-{id}|YYYYMMDD|Video|
 |config|string|string|
 
-stream-{id}-live.db
+stream-{id}.db
 |Bucket|Key|Value|
 |---|---|---|
 |{YYYYMMDD}|media file name (string)|Media information (Media)|

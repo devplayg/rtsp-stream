@@ -159,7 +159,6 @@ type Segment struct {
 	UnixTime int64   `json:"t"`
 	Data     []byte  `json:"-"`
 	Date     string  `json:"date"`
-	//Discontinuity bool    `json:"discontinuity"`
 }
 
 func NewSegment(seqId int64, duration float64, uri string, modTime time.Time) *Segment {

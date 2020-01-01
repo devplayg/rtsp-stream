@@ -15,11 +15,10 @@ let Streams = function() {
         $.ajax({
             url: "/streams"
         }).done(function(streams) {
-            // console.log(list);
             $.each(streams, function(i, s) {
                 c.streams[s.id] = s;
             });
-            console.log(c.streams);
+            // console.log(c.streams);
         }).fail(function(xhr) {
             Swal.fire({
                 type: 'error',

@@ -372,43 +372,54 @@
             <!-- the #js-page-content id is needed for some plugins to initialize -->
             <main id="js-page-content" role="main" class="page-content">
                 <!-- Content ### -->
-                <div class="row">
-                    <div class="col col-xl-3">
-                        <div  class="panel ">
-                            <!--
-                            <div class="panel-hdr">
-                                <h2>
-                                    <i class="far fa-play-circle"></i>  Videos
-                                </h2>
-                            </div>
-                            -->
-                            <div class="panel-container show">
-                                <div class="panel-content">
-                                    <table  id="table-videos"
-                                            class="table-sm"
-                                            data-toggle="table"
-                                            data-url="/videos"
-                                            data-toolbar="#toolbar-videos"
-                                            data-pagination="true"
-                                            data-side-pagination="client"
-                                            data-show-refresh="true"
-                                            data-sort-name="date"
-                                            data-sort-order="desc">
-                                        <thead>
-                                        <tr>
-                                            <th data-field="date" data-formatter="videosDateFormatter">Date</th>
-                                            <th data-formatter="videosVideoFormatter">Playback</th>
-                                        </tr>
-                                        </thead>
-                                    </table>
-                                </div>
+                <div  class="panel ">
+                    <!--
+                    <div class="panel-hdr">
+                        <h2>
+                            <i class="far fa-play-circle"></i>  Videos
+                        </h2>
+                    </div>
+                    -->
+                    <div class="panel-container show">
+                        <div class="panel-content">
+                            <table  id="table-videos"
+                                    class=""
+                                    data-url="/videos"
+                                    data-toolbar="#toolbar-videos"
+                                    data-pagination="true"
+                                    data-side-pagination="client"
+                                    data-show-refresh="true"
+                                    data-sort-name="date"
+                                    data-page-size="10"
+                                    data-sort-order="desc">
+                                <!--
+                                <thead>
+                                <tr>
+                                    <th data-field="date" data-formatter="videosDateFormatter">Date</th>
+                                    <th data-formatter="videosVideoFormatter">Playback</th>
+                                </tr>
+                                </thead>
+                                -->
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fullscreen Modal -->
+                <div class="modal fade modal-fullscreen example-modal-fullscreen" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content h-100 border-0 shadow-0 bg-fusion-800">
+                            <button type="button" class="close p-sm-2 p-md-4 text-white fs-xxl position-absolute pos-right mr-sm-2 mt-sm-1 z-index-space" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true"><i class="fal fa-times"></i></span>
+                            </button>
+                            <div class="modal-body p-0">
+                                <video-js id="player" class="vjs-default-skin vjs-fluid">
+                                </video-js>
                             </div>
                         </div>
                     </div>
-                    <div class="col">
-                        asdf
-                    </div>
                 </div>
+
             </main>
             <!-- this overlay is activated only when mobile menu is triggered -->
             <div class="page-content-overlay" data-action="toggle" data-class="mobile-nav-on"></div> <!-- END Page Content -->

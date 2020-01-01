@@ -114,7 +114,8 @@ func (s *Assistant) saveSegments(segments map[int64]*common.Segment) error {
 				"segUri":  seg.URI,
 				"segTime": seg.UnixTime,
 			}).Trace("saved a segment")
-			if err = bucket.Put(common.Int64ToBytes(seqId), seg.Data); err != nil {
+			timeStr := time.Unix(seg.UnixTime, 0).In(common.Loc).Format(time.RFC3339)
+			if err = bucket.Put([]byte(timeStr), seg.Data); err != nil {
 				return err
 			}
 		}

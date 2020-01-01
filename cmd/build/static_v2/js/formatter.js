@@ -18,6 +18,17 @@ function streamsControlFormatter(val, row, idx) {
     }
     return arr.join(' ');
 }
+
+function videosVideoFormatter(val, idx, row, field) {
+    let id = field.replace("video-", "");
+// class="play" data-name="won" data-id="' + id + '"
+    if (val === 1) {
+        return '<a  href="#" type="button" class="btn btn-success btn-xs video" data-name="won" data-id="' + id + '"><i class="far fa-play"></i></a>';
+    }
+    return null;
+
+}
+
 //
 // function streamsActiveFormatter(active, row, idx) {
 //     let text = "Stopped",
@@ -51,27 +62,28 @@ function streamsControlFormatter(val, row, idx) {
 //     ].join("");
 // }
 
-function videosCanPlayFormatter(val, row, idx, field) {
-    let id = field.replace("video-", "");
-    if (row.date ==="live") {
-        let arr = val.split(",");
-        if (arr.length < 1) {
-            return;
-        }
-        // console.log(arr);
-        let tag = "";
-        if (arr[0] === "1") {
-            tag += '<a href="#" class="live" data-id="' + id + '">LIVE</a>';
-        }
-        if (arr[1] === "1") {
-            tag += ' <a href="#" class="today" data-id="' + id + '">Today</a>';
-        }
-        return tag;
-    }
-    if (val === "1") {
-        return '<a href="#" class="play" data-name="won" data-id="' + id + '">a</a>';
-    }
-}
+// function videosCanPlayFormatter(val, row, idx, field) {
+    // let id = field.replace("video-", "");
+    // if (row.date ==="live") {
+    //     let arr = val.split(",");
+    //     if (arr.length < 1) {
+    //         return;
+    //     }
+    //     // console.log(arr);
+    //     let tag = "";
+    //     if (arr[0] === "1") {
+    //         tag += '<a href="#" class="live" data-id="' + id + '">LIVE</a>';
+    //     }
+    //     if (arr[1] === "1") {
+    //         tag += ' <a href="#" class="today" data-id="' + id + '">Today</a>';
+    //     }
+    //     return tag;
+    // }
+    // if (val === "1") {
+    //     return '<a href="#" class="play" data-name="won" data-id="' + id + '">a</a>';
+    // }
+    // return val;
+// }
 
 function streamsStatusFormatter(val, row, idx) {
     if (val === Failed) {
@@ -100,40 +112,40 @@ function streamsStatusFormatter(val, row, idx) {
 function streamsUpdatedFormatter(val, row, idx) {
     return moment.unix(val).format();
 }
-
-function videosVideoFormatter(val, row, idx) {
-    // console.log(row);
-    let keys = $.map(row, function(v, k) {
-        if (k.startsWith("video-")) {
-            return k;
-        }
-    });
-    if (keys.length < 1) return;
-
-    let tags = "";
-    $.each(keys, function(i, k) {
-        // console.log(k);
-        if (row[k] === 1) {
-            tags += '<a href="#" class="btn btn-primary btn-xs btn-icon rounded-circle"><i class="fal fa-check"></i></a>';
-            return true;
-        }
-        tags += '<a href="#" class="btn btn-default btn-xs btn-icon rounded-circle">-</a>';
-        return true;
-    });
-
-    return tags;
-    // console.log(keys);
-
-    // var collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
-    // var myArray = ['1_Document', '11_Document', '2_Document'];
-    // console.log(myArray.sort(collator.compare));
-
-
-    // console.log(row);
-    // return row.date;
-}
+//
+// function videosVideoFormatter(val, row, idx) {
+//     // console.log(row);
+//     let keys = $.map(row, function(v, k) {
+//         if (k.startsWith("video-")) {
+//             return k;
+//         }
+//     });
+//     if (keys.length < 1) return;
+//
+//     let tags = "";
+//     $.each(keys, function(i, k) {
+//         // console.log(k);
+//         if (row[k] === 1) {
+//             tags += '<a href="#" class="btn btn-primary btn-xs btn-icon rounded-circle"><i class="fal fa-check"></i></a>';
+//             return true;
+//         }
+//         tags += '<a href="#" class="btn btn-default btn-xs btn-icon rounded-circle">-</a>';
+//         return true;
+//     });
+//
+//     return tags;
+//     // console.log(keys);
+//
+//     // var collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
+//     // var myArray = ['1_Document', '11_Document', '2_Document'];
+//     // console.log(myArray.sort(collator.compare));
+//
+//
+//     // console.log(row);
+//     // return row.date;
+// }
 
 function videosDateFormatter(val, idx, row) {
     let m =  moment(val, 'YYYYMMDD');
-    return m.format("ll") + '<span class="small">' + m.format("ddd") + '</span>';
+    return m.format("ll") + '<samp class="badge badge-secondary float-right code">' + m.format("dd") + '</sp>';
 }
