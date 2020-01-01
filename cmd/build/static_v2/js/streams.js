@@ -7,8 +7,11 @@ let StreamManager = function () {
     this.modalAdd = $("#modal-streams-add");
     this.modalEdit = $("#modal-streams-edit");
 
-    this.refreshTable = function() {
-        this.table.bootstrapTable("refresh");
+    this.refreshTable = function(silent) {
+        if (silent === undefined) {
+            silent = false;
+        }
+        this.table.bootstrapTable("refresh", {silent: silent});
     };
 
     this.add = function() {
@@ -128,6 +131,9 @@ let StreamManager = function () {
 
 
 let manager = new StreamManager();
+setInterval(function() {
+    manager.refreshTable(true);
+}, 3000);
 
 
 

@@ -55,13 +55,13 @@
                     <li class="nav-title">Streaming</li>
                     <li>
                         <a href="/static/live.html" title="Live">
-                            <i class="fal fa-window"></i>
+                            <i class="fal fa-video"></i>
                             <span class="nav-link-text">Live</span>
                         </a>
                     </li>
                     <li>
                         <a href="/static/videos.html" title="Videos">
-                            <i class="far fa-video"></i>
+                            <i class="fas fa-play-circle"></i>
                             <span class="nav-link-text">Playback</span>
                         </a>
                     </li>
@@ -371,8 +371,7 @@
             <!-- BEGIN Page Content -->
             <!-- the #js-page-content id is needed for some plugins to initialize -->
             <main id="js-page-content" role="main" class="page-content">
-
-                <!-- Content -->
+                <!-- Content ### -->
                 <div class="row">
                     <div class="col">
                         <div  class="panel ">
@@ -434,6 +433,9 @@
                                     <div class="form-group">
                                         <label class="form-label">URI</label>
                                         <input type="text" name="uri" class="form-control" value="rtsp://10.0.75.1:8801/MainCam" />
+                                        <span class="help-block">
+                                            ex) rtsp://192.168.0.14:8801/MainCam
+                                        </span>
                                     </div>
 
                                     <div class="row">
@@ -494,6 +496,9 @@
                                     <div class="form-group">
                                         <label class="form-label">URI</label>
                                         <input type="text" name="uri" class="form-control"/>
+                                        <span class="help-block">
+                                            ex) rtsp://192.168.0.14:8801/MainCam
+                                        </span>
                                     </div>
 
                                     <div class="row">
@@ -639,7 +644,7 @@
         <i class="fal fa-expand"></i>
     </a>
     <a href="#" class="menu-item btn" data-action="app-print" data-toggle="tooltip" data-placement="left" title="Print page">
-        <i class="fal fa-print"></i>
+        <i class="fal fa-print"></i>`
     </a>
     <a href="#" class="menu-item btn" data-action="app-voice" data-toggle="tooltip" data-placement="left" title="Voice command">
         <i class="fal fa-microphone"></i>
@@ -653,6 +658,7 @@
 <script src="/static/plugins/jquery.mask.min.js"></script>
 <script src="/static/plugins/js.cookie-2.2.1.min.js"></script>
 <script src="/static/plugins/moment/moment.min.js"></script>
+<script src="/static/plugins/moment/moment-timezone.min.js"></script>
 <script src="/static/plugins/videojs/video.min.js"></script>
 <script src="/static/plugins/videojs/videojs-http-streaming.min.js"></script>
 <script src="/static/js/custom.js"></script>

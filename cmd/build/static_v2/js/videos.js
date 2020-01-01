@@ -81,11 +81,6 @@ $(function () {
 
         this.init = function () {
             this.initTable();
-            console.log("####---");
-            console.log(this.columns);
-            console.log(this.val);
-            // this.updateVideos();
-            console.log(this.val);
         };
 
         this.init();

@@ -4,7 +4,7 @@ const Failed = -1,
     Starting = 3,
     Started = 4;
 
-let colorPallet = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+// let colorPallet = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
 
 moment.tz.setDefault("Asia/Seoul");
 
@@ -37,4 +37,3 @@ streams = new Streams();
 // function convertToUserTime(dt) {
 //     return moment.tz(dt, systemTz).tz(userTz);
 // }
-
