@@ -298,6 +298,17 @@ func (m *Manager) addStream(stream *streaming.Stream) error {
 	return nil
 }
 
+func (m *Manager) isDuplicatedUri(uriHash string) bool {
+	m.RLock()
+	defer m.RUnlock()
+	for _, s := range m.streams {
+		if s.UrlHash == uriHash {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Manager) isValidStream(stream *streaming.Stream) error {
 	if len(stream.Uri) < 1 {
 		return errors.New("empty stream url")
@@ -307,6 +318,9 @@ func (m *Manager) isValidStream(stream *streaming.Stream) error {
 	}
 	stream.UrlHash = common.GetHashString(stream.Uri)
 
+	if m.isDuplicatedUri(stream.UrlHash) {
+		return errors.New("duplicated URI: " + stream.Uri)
+	}
 	//if !(stream.Protocol == common.HLS || stream.Protocol == common.WEBM) {
 	//	return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
 	//}
@@ -422,6 +436,17 @@ func (m *Manager) cleanStreamDir(stream *streaming.Stream) error {
 		}
 	}
 
+	return nil
+}
+
+func (m *Manager) deleteOldStreamDataBefore() error {
+	// Delete old files in the storage directory
+
+	// Delete old keys in the database
+
+	// Delete old keys in the live database
+
+	// Delete old keys in the live directory
 	return nil
 }
 
