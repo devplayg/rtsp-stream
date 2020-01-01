@@ -62,6 +62,8 @@ func (m *Manager) init() error {
 		return err
 	}
 
+	m.deleteOldDataBefore()
+
 	//
 	//s2 := rand.NewSource(42)
 	//r2 := rand.New(s2)
@@ -439,17 +441,6 @@ func (m *Manager) cleanStreamDir(stream *streaming.Stream) error {
 		}
 	}
 
-	return nil
-}
-
-func (m *Manager) deleteOldStreamDataBefore() error {
-	// Delete old files in the storage directory
-
-	// Delete old keys in the database
-
-	// Delete old keys in the live database
-
-	// Delete old keys in the live directory
 	return nil
 }
 
