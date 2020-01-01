@@ -26,7 +26,7 @@ type Stream struct {
 	Recording          bool                 `json:"recording"`    // Is recording
 	Enabled            bool                 `json:"enabled"`      // Enabled
 	ProtocolInfo       *common.ProtocolInfo `json:"protocolInfo"` // Protocol info
-	UrlHash            string               `json:"urlHash"`      // URL Hash
+	UriHash            string               `json:"uriHash"`      // URL Hash
 	Cmd                *exec.Cmd            `json:"-"`            // Command
 	liveDir            string               `json:"-"`            // Live video directory
 	Status             int                  `json:"status"`       // Stream status

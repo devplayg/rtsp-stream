@@ -376,11 +376,6 @@
                 <div class="row">
                     <div class="col">
                         <div  class="panel ">
-                            <div class="panel-hdr">
-                                <h2 class="text-uppercase">
-                                    Settings <span class="fw-300">master button</span>
-                                </h2>
-                            </div>
                             <div class="panel-container show">
                                 <div class="panel-content">
                                     <div id="toolbar-streams">
@@ -397,19 +392,19 @@
                                             data-side-pagination="client"
                                             data-show-refresh="true"
                                             data-show-columns="true"
-                                            data-sort-name="uri"
+                                            data-sort-name="name"
                                             data-sort-order="asc">
                                         <thead>
                                         <tr>
-                                            <th data-field="id">Channel</th>
+                                            <th data-field="id" data-sortable="true">Ch.</th>
                                             <th data-formatter="streamsControlFormatter" data-events="streamsActiveEvents">Control</th>
-                                            <th data-field="name">Name</th>
-                                            <th data-field="status" data-formatter="streamsStatusFormatter">Status</th>
-                                            <th data-field="uri" data-visible="false">URI</th>
-                                            <th data-field="enabled" data-formatter="onOffFormatter">Auto Start</th>
-                                            <th data-field="recording" data-formatter="onOffFormatter">Recording</th>
-                                            <th data-field="created" data-formatter="streamsCreatedFormatter" data-visible="false">Created</th>
-                                            <th data-field="updated" data-formatter="streamsUpdatedFormatter">Updated</th>
+                                            <th data-field="name" data-sortable="true">Name</th>
+                                            <th data-field="status" data-sortable="true" data-formatter="streamsStatusFormatter">Status</th>
+                                            <th data-field="uri" data-sortable="true" data-visible="false">URI</th>
+                                            <th data-field="enabled" data-sortable="true" data-formatter="onOffFormatter">Auto Start</th>
+                                            <th data-field="recording" data-sortable="true" data-formatter="onOffFormatter">Recording</th>
+                                            <th data-field="created" data-sortable="true" data-formatter="streamsCreatedFormatter" data-visible="false">Created</th>
+                                            <th data-field="updated" data-sortable="true" data-formatter="streamsUpdatedFormatter">Updated</th>
                                         </tr>
                                         </thead>
                                     </table>
@@ -466,7 +461,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="alert alert-danger d-none" role="alert">
+                                    <div class="alert alert-danger d-none mt-4 mb-0" role="alert">
                                         <strong>Error!</strong> <span class="msg"></span>
                                     </div>
 
@@ -526,7 +521,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="alert alert-danger d-none" role="alert">
+                                    <div class="alert alert-danger d-none mt-4 mb-0" role="alert">
                                         <strong>Error!</strong> <span class="msg"></span>
                                     </div>
 

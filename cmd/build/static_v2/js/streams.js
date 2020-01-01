@@ -164,7 +164,7 @@ $(".modal-form")
         let $form = $(this).closest("form");
         // $form.validate().resetForm();
         $form.get(0).reset();
-        // $(".alert", $form).addClass("hide").removeClass("in");
+        $(".alert", $form).addClass("d-none");
         // $(".alert .message", $form).empty();
 
         manager.refreshTable();

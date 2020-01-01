@@ -99,11 +99,12 @@ function streamsStatusFormatter(val, row, idx) {
     }
 
     if (val === Starting) {
-        return '<div class="spinner-grow spinner-grow-sm text-info" role="status"><span class="sr-only">Loading...</span></div> Starting';
+        return '<div class="spinner-border spinner-border-sm text-info" role="status"><span class="sr-only">Loading...</span></div> Starting';
     }
 
     if (val === Started) {
-        return '<span class="badge badge-danger">Live</span>';
+        // return '<span class="badge badge-danger">Live</span>';
+        return '<span class="badge badge-danger"><div class="spinner-grow spinner-grow-sm text-white" role="status"><span class="sr-only">Loading...</span></div>LIVE</span>';
     }
 
     return val;

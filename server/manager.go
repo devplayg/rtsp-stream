@@ -277,7 +277,7 @@ func (m *Manager) getStreamById(id int64) *streaming.Stream {
 }
 
 func (m *Manager) addStream(stream *streaming.Stream) error {
-	if err := m.isValidStream(stream); err != nil {
+	if err := m.isValidStreamUri(stream); err != nil {
 		return err
 	}
 
@@ -302,24 +302,26 @@ func (m *Manager) isDuplicatedUri(uriHash string) bool {
 	m.RLock()
 	defer m.RUnlock()
 	for _, s := range m.streams {
-		if s.UrlHash == uriHash {
+		if s.UriHash == uriHash {
 			return true
 		}
 	}
 	return false
 }
 
-func (m *Manager) isValidStream(stream *streaming.Stream) error {
+func (m *Manager) isValidStreamUri(stream *streaming.Stream) error {
 	if len(stream.Uri) < 1 {
 		return errors.New("empty stream url")
 	}
 	if _, err := url.Parse(stream.Uri); err != nil {
 		return common.ErrorInvalidUri
 	}
-	stream.UrlHash = common.GetHashString(stream.Uri)
+	stream.UriHash = common.GetHashString(stream.Uri)
 
-	if m.isDuplicatedUri(stream.UrlHash) {
-		return errors.New("duplicated URI: " + stream.Uri)
+	if stream.Id < 1 { // only when new stream is inserted
+		if m.isDuplicatedUri(stream.UriHash) {
+			return errors.New("duplicated URI: " + stream.Uri)
+		}
 	}
 	//if !(stream.Protocol == common.HLS || stream.Protocol == common.WEBM) {
 	//	return errors.New("unknown stream protocol: " + strconv.Itoa(stream.Protocol))
@@ -337,6 +339,7 @@ func (m *Manager) issueStream(input *streaming.Stream) error {
 		return err
 	}
 	input.Id = id
+	input.Status = common.Stopped
 	input.Created = time.Now().Unix()
 	input.Updated = input.Created
 	input.SetProtocol(common.HLS)
@@ -356,7 +359,7 @@ func (m *Manager) saveStream(stream *streaming.Stream) error {
 }
 
 func (m *Manager) updateStream(input *streaming.Stream) error {
-	if err := m.isValidStream(input); err != nil {
+	if err := m.isValidStreamUri(input); err != nil {
 		return err
 	}
 
@@ -377,7 +380,7 @@ func (m *Manager) updateStream(input *streaming.Stream) error {
 	stream.Username = input.Username
 	stream.Password = input.Password
 	stream.ProtocolInfo = input.ProtocolInfo
-	stream.UrlHash = input.UrlHash
+	stream.UriHash = input.UriHash
 	stream.Updated = time.Now().Unix()
 
 	return m.saveStream(stream)
