@@ -103,8 +103,11 @@ function streamsStatusFormatter(val, row, idx) {
     }
 
     if (val === Started) {
-        // return '<span class="badge badge-danger">Live</span>';
-        return '<span class="badge badge-danger"><div class="spinner-grow spinner-grow-sm text-white" role="status"><span class="sr-only">Loading...</span></div>LIVE</span>';
+        return [
+            '<a href="#" class="live">',
+            '<span class="badge badge-danger"><div class="spinner-grow spinner-grow-sm text-white" role="status"><span class="sr-only">Loading...</span></div>LIVE</span>',
+            '</a>'
+        ].join("");
     }
 
     return val;

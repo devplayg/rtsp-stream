@@ -4,8 +4,18 @@ let StreamManager = function () {
     this.formAdd = $("#form-streams-add");
     this.formEdit = $("#form-streams-edit");
     this.table = $("#table-streams");
+    this.player = videojs('player', {
+        controls: true,
+        autoplay: false,
+        preload: 'auto',
+        // playbackRates: [0.5, 1, 1.5, 2, 4, 8],
+    });
+
+    // Modal
     this.modalAdd = $("#modal-streams-add");
     this.modalEdit = $("#modal-streams-edit");
+    this.modalPlayer = $("modal-streams-player");
+
 
     this.refreshTable = function(silent) {
         if (silent === undefined) {
@@ -127,6 +137,26 @@ let StreamManager = function () {
             $form.find(".alert .msg").text(xhr.responseJSON.error);
         });
     };
+
+    this.playVideo = function (uri) {
+        this.player.src({
+            "type": "application/x-mpegURL",
+            "src": uri
+        });
+        let c = this;
+        this.player.ready(function () {
+            c.player.muted(true);
+            c.player.play();
+        });
+        $("#modal-streams-player").modal("show");
+    };
+
+    this.stopVideo = function() {
+        // $("#player").pause();
+        // this.player.currentTime = 0;
+        let  video = document.querySelector("#player");
+        video.pause();
+    };
 };
 
 
@@ -183,6 +213,13 @@ $(".modal-form")
             .select();
     });
 
+
+$("#modal-streams-player")
+    .on("hidden.bs.modal", function () {
+        console.log(11);
+        manager.stopVideo();
+    });
+
 let $table = $("#table-streams");
 
 
@@ -209,5 +246,13 @@ window.streamsActiveEvents = {
     },
     'click .edit': function (e, value, row, index) {
         manager.show(row.id);
+    },
+};
+
+window.streamsStatusEvents = {
+    'click .live': function (e, val, row, idx) {
+        let url = "/live/" + row.id + "/m3u8";
+        console.log(url);
+        manager.playVideo(url);
     },
 };

@@ -398,7 +398,7 @@
                                             <th data-field="id" data-sortable="true">Ch.</th>
                                             <th data-formatter="streamsControlFormatter" data-events="streamsActiveEvents">Control</th>
                                             <th data-field="name" data-sortable="true">Name</th>
-                                            <th data-field="status" data-sortable="true" data-formatter="streamsStatusFormatter">Status</th>
+                                            <th data-field="status" data-sortable="true" data-formatter="streamsStatusFormatter" data-events="streamsStatusEvents">Status</th>
                                             <th data-field="uri" data-sortable="true" data-visible="false">URI</th>
                                             <th data-field="enabled" data-sortable="true" data-formatter="onOffFormatter">Auto Start</th>
                                             <th data-field="recording" data-sortable="true" data-formatter="onOffFormatter">Recording</th>
@@ -539,6 +539,28 @@
                         </div>
                     </div>
                 </form>
+
+                <!-- modal - player -->
+                <div id="modal-streams-player" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Modal title</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true"><i class="fal fa-times"></i></span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <video-js id="player" class="vjs-default-skin vjs-fluid">
+                                </video-js>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </main>
             <!-- this overlay is activated only when mobile menu is triggered -->
             <div class="page-content-overlay" data-action="toggle" data-class="mobile-nav-on"></div> <!-- END Page Content -->

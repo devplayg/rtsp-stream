@@ -30,6 +30,7 @@ $(function() {
             player.ready(function() {
                 player.muted(true);
                 player.play();
+
             });
         });
     }
