@@ -115,24 +115,24 @@ func RemoveLiveFiles(dir string, files []os.FileInfo) int {
 	return count
 }
 
-func GetDbBuckets(db *bolt.DB, prefix string) ([][]byte, error) {
-	buckets := make([][]byte, 0)
-	err := db.View(func(tx *bolt.Tx) error {
-		err := tx.ForEach(func(b []byte, _ *bolt.Bucket) error {
-			if len(prefix) > 0 {
-				if strings.HasPrefix(string(b), prefix) {
-					buckets = append(buckets, b)
-					return nil
-				}
-				return nil
-			}
-			buckets = append(buckets, b)
-			return nil
-		})
-		return err
-	})
-	return buckets, err
-}
+//func GetDbBuckets(db *bolt.DB, prefix string) ([][]byte, error) {
+//	buckets := make([][]byte, 0)
+//	err := db.View(func(tx *bolt.Tx) error {
+//		err := tx.ForEach(func(b []byte, _ *bolt.Bucket) error {
+//			if len(prefix) > 0 {
+//				if strings.HasPrefix(string(b), prefix) {
+//					buckets = append(buckets, b)
+//					return nil
+//				}
+//				return nil
+//			}
+//			buckets = append(buckets, b)
+//			return nil
+//		})
+//		return err
+//	})
+//	return buckets, err
+//}
 
 func GetVideoRecordHistory(db *bolt.DB) (map[string]map[string]bool, map[string]bool, error) {
 	prefix := []byte("video-")

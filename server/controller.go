@@ -756,3 +756,8 @@ func (c *Controller) Test(w http.ResponseWriter, r *http.Request) {
 	//
 	//Response(w, r, nil, http.StatusOK)
 }
+
+func (c *Controller) GetDatabaseBuckets(w http.ResponseWriter, r *http.Request) {
+	//buckets, err := GetDbBuckets(db)
+
+}

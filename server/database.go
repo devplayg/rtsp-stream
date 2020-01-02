@@ -29,6 +29,18 @@ func PutDataIntoDbBucket(bucket, key, value []byte) error {
 	})
 }
 
+func GetDbBuckets(db *bolt.DB) ([][]byte, error) {
+	buckets := make([][]byte, 0)
+	err := db.View(func(tx *bolt.Tx) error {
+		err := tx.ForEach(func(b []byte, _ *bolt.Bucket) error {
+			buckets = append(buckets, b)
+			return nil
+		})
+		return err
+	})
+	return buckets, err
+}
+
 func IssueStreamId() (int64, error) {
 	var streamId int64
 	err := db.Update(func(tx *bolt.Tx) error {

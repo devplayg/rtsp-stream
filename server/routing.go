@@ -7,6 +7,7 @@ import (
 func (c *Controller) initRouter() {
 	c.setApiRoutes()
 	c.setAssetRoutes()
+	c.setDatabaseRoutes()
 	c.setUiRoutes()
 }
 
@@ -85,4 +86,14 @@ func (c *Controller) setAssetRoutes() {
 	c.router.HandleFunc("/assets/modules/{moduleName}/{name}", func(w http.ResponseWriter, r *http.Request) {
 		GetAsset(w, r)
 	})
+}
+
+func (c *Controller) setDatabaseRoutes() {
+	/**
+	/db
+	/db/{bucketName}
+	/streamDb
+	/streamDb/1
+	/streamDb/1/{bucketName}
+	*/
 }
