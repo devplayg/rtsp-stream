@@ -172,6 +172,9 @@ func (s *Stream) Start() (int, error) {
 			"err": err,
 			"pid": GetStreamPid(s),
 		}).Debugf("    [stream-%d] process has been terminated", s.Id)
+		if err != nil {
+			log.Error(s.Cmd.Args)
+		}
 		//s.cmd = nil
 	}()
 
