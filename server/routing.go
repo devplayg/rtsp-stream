@@ -20,14 +20,13 @@ func (c *Controller) setUiRoutes() {
 
 func (c *Controller) setApiRoutes() {
 	//r.HandleFunc("/test", c.Test).Methods("GET")
+
 	c.router.HandleFunc("/streams", c.GetStreams).Methods("GET")
 	c.router.HandleFunc("/streams", c.AddStream).Methods("POST")
 	c.router.HandleFunc("/streams/debug", c.DebugStream).Methods("GET")
-
 	c.router.HandleFunc("/streams/{id:[0-9]+}", c.GetStreamById).Methods("GET")
 	c.router.HandleFunc("/streams/{id:[0-9]+}", c.UpdateStream).Methods("PATCH")
 	c.router.HandleFunc("/streams/{id:[0-9]+}", c.DeleteStream).Methods("DELETE")
-
 	c.router.HandleFunc("/streams/{id:[0-9]+}/start", c.StartStream).Methods("GET")
 	c.router.HandleFunc("/streams/{id:[0-9]+}/stop", c.StopStream).Methods("GET")
 

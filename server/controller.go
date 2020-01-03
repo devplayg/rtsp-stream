@@ -531,9 +531,6 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
-	//w.Header().Set("Content-Type", common.ContentTypeTs)
-	w.Header().Set("Accept-Range", "bytes")
-	w.Header().Set("Content-Type", common.ContentTypeTs)
 
 	buf := new(bytes.Buffer)
 	n, err := buf.ReadFrom(object)
@@ -541,6 +538,9 @@ func (c *Controller) GetDailyVideo(w http.ResponseWriter, r *http.Request) {
 		Response(w, r, err, http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Accept-Range", "bytes")
+	w.Header().Set("Content-Type", common.ContentTypeTs)
 	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
 	w.WriteHeader(http.StatusOK)
 	w.Write(buf.Bytes())
