@@ -154,8 +154,7 @@ let StreamManager = function () {
     this.stopVideo = function() {
         // $("#player").pause();
         // this.player.currentTime = 0;
-        let  video = document.querySelector("#player");
-        video.pause();
+        $(".video-js")[0].player.pause();
     };
 };
 

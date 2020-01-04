@@ -55,6 +55,11 @@ func (m *Manager) startScheduler() error {
 			return
 		}
 
+		if err := m.deleteOldData(7); err != nil {
+			log.Error(err)
+			return
+		}
+
 	})
 
 	scheduler.Start()

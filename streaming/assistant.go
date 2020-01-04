@@ -94,7 +94,7 @@ func (s *Assistant) captureLiveM3u8(size int) error {
 		"count":      len(segments),
 		"lastSeqId":  maxSeqId,
 		"firstSeqId": playlist.Segments[0].SeqId,
-	}).Debugf("    [stream-%d] read m3u8", s.stream.Id)
+	}).Tracef("    [stream-%d] read m3u8", s.stream.Id)
 
 	return nil
 }

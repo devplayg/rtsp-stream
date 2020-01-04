@@ -140,7 +140,7 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Co
 		}
 		log.WithFields(log.Fields{
 			"count": count,
-		}).Debugf("    [stream-%d] waiting until streaming starts", s.Id)
+		}).Tracef("    [stream-%d] waiting until streaming starts", s.Id)
 		count++
 
 		select {

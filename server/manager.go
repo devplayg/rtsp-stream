@@ -13,6 +13,7 @@ import (
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"math/rand"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -62,18 +63,17 @@ func (m *Manager) init() error {
 		return err
 	}
 
-	m.deleteOldDataBefore()
+	// m.deleteOldDataBefore()
 
-	//
-	//s2 := rand.NewSource(42)
-	//r2 := rand.New(s2)
-	//for _, id := range m.getStreamIdList() {
-	//	for i:=0; i<29; i++ {
-	//		n := r2.Intn(29) + 1
-	//		// fmt.Printf("201912%02d\n", n)
-	//		m.writeVideoArchivingHistory(id, fmt.Sprintf("201912%02d\n", n))
-	//	}
-	//}
+	s2 := rand.NewSource(42)
+	r2 := rand.New(s2)
+	for _, id := range m.getStreamIdList() {
+		for i := 0; i < 29; i++ {
+			n := r2.Intn(29) + 1
+			// fmt.Printf("201912%02d\n", n)
+			m.writeVideoArchivingHistory(id, fmt.Sprintf("201912%02d", n))
+		}
+	}
 
 	return nil
 }

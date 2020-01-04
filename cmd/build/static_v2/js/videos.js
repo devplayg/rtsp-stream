@@ -2,6 +2,7 @@ $(function () {
     let VideoShop = function () {
         this.table = $("#table-videos");
         this.columns = [];
+        this.playerModal = $("#modal-videos-player");
         this.player = videojs('player', {
             controls: true,
             autoplay: false,
@@ -68,15 +69,29 @@ $(function () {
         // };
 
         this.play = function (uri) {
+            // let c = this;
+            //
+            // console.log(uri);
+            // console.log(uri.length);
+            // c.player.src({
+            //     "type": "application/x-mpegURL",
+            //     "src": uri
+            // });
+            // this.player.ready(function () {
+            //     c.player.play();
+            // });
+            //
             this.player.src({
                 "type": "application/x-mpegURL",
                 "src": uri
             });
+            let c = this;
             this.player.ready(function () {
-                player.play();
+                c.player.muted(true);
+                c.player.play();
             });
 
-            $(".example-modal-fullscreen").modal("show");
+            this.playerModal.modal("show");
         };
 
         this.init = function () {
@@ -105,6 +120,12 @@ $(function () {
             shop.play(url);
         },
     };
+
+
+    $("#modal-videos-player")
+        .on("hidden.bs.modal", function () {
+            $(".video-js")[0].player.pause();
+        });
 
 
     // new VideoShop
