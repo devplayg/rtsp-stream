@@ -47,10 +47,11 @@ func (s *Server) Start() error {
 	absLiveDir, _ := filepath.Abs(s.config.Storage.LiveDir)
 	absRecordDir, _ := filepath.Abs(s.config.Storage.RecordDir)
 	log.WithFields(log.Fields{
-		"liveDir":   absLiveDir,
-		"recordDir": absRecordDir,
-		"bucket":    s.config.Storage.Bucket,
-		"staticDir": s.config.StaticDir,
+		"liveDir":           absLiveDir,
+		"recordDir":         absRecordDir,
+		"bucket":            s.config.Storage.Bucket,
+		"staticDir":         s.config.StaticDir,
+		"dataRetentionDays": s.config.DataRetentionDays,
 	}).Infof("[server] listening on %s", s.addr)
 	go func() {
 		log.Fatal(srv.ListenAndServe())

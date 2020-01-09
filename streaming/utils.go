@@ -19,6 +19,47 @@ import (
 	"strings"
 )
 
+func GetHlsStreamingCommand(stream *Stream) *exec.Cmd {
+	return exec.Command(
+		"ffmpeg",
+		"-y",
+		"-fflags",
+		"nobuffer",
+		"-rtsp_transport",
+		"tcp",
+		"-i",
+		stream.StreamUri(),
+		"-vsync",
+		"0",
+		"-copyts",
+		"-vcodec",
+		"copy",
+		"-movflags",
+		"frag_keyframe+empty_moov",
+		"-an",
+		"-hls_flags",
+		"append_list",
+		"-f",
+		"hls",
+		"-segment_list_flags",
+		"live",
+		"-hls_time",
+		"1",
+		"-hls_list_size",
+		"3",
+		//"-hls_time",
+		//"60",
+		"-hls_segment_filename",
+		stream.liveDir+"/"+stream.ProtocolInfo.LiveFilePrefix+"%d.ts",
+		stream.liveDir+"/"+stream.ProtocolInfo.MetaFileName,
+	)
+	//output, err := cmd.CombinedOutput()
+	//if err != nil {
+	//    log.Error(string(output))
+	//    return err
+	//}
+}
+
 func GetHashFromFile(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -38,169 +79,28 @@ func GetHashFromFile(path string) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
-//
-//func GetStreamingCommand(stream *Stream) *exec.Cmd {
-//	if stream.Protocol == common.HLS {
-//		return GetHlsStreamingCommand(stream)
-//	}
-//
-//	return GetHlsStreamingCommand(stream)
-//}
-
 func GetStreamPid(stream *Stream) int {
-	if stream.Cmd == nil {
+	if stream.Cmd == nil || stream.Cmd.Process == nil {
 		return 0
 	}
-
-	if stream.Cmd.Process == nil {
-		return 0
-	}
-
 	return stream.Cmd.Process.Pid
 }
 
-//func checkStreamUri(stream *Stream) error {
-//	uri := strings.TrimPrefix(stream.Uri, "rtsp://")
-//	stream.Uri = fmt.Sprintf("rtsp://%s:%s@%s", stream.Username, stream.Password, uri)
-//
-//	return nil
-//}
-
-//
-//func GetRecentFilesInDir(dir string, after time.Duration) ([]*LiveVideoFile, error) {
-//	files := make([]*LiveVideoFile, 0)
-//	list, err := ioutil.ReadDir(dir)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	for _, f := range list {
-//		if f.IsDir() {
-//			continue
-//		}
-//
-//		if time.Since(f.ModTime()) < after {
-//			continue
-//		}
-//
-//		if f.Size() < 1 {
-//			continue
-//		}
-//
-//		ext := filepath.Ext(f.Name())
-//		if ext != ".ts" {
-//			continue
-//		}
-//
-//		files = append(files, NewLiveVideoFile(f, ext, dir))
-//
-//	}
-//	return files, err
-//}
-
-//func MergeLiveVideoFiles(inputFilePath, outputFilePath string) error {
-//	if err := os.Chdir(filepath.Dir(inputFilePath)); err != nil {
-//		return nil
-//	}
-//	cmd := exec.Command(
-//		"ffmpeg",
-//		"-y",
-//		"-f",
-//		"concat",
-//		"-safe",
-//		"0",
-//		"-i",
-//		filepath.Base(inputFilePath),
-//		"-c",
-//		"copy",
-//		"-f",
-//		"ssegment",
-//		"-segment_list",
-//		filepath.Base(outputFilePath),
-//		"-segment_list_flags",
-//		"+live",
-//		"-segment_time",
-//		"10",
-//		common.VideoFilePrefix+"%d.ts",
-//	)
-//	//output, err := cmd.CombinedOutput()
-//	//if err != nil {
-//	//    log.Error(string(output))
-//	//    return err
-//	//}
-//	return cmd.Run()
-//}
-
-func GetVideoFilesInDir(dir string, prefix string) ([]*common.VideoFile, error) {
-	videoFiles := make([]*common.VideoFile, 0)
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	for _, f := range files {
-		if f.IsDir() {
-			continue
+func GetDirSize(dir string) (int64, error) {
+	var size int64
+	err := filepath.Walk(dir, func(path string, file os.FileInfo, err error) error {
+		if file.IsDir() {
+			return nil
+		}
+		if !file.Mode().IsRegular() {
+			return nil
 		}
 
-		if f.Size() < 1 {
-			continue
-		}
-
-		ext := filepath.Ext(f.Name())
-		if ext != common.VideoFileExt {
-			continue
-		}
-
-		if !strings.HasPrefix(f.Name(), prefix) {
-			continue
-		}
-
-		videoFiles = append(videoFiles, common.NewVideoFile(f, dir))
-	}
-	sort.SliceStable(videoFiles, func(i, j int) bool {
-		return videoFiles[i].File.ModTime().Before(videoFiles[j].File.ModTime())
+		size += file.Size()
+		return nil
 	})
 
-	return videoFiles, nil
-}
-
-func SendToStorage(bucketName, objectName, path, contentType string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	fileStat, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	if len(contentType) < 1 {
-		contentType = "application/octet-stream"
-	}
-	if _, err = common.MinioClient.PutObject(bucketName, objectName, file, fileStat.Size(), minio.PutObjectOptions{ContentType: contentType}); err != nil {
-		return err
-	}
-	return nil
-}
-
-//func GetStreamBucketName(streamId int64, date string) []byte {
-//	if len(date) < 1 {
-//		date = common.LiveBucketName
-//	}
-//	return []byte(fmt.Sprintf("stream-%d-%s", streamId, date))
-//}
-
-func GetVideoFileSeq(name string) (int, error) {
-	str := strings.TrimPrefix(filepath.Base(name), common.VideoFilePrefix)
-	str = strings.TrimSuffix(str, common.VideoFileExt)
-	mediaFileSeq, err := strconv.Atoi(str)
-	if err != nil {
-		return 0, err
-	}
-
-	return mediaFileSeq, nil
+	return size, err
 }
 
 func ParseAndGetStream(body io.Reader) (*Stream, error) {
@@ -289,43 +189,67 @@ func ParseAndGetStreamId(r *http.Request) (int64, error) {
 //    return "#EXT-X-ENDLIST"
 //}
 
-func GetHlsStreamingCommand(stream *Stream) *exec.Cmd {
-	return exec.Command(
-		"ffmpeg",
-		"-y",
-		"-fflags",
-		"nobuffer",
-		"-rtsp_transport",
-		"tcp",
-		"-i",
-		stream.StreamUri(),
-		"-vsync",
-		"0",
-		"-copyts",
-		"-vcodec",
-		"copy",
-		"-movflags",
-		"frag_keyframe+empty_moov",
-		"-an",
-		"-hls_flags",
-		"append_list",
-		"-f",
-		"hls",
-		"-segment_list_flags",
-		"live",
-		"-hls_time",
-		"1",
-		"-hls_list_size",
-		"3",
-		//"-hls_time",
-		//"60",
-		"-hls_segment_filename",
-		stream.liveDir+"/"+stream.ProtocolInfo.LiveFilePrefix+"%d.ts",
-		stream.liveDir+"/"+stream.ProtocolInfo.MetaFileName,
-	)
-	//output, err := cmd.CombinedOutput()
-	//if err != nil {
-	//    log.Error(string(output))
-	//    return err
-	//}
+func SendToStorage(bucketName, objectName, path, contentType string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fileStat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	if len(contentType) < 1 {
+		contentType = "application/octet-stream"
+	}
+	if _, err = common.MinioClient.PutObject(bucketName, objectName, file, fileStat.Size(), minio.PutObjectOptions{ContentType: contentType}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetVideoFileSeq(name string) (int, error) {
+	str := strings.TrimPrefix(filepath.Base(name), common.VideoFilePrefix)
+	str = strings.TrimSuffix(str, common.VideoFileExt)
+	mediaFileSeq, err := strconv.Atoi(str)
+	if err != nil {
+		return 0, err
+	}
+
+	return mediaFileSeq, nil
+}
+
+func GetVideoFilesInDir(dir string, prefix string) ([]*common.VideoFile, error) {
+	videoFiles := make([]*common.VideoFile, 0)
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		if f.Size() < 1 {
+			continue
+		}
+
+		ext := filepath.Ext(f.Name())
+		if ext != common.VideoFileExt {
+			continue
+		}
+
+		if !strings.HasPrefix(f.Name(), prefix) {
+			continue
+		}
+
+		videoFiles = append(videoFiles, common.NewVideoFile(f, dir))
+	}
+	sort.SliceStable(videoFiles, func(i, j int) bool {
+		return videoFiles[i].File.ModTime().Before(videoFiles[j].File.ModTime())
+	})
+
+	return videoFiles, nil
 }

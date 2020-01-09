@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/devplayg/rtsp-stream/common"
-	log "github.com/sirupsen/logrus"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -51,13 +50,13 @@ func MergeLiveVideoFiles(listFilePath, metaFilePath string, segmentTime int) err
 	//   log.Error(string(output))
 	//   return []byte{}, err
 	//}
-	log.WithFields(log.Fields{
-		"name": "MergeLiveVideoFiles",
-	}).Debug(cmd.Args)
+	//log.WithFields(log.Fields{
+	//	"name": "MergeLiveVideoFiles",
+	//}).Debug(cmd.Args)
 	err := cmd.Run()
-	if err != nil {
-		log.Error(cmd.Args)
-	}
+	//if err != nil {
+	//	log.Error(cmd.Args)
+	//}
 
 	return err
 }

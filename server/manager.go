@@ -13,7 +13,6 @@ import (
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"math/rand"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -63,17 +62,22 @@ func (m *Manager) init() error {
 		return err
 	}
 
-	// m.deleteOldDataBefore()
-
-	s2 := rand.NewSource(42)
-	r2 := rand.New(s2)
-	for _, id := range m.getStreamIdList() {
-		for i := 0; i < 29; i++ {
-			n := r2.Intn(29) + 1
-			// fmt.Printf("201912%02d\n", n)
-			m.writeVideoArchivingHistory(id, fmt.Sprintf("201912%02d", n))
-		}
+	if err := m.deleteOldData(7); err != nil {
+		log.Error(err)
 	}
+
+	// m.deleteOldDataBefore()
+	//
+	//
+	//s2 := rand.NewSource(42)
+	//r2 := rand.New(s2)
+	//for _, id := range m.getStreamIdList() {
+	//	for i := 0; i < 29; i++ {
+	//		n := r2.Intn(29) + 1
+	//		// fmt.Printf("201912%02d\n", n)
+	//		m.writeVideoArchivingHistory(id, fmt.Sprintf("201912%02d", n))
+	//	}
+	//}
 
 	return nil
 }
@@ -365,12 +369,32 @@ func (m *Manager) updateStream(input *streaming.Stream) error {
 		return err
 	}
 
-	//m.Lock()
-	//m.streams[stream.Id] = stream
-	//m.Unlock()
 	stream := m.getStreamById(input.Id)
 	if stream == nil {
 		return common.ErrorInvalidStream
+	}
+
+	needToReload, err := m._updateStream(stream, input)
+	if err != nil {
+		return err
+	}
+
+	if needToReload {
+		log.WithFields(log.Fields{}).Debugf("[manager] reloading stream-%d", stream.Id)
+		go func() {
+			if err := m.reloadStream(stream.Id); err != nil {
+				log.Error(err)
+			}
+		}()
+	}
+
+	return nil
+}
+
+func (m *Manager) _updateStream(stream, input *streaming.Stream) (bool, error) {
+	needToReload := false
+	if stream.UriHash != input.UriHash || stream.Username != input.Username || stream.Password != input.Password {
+		needToReload = true
 	}
 
 	m.RLock()
@@ -384,9 +408,22 @@ func (m *Manager) updateStream(input *streaming.Stream) error {
 	stream.ProtocolInfo = input.ProtocolInfo
 	stream.UriHash = input.UriHash
 	stream.Updated = time.Now().Unix()
+	return needToReload, m.saveStream(stream)
+}
 
-	return m.saveStream(stream)
-	// return SaveStreamInDB(stream)
+func (m *Manager) reloadStream(id int64) error {
+	if err := m.stopStreaming(id, "manager"); err != nil {
+		return err
+	}
+
+	time.Sleep(3 * time.Second)
+
+	if err := m.startStreaming(id, "manager"); err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func (m *Manager) deleteStream(id int64, from string) error {
@@ -557,7 +594,9 @@ func (m *Manager) stopStreaming(id int64, from string) error {
 func (m *Manager) Stop() error {
 	m.cancel()
 	for id, _ := range m.streams {
-		m.stopStreaming(id, "manager")
+		if err := m.stopStreaming(id, "manager"); err != nil {
+			log.Error(err)
+		}
 		if m.streams[id].DB == nil {
 			continue
 		}

@@ -172,9 +172,9 @@ func (s *Stream) Start() (int, error) {
 			"err": err,
 			"pid": GetStreamPid(s),
 		}).Debugf("    [stream-%d] process has been terminated", s.Id)
-		if err != nil {
-			log.Error(s.Cmd.Args)
-		}
+		//if err != nil {
+		//    log.Error(s.Cmd.Args)
+		//}
 		//s.cmd = nil
 	}()
 
@@ -190,21 +190,24 @@ func (s *Stream) Start() (int, error) {
 		s.Status = common.Started
 		return count, nil
 	case <-s.ctx.Done():
-		s.Stop()
+		if err := s.Stop(); err != nil {
+			log.Error("failed to stop stream: " + err.Error())
+		}
 		s.Status = common.Failed
 		return 0, errors.New("failed or canceled")
 	}
 }
 
-func (s *Stream) Stop() {
+func (s *Stream) Stop() error {
 	if s.Cmd == nil || s.Cmd.Process == nil {
-		return
+		return nil
 	}
 	err := s.Cmd.Process.Kill()
 	log.WithFields(log.Fields{
 		"uri":    s.Uri,
 		"result": err,
 	}).Infof("    [stream-%d] process has been stopped", s.Id)
+	return err
 }
 
 func (s *Stream) makeM3u8Tags(segments []*common.Segment) string {

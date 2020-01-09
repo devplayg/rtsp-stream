@@ -10,37 +10,10 @@
 * Hippo(https://github.com/devplayg/hippo)
 
 
-server 
+### Do do
 
-- server
-- manager
-- controller
-- asset
-
-streaming
-
-- stream
-- assistant
-
-
-### V3
-
-### V2
-
-### V1
-
-Prototype
-
-
-### Processes
-
-Server
-
-[] Live streaming
-[X] Receiving streaming
-[X] Storing streaming
-[X] Auto start/restart streaming
-
+- [X] Write daily video size 
+- [X] If stream uri, name or password are changed, reload the stream  
 
 
 

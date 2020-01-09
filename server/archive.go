@@ -6,6 +6,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/devplayg/hippo"
 	"github.com/devplayg/rtsp-stream/common"
+	"github.com/devplayg/rtsp-stream/streaming"
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -55,7 +56,7 @@ func (m *Manager) startScheduler() error {
 			return
 		}
 
-		if err := m.deleteOldData(7); err != nil {
+		if err := m.deleteOldData(m.server.config.DataRetentionDays); err != nil {
 			log.Error(err)
 			return
 		}
@@ -84,8 +85,7 @@ func (m *Manager) startToArchiveVideos(targetDate string) error {
 		}
 	}
 	if err := m.startToDeleteVideosNotToBeArchived(streamIdListNotToArchive, targetDate); err != nil {
-		log.Error("failed to delete videos")
-		return err
+		log.Error("failed to delete videos; " + err.Error())
 	}
 
 	log.WithFields(log.Fields{
@@ -126,12 +126,13 @@ func (m *Manager) startToArchiveVideosOnDate(streamIdList []int64, date string) 
 	var result error
 	for _, streamId := range streamIdList {
 		liveDir := filepath.Join(m.server.config.Storage.LiveDir, strconv.FormatInt(streamId, 10))
-		if err := m.archive(streamId, liveDir, date); err != nil {
+		dirSize, err := m.archive(streamId, liveDir, date)
+		if err != nil {
 			log.Error(err)
 			result = err
 			continue
 		}
-		if err := m.writeVideoArchivingHistory(streamId, date); err != nil {
+		if err := m.writeVideoArchivingHistory(streamId, date, dirSize); err != nil {
 			log.Error(err)
 			result = err
 			continue
@@ -163,10 +164,10 @@ func (m *Manager) deleteLiveDataOnStreamDB(streamId int64, date string) error {
 	})
 }
 
-func (m *Manager) archive(streamId int64, liveDir string, date string) error {
+func (m *Manager) archive(streamId int64, liveDir string, date string) (int64, error) {
 	liveFiles, err := common.ReadVideoFilesOnDateInDir(liveDir, date, common.VideoFileExt)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if len(liveFiles) < 1 {
@@ -175,7 +176,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 			"dir":      liveDir,
 			"streamId": streamId,
 		}).Debug("no video files to archive")
-		return nil
+		return 0, nil
 	}
 	sort.SliceStable(liveFiles, func(i, j int) bool {
 		return liveFiles[i].ModTime().Before(liveFiles[j].ModTime())
@@ -183,11 +184,11 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 
 	recordDir := filepath.ToSlash(filepath.Join(m.server.config.Storage.RecordDir, m.server.config.Storage.Bucket, strconv.FormatInt(streamId, 10), date))
 	if err := hippo.EnsureDir(recordDir); err != nil {
-		return err
+		return 0, err
 	}
 	listFilePath, err := m.writeLiveFileListToText(liveDir, liveFiles, recordDir)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	t := time.Now()
@@ -197,7 +198,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 	}).Debugf("[manager] found %d video files in stream-%d; merging video files..", len(liveFiles), streamId)
 	err = MergeLiveVideoFiles(listFilePath, filepath.Join(recordDir, common.LiveM3u8FileName), m.server.config.HlsOptions.SegmentTime)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	log.WithFields(log.Fields{
 		"date":     date,
@@ -208,7 +209,9 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) error {
 	}).Debug("[manager] completed merging video files")
 
 	common.RemoveLiveFiles(liveDir, liveFiles) // wondory
-	return err
+
+	return streaming.GetDirSize(recordDir)
+
 }
 
 func (m *Manager) startToDeleteVideosNotToBeArchived(streamIdList []int64, targetDate string) error {
@@ -259,14 +262,15 @@ func (m *Manager) writeLiveFileListToText(liveDir string, files []os.FileInfo, r
 	return f.Name(), err
 }
 
-func (m *Manager) writeVideoArchivingHistory(streamId int64, date string) error {
+func (m *Manager) writeVideoArchivingHistory(streamId int64, date string, dirSize int64) error {
 	bucketName := []byte(common.VideoBucketPrefix + strconv.FormatInt(streamId, 10))
+	size := common.Int64ToBytes(dirSize)
 	return db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketName)
 		if err != nil {
 			return err
 		}
-		return bucket.Put([]byte(date), []byte{})
+		return bucket.Put([]byte(date), size)
 	})
 }
 

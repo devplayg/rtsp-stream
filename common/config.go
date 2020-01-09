@@ -17,10 +17,11 @@ type Config struct {
 		LiveDir   string
 		RecordDir string
 	} `json:"storage"`
-	BindAddress string `json:"bind-address"`
-	Timezone    string
-	StaticDir   string
-	HlsOptions  struct {
+	BindAddress       string `json:"bind-address"`
+	Timezone          string
+	StaticDir         string
+	DataRetentionDays int
+	HlsOptions        struct {
 		SegmentTime int
 	}
 }
@@ -37,6 +38,10 @@ func ReadConfig(path string) *Config {
 	if err != nil {
 		log.Warn(err)
 		return &DefaultConfig
+	}
+
+	if config.DataRetentionDays < 1 {
+		config.DataRetentionDays = 1
 	}
 
 	return config
@@ -62,9 +67,10 @@ var DefaultConfig = Config{
 		LiveDir:   "live",
 		RecordDir: "storage",
 	},
-	BindAddress: "0.0.0.0:8000",
-	StaticDir:   "static",
-	HlsOptions:  HlsOption{SegmentTime: 30},
+	DataRetentionDays: 5,
+	BindAddress:       "0.0.0.0:8000",
+	StaticDir:         "static",
+	HlsOptions:        HlsOption{SegmentTime: 30},
 }
 
 type HlsOption struct {
