@@ -62,7 +62,7 @@ func (m *Manager) init() error {
 		return err
 	}
 
-	if err := m.deleteOldData(7); err != nil {
+	if err := m.deleteOldData(m.server.config.DataRetentionDays); err != nil {
 		log.Error(err)
 	}
 
