@@ -49,7 +49,7 @@ func (m *Manager) deleteOldDataOfStream(s *streaming.Stream, date string) error 
 			if result != 1 {
 				return nil
 			}
-			dir := filepath.Join(m.server.config.Storage.RecordDir, strconv.FormatInt(s.Id, 10), string(k))
+			dir := filepath.Join(m.server.config.Storage.RecordDir, m.server.config.Storage.Bucket, strconv.FormatInt(s.Id, 10), string(k))
 			log.WithFields(log.Fields{
 				"streamId": s.Id,
 				"key":      string(k),
