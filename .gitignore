@@ -7,5 +7,5 @@
 *.yaml
 *.yml
 *.log
-*.html
+.html
 .js
