@@ -208,7 +208,7 @@ func (m *Manager) archive(streamId int64, liveDir string, date string) (int64, e
 		"duration": time.Since(t).Seconds(),
 	}).Debug("[manager] completed merging video files")
 
-	common.RemoveLiveFiles(liveDir, liveFiles) // wondory
+	common.RemoveLiveFiles(liveDir, liveFiles) 
 
 	return streaming.GetDirSize(recordDir)
 
