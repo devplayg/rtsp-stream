@@ -117,7 +117,7 @@ func (s *Stream) IsActive() bool {
 	//}
 	//
 	//// Check if the .ts file is created continuously
-	//// wondory
+	//// 
 	//
 	//return true
 }
@@ -153,7 +153,7 @@ func (s *Stream) WaitUntilStreamingStarts(startedChan chan<- int, ctx context.Co
 
 func (s *Stream) Start() (int, error) {
 	s.LastAttemptTime = time.Now().In(common.Loc)
-	// s.ProtocolInfo = common.NewProtocolInfo(common.HLS) // wondory no-need
+	// s.ProtocolInfo = common.NewProtocolInfo(common.HLS) //  no-need
 	s.Cmd = GetHlsStreamingCommand(s)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	go func() {
