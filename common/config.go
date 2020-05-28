@@ -77,7 +77,6 @@ type HlsOption struct {
 	SegmentTime int
 }
 
-// wondory
 //func GetDefaultConfig() *Config {
 //    return &Config{
 //        Storage: struct {
