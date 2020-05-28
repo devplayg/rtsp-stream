@@ -226,7 +226,7 @@ func (m *Manager) loadStreamsFromDatabase() error {
 
 	//return err
 
-	// wondory
+	
 	// fetch and unmarshal
 	// lock
 	// assign
@@ -661,7 +661,7 @@ func (m *Manager) startStreamWatcher() {
 	}
 }
 
-func (m *Manager) getM3u8(id int64, date string) (string, error) { // wondory
+func (m *Manager) getM3u8(id int64, date string) (string, error) { 
 	stream := m.getStreamById(id)
 	if stream == nil {
 		return "", common.ErrorStreamNotFound
